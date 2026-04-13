@@ -1,0 +1,23 @@
+{
+  "name": "@defx/storefront-core",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "type": "module",
+  "packageManager": "yarn@4.12.0",
+  "scripts": {
+    "build": "tsup"
+  },
+  "peerDependencies": {
+    "react": "^18 || ^19",
+    "react-dom": "^18 || ^19"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.27",
+    "postcss": "^8.5.9",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "tailwindcss": "^4.2.2",
+    "tsup": "^8.5.1",
+    "typescript": "^6.0.2"
+  }
+}
