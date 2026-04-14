@@ -1,195 +1,215 @@
 "use client";
 
 import { useState } from "react";
-import { useUser } from "@clerk/nextjs";
-import { toast } from "react-toastify";
-import { useCart } from "@/context/CartContext";
-import useCartInfo from "./userCartInfo";
-import {
-  createCartAction,
-  getCartAction,
-  getCartByIdAction,
-} from "@/app/actions/createCartAction";
-import {
-  createLineItemAction,
-  updateLineItemAction,
-  deleteLineItemAction,
-} from "@/app/actions/createLineItem";
-import { useRegionContext } from "@/context/RegionContext";
+import { useCore } from "../context/CoreProvider";
 
+/**
+ * useAddToCart()
+ *
+ * Production-ready cart mutation hook.
+ * ⚡ Zero Next.js / Clerk / store-specific imports.
+ *
+ * All API calls are resolved through injected `actions` in CoreProvider:
+ *  actions.getCart(regionId)                       → cart[]
+ *  actions.getCartById(cartId, regionId)           → cart
+ *  actions.createCart(payload)                     → cart
+ *  actions.createLineItem(payload)                 → lineItem
+ *  actions.updateLineItem(lineItemId, payload)     → lineItem
+ *  actions.deleteLineItem(lineItemId)              → void
+ *
+ * Auth awareness is handled via injected `auth`:
+ *  auth.isSignedIn  → boolean
+ *
+ * Toast notifications are handled via injected `toast`:
+ *  toast.success(msg)
+ *  toast.error(msg)
+ */
 export function useAddToCart() {
-  const { isSignedIn } = useUser();
-  const { initialCartInfo } = useCartInfo();
-  const { cart, setCart } = useCart();
-  const { activeRegion } = useRegionContext();
+    const { cart, setCart, actions, toast, auth, config } = useCore();
+    const [quantity, setQuantity] = useState(1);
+    const [isAddToCartLoading, setIsAddToCartLoading] = useState(false);
 
-  const [quantity, setQuantity] = useState(1);
-  const [isAddToCartLoading, setIsAddToCartLoading] = useState(false);
+    const isSignedIn = auth?.isSignedIn ?? false;
+    const regionId = config?.regionId ?? null;
 
-  console.log({ cart })
-  const refreshCart = async (cartId) => {
-    try {
-      let updatedCart;
-      if (isSignedIn) {
-        const data = await getCartAction(activeRegion?.id);
-        updatedCart = data?.[0];
-      } else {
-        updatedCart = await getCartByIdAction(cartId, activeRegion?.id);
-      }
-      setCart(updatedCart || null);
-    } catch (err) {
-      console.error("Failed to refresh cart:", err);
-    }
-  };
+    // ─── Helpers ────────────────────────────────────────────────────────────
 
-  const getCartItem = (product) => {
-    if (!cart?.line_items) return null;
-    return cart.line_items.find(
-      (item) => item.line_itemable?.id === product?.id
-    ) ?? null;
-  };
+    /** Returns the existing line item for a product, or null */
+    const getCartItem = (product) => {
+        console.log("getCartItem", { product, cart })
+        if (!cart?.line_items) return null;
+        return (
+            cart.line_items.find(
+                (item) => item.line_itemable?.id === product?.id
+            ) ?? null
+        );
+    };
 
-  const addItemToCart = async (product, resolvedCartId) => {
-    const sellingQTY = product?.selling_quantity?.values?.[0]?.label;
-    const qty = quantity ?? 1;
+    /** Re-fetch the cart after a mutation and sync context */
+    const refreshCart = async (cartId) => {
+        console.log("refersh cart", { cartId, isSignedIn })
+        try {
+            let updatedCart;
+            if (isSignedIn) {
+                const data = await actions.getCart?.(regionId);
+                updatedCart = Array.isArray(data) ? data[0] : data;
+            } else {
+                updatedCart = await actions.getCartById?.(cartId, regionId);
+            }
 
-    // Check for an existing line item with the same product variant
-    const existingLineItem = getCartItem(product);
-    if (existingLineItem) {
-      // Update quantity instead of creating a duplicate
-      const newQty = existingLineItem.quantity + qty;
-      console.log("updatecartline item")
-      await updateLineItemAction(existingLineItem.id, { quantity: newQty });
-    } else {
-      console.log("createcartline item")
-      const body = {
-
-        line_itemable_id: product?.id,
-        quantity: qty,
-        ...(resolvedCartId && !isSignedIn ? { cart_id: resolvedCartId } : {}),
-        ...(activeRegion?.id ? { region_id: activeRegion.id } : {}),
-      };
-
-      await createLineItemAction(body);
-    }
-
-    // Reset quantity to selling unit default
-    setQuantity(sellingQTY ? Number(sellingQTY) : 1);
-
-    // Always refresh so the cart context reflects the latest state
-    if (resolvedCartId) {
-      await refreshCart(resolvedCartId);
-    }
-  };
-
-  const handleAddToCart = async (product) => {
-    try {
-      setIsAddToCartLoading(true);
-
-      let cartId = typeof window !== "undefined"
-        ? localStorage.getItem("cartid")
-        : null;
-
-      // Track the resolved cart ID — may come from an existing cart or a newly created one
-      let resolvedCartId = cart?.id ?? cartId;
-
-      // Create a cart if one doesn't exist yet
-      if (!cart) {
-        const payload = { ...initialCartInfo };
-        if (activeRegion?.id) {
-          payload.region_id = activeRegion.id;
+            console.log({ updatedCart })
+            setCart(updatedCart ?? null);
+        } catch (err) {
+            console.error("[useAddToCart] refreshCart error:", err);
         }
-        console.log("createcart")
-        const createdCart = await createCartAction(payload);
-        if (createdCart?.id) {
-          resolvedCartId = createdCart.id;
-          if (!isSignedIn) {
-            cartId = createdCart.id;
-            localStorage.setItem("cartid", cartId);
-          }
-          setCart(createdCart);
+    };
+
+    // ─── Internal: add or update a line item ────────────────────────────────
+    const addItemToCart = async (product, resolvedCartId) => {
+        console.log("addItemToCart", { product, resolvedCartId })
+        const sellingQTY = product?.selling_quantity?.values?.[0]?.label;
+        const qty = quantity ?? 1;
+
+        const existingLineItem = getCartItem(product);
+
+        if (existingLineItem) {
+            // Quantity already exists → increment
+            const newQty = existingLineItem.quantity + qty;
+            await actions.updateLineItem?.(existingLineItem.id, { quantity: newQty });
+        } else {
+            // New line item
+            const body = {
+                line_itemable_id: product?.id,
+                quantity: qty,
+                ...(resolvedCartId && !isSignedIn ? { cart_id: resolvedCartId } : {}),
+                ...(regionId ? { region_id: regionId } : {}),
+            };
+            console.log({ body })
+            await actions.createLineItem?.(body);
         }
-      }
 
-      await addItemToCart(product, resolvedCartId);
+        // Reset quantity to selling-unit default
+        setQuantity(sellingQTY ? Number(sellingQTY) : 1);
 
-      toast.success("Item added to cart", {
-        position: "top-right",
-        className: "mt-0 md:mt-[60px]",
-      });
-    } catch (err) {
-      console.error("Error adding product:", err);
-      toast.error("Failed to add item to cart", {
-        position: "top-right",
-        className: "mt-0 md:mt-[60px]",
-      });
-    } finally {
-      setIsAddToCartLoading(false);
-    }
-  };
+        // Always refresh to keep context in sync
+        if (resolvedCartId) {
+            await refreshCart(resolvedCartId);
+        }
+    };
 
-  /** Returns the existing cart line item for a given product, or null */
+    // ─── Public API ─────────────────────────────────────────────────────────
 
+    /**
+     * Add a product to the cart.
+     * Creates a cart first if one doesn't exist yet.
+     */
+    const handleAddToCart = async (product) => {
+        try {
+            setIsAddToCartLoading(true);
 
-  /**
-   * Decrease quantity by 1. If qty reaches 0, delete the line item entirely.
-   */
-  const handleDecreaseQty = async (product) => {
-    const existingLineItem = getCartItem(product);
-    if (!existingLineItem) return;
+            const storedCartId =
+                typeof window !== "undefined"
+                    ? localStorage.getItem("cartid")
+                    : null;
 
-    try {
-      setIsAddToCartLoading(true);
-      if (existingLineItem.quantity <= 1) {
-        await deleteLineItemAction(existingLineItem.id);
-      } else {
-        await updateLineItemAction(existingLineItem.id, {
-          quantity: existingLineItem.quantity - 1,
-        });
-      }
+            let resolvedCartId = cart?.id ?? storedCartId;
+            console.log("handleAddToCart before cart check", { cart, storedCartId, resolvedCartId, storedCartId })
+            // Create cart if needed
+            if (!cart) {
+                const payload = {
+                    number: "",
+                    item_total: 0,
+                    total: 0,
+                    currency: "",
+                    cart_sales_channels: "web",
+                    order_type: "delivery",
+                    ...(regionId ? { region_id: regionId } : {}),
+                };
 
-      const activeCartId = cart?.id;
-      if (activeCartId) {
-        await refreshCart(activeCartId);
-      }
-    } catch (err) {
-      console.error("Error decreasing quantity:", err);
-    } finally {
-      setIsAddToCartLoading(false);
-    }
-  };
+                const createdCart = await actions.createCart?.(payload);
+                console.log("handleAddToCart", { createdCart })
+                if (createdCart?.id) {
+                    resolvedCartId = createdCart.id;
+                    if (!isSignedIn) {
+                        localStorage.setItem("cartid", createdCart.id);
+                    }
+                    setCart(createdCart);
+                }
+            }
 
-  /**
-   * Remove a line item entirely from the cart.
-   */
-  const handleDeleteLineItem = async (product) => {
-    const existingLineItem = getCartItem(product);
-    if (!existingLineItem) return;
-    console.log({ product, existingLineItem })
-    try {
-      setIsAddToCartLoading(true);
-      await deleteLineItemAction(existingLineItem.id);
+            await addItemToCart(product, resolvedCartId);
 
-      const activeCartId = cart?.id;
-      if (activeCartId) {
-        await refreshCart(activeCartId);
-      }
-      toast.success("Item removed from cart");
-    } catch (err) {
-      console.error("Error deleting line item:", err);
-      toast.error("Failed to remove item");
-    } finally {
-      setIsAddToCartLoading(false);
-    }
-  };
+            toast?.success?.("Item added to cart");
+        } catch (err) {
+            console.error("[useAddToCart] handleAddToCart error:", err);
+            toast?.error?.("Failed to add item to cart");
+        } finally {
+            setIsAddToCartLoading(false);
+        }
+    };
 
-  return {
-    handleAddToCart,
-    handleDecreaseQty,
-    handleDeleteLineItem,
-    getCartItem,
-    quantity,
-    setQuantity,
-    isAddToCartLoading,
-  };
+    /**
+     * Decrease quantity by 1.
+     * Deletes the line item entirely if quantity reaches 0.
+     */
+    const handleDecreaseQty = async (product) => {
+        const existingLineItem = getCartItem(product);
+        if (!existingLineItem) return;
+
+        try {
+            setIsAddToCartLoading(true);
+
+            if (existingLineItem.quantity <= 1) {
+                await actions.deleteLineItem?.(existingLineItem.id);
+            } else {
+                await actions.updateLineItem?.(existingLineItem.id, {
+                    quantity: existingLineItem.quantity - 1,
+                });
+            }
+
+            const activeCartId = cart?.id;
+            if (activeCartId) {
+                await refreshCart(activeCartId);
+            }
+        } catch (err) {
+            console.error("[useAddToCart] handleDecreaseQty error:", err);
+        } finally {
+            setIsAddToCartLoading(false);
+        }
+    };
+
+    /**
+     * Remove a line item entirely from the cart.
+     */
+    const handleDeleteLineItem = async (product) => {
+        const existingLineItem = getCartItem(product);
+        if (!existingLineItem) return;
+
+        try {
+            setIsAddToCartLoading(true);
+            await actions.deleteLineItem?.(existingLineItem.id);
+
+            const activeCartId = cart?.id;
+            if (activeCartId) {
+                await refreshCart(activeCartId);
+            }
+
+            toast?.success?.("Item removed from cart");
+        } catch (err) {
+            console.error("[useAddToCart] handleDeleteLineItem error:", err);
+            toast?.error?.("Failed to remove item");
+        } finally {
+            setIsAddToCartLoading(false);
+        }
+    };
+
+    return {
+        handleAddToCart,
+        handleDecreaseQty,
+        handleDeleteLineItem,
+        getCartItem,
+        quantity,
+        setQuantity,
+        isAddToCartLoading,
+    };
 }

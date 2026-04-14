@@ -1,22 +1,34 @@
-import { useRegionContext } from "@/context/RegionContext";
+"use client";
 
+import { useCore } from "../context/CoreProvider";
 
+/**
+ * useCurrencyFormat()
+ *
+ * Reads currency/locale from CoreProvider config.
+ * No store-specific or framework imports.
+ *
+ * Config keys used:
+ *  config.currency  (e.g. "INR", "USD") — defaults to "USD"
+ *  config.locale    (e.g. "en-IN", "en-US") — defaults to "en-US"
+ *
+ * Usage:
+ *  const { formatCurrency } = useCurrencyFormat();
+ *  formatCurrency(1999.5) // "₹1,999.50"
+ */
 export function useCurrencyFormat() {
-  const region = useRegionContext();
+    const { config } = useCore();
 
-  const activeRegion = region?.activeRegion;
+    const currency = config?.currency ?? "USD";
+    const locale = config?.locale ?? "en-US";
 
-  const currency = activeRegion?.currency || "INR";
-  const locale = activeRegion?.locale || "en-IN";
+    const formatCurrency = (amount) => {
+        if (amount == null) return "";
+        return new Intl.NumberFormat(locale, {
+            style: "currency",
+            currency,
+        }).format(amount);
+    };
 
-  function formatCurrency(amount) {
-    if (amount == null) return "";
-
-    return new Intl.NumberFormat(locale, {
-      style: "currency",
-      currency: currency,
-    }).format(amount);
-  }
-
-  return { formatCurrency };
+    return { formatCurrency };
 }
