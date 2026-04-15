@@ -1,6 +1,7 @@
 import React6, { createContext, useState, useEffect, useMemo, useContext } from 'react';
 import { jsx, jsxs, Fragment } from 'react/jsx-runtime';
 import { flatten, map, compact, filter, uniqBy } from 'lodash';
+import { useUser, useClerk } from '@clerk/nextjs';
 
 // src/context/CoreProvider.js
 var CoreContext = createContext(null);
@@ -9,51 +10,28 @@ var CoreProvider = ({
   config = {},
   actions = {},
   toast = null,
-  auth = null,
-  initialCart = {
-    number: "",
-    item_total: 0,
-    total: 0,
-    ship_total: 0,
-    adjustment_total: 0,
-    completed_at: "",
-    included_tax_total: 0,
-    additional_tax_total: 0,
-    tax_total: 0,
-    currency: "",
-    email: "",
-    promo_total: 0,
-    item_count: 0,
-    special_instructions: "",
-    pre_tax_item_amount: 0,
-    pre_tax_total: 0,
-    shipment_state: "",
-    payment_state: "",
-    cart_sales_channels: "web",
-    order_type: "delivery"
-  }
+  auth = null
 }) => {
   const [cart, setCart] = useState();
   const [isCartLoading, setIsCartLoading] = useState(false);
-  const [region, setRegion] = useState((config == null ? void 0 : config.region) ?? null);
+  const [region, setRegion] = useState(config?.region ?? null);
   useEffect(() => {
     console.log("before initialCart");
-    if (initialCart || !(actions == null ? void 0 : actions.getCart)) return;
-    console.log("before initialCart", { initialCart, actions });
+    if (!actions?.getCart) return;
+    console.log("before loadCart", { actions });
     const loadCart = async () => {
       try {
         setIsCartLoading(true);
-        console.log("loadCart", { isSignedIn });
         let resolvedCart = null;
-        const isSignedIn = (auth == null ? void 0 : auth.isSignedIn) ?? false;
+        const isSignedIn = auth?.isSignedIn ?? false;
         if (isSignedIn) {
-          const data = await actions.getCart(config == null ? void 0 : config.regionId);
+          const data = await actions.getCart(config?.regionId);
           resolvedCart = Array.isArray(data) ? data[0] : data;
         } else {
           const storedCartId = typeof window !== "undefined" ? localStorage.getItem("cartid") : null;
           console.log({ storedCartId });
-          if (storedCartId && (actions == null ? void 0 : actions.getCartById)) {
-            resolvedCart = await actions.getCartById(storedCartId, config == null ? void 0 : config.regionId);
+          if (storedCartId && actions?.getCartById) {
+            resolvedCart = await actions.getCartById(storedCartId, config?.regionId);
           }
         }
         console.log({ resolvedCart });
@@ -66,7 +44,7 @@ var CoreProvider = ({
     };
     loadCart();
     console.log("load script");
-  }, [config == null ? void 0 : config.regionId, auth == null ? void 0 : auth.isSignedIn]);
+  }, [config?.regionId, auth?.isSignedIn]);
   const value = useMemo(
     () => ({
       // Cart state
@@ -106,28 +84,25 @@ function useAddToCart() {
   const { cart, setCart, actions, toast, auth, config } = useCore();
   const [quantity, setQuantity] = useState(1);
   const [isAddToCartLoading, setIsAddToCartLoading] = useState(false);
-  const isSignedIn = (auth == null ? void 0 : auth.isSignedIn) ?? false;
-  const regionId = (config == null ? void 0 : config.regionId) ?? null;
+  const isSignedIn = auth?.isSignedIn ?? false;
+  const regionId = config?.regionId ?? null;
+  const cartItems = cart?.line_items ?? [];
   const getCartItem = (product) => {
     console.log("getCartItem", { product, cart });
-    if (!(cart == null ? void 0 : cart.line_items)) return null;
+    if (!cart?.line_items) return null;
     return cart.line_items.find(
-      (item) => {
-        var _a;
-        return ((_a = item.line_itemable) == null ? void 0 : _a.id) === (product == null ? void 0 : product.id);
-      }
+      (item) => item.line_itemable?.id === product?.id
     ) ?? null;
   };
   const refreshCart = async (cartId) => {
-    var _a, _b;
     console.log("refersh cart", { cartId, isSignedIn });
     try {
       let updatedCart;
       if (isSignedIn) {
-        const data = await ((_a = actions.getCart) == null ? void 0 : _a.call(actions, regionId));
+        const data = await actions.getCart?.(regionId);
         updatedCart = Array.isArray(data) ? data[0] : data;
       } else {
-        updatedCart = await ((_b = actions.getCartById) == null ? void 0 : _b.call(actions, cartId, regionId));
+        updatedCart = await actions.getCartById?.(cartId, regionId);
       }
       console.log({ updatedCart });
       setCart(updatedCart ?? null);
@@ -136,23 +111,22 @@ function useAddToCart() {
     }
   };
   const addItemToCart = async (product, resolvedCartId) => {
-    var _a, _b, _c, _d, _e;
     console.log("addItemToCart", { product, resolvedCartId });
-    const sellingQTY = (_c = (_b = (_a = product == null ? void 0 : product.selling_quantity) == null ? void 0 : _a.values) == null ? void 0 : _b[0]) == null ? void 0 : _c.label;
+    const sellingQTY = product?.selling_quantity?.values?.[0]?.label;
     const qty = quantity ?? 1;
     const existingLineItem = getCartItem(product);
     if (existingLineItem) {
       const newQty = existingLineItem.quantity + qty;
-      await ((_d = actions.updateLineItem) == null ? void 0 : _d.call(actions, existingLineItem.id, { quantity: newQty }));
+      await actions.updateLineItem?.(existingLineItem.id, { quantity: newQty });
     } else {
       const body = {
-        line_itemable_id: product == null ? void 0 : product.id,
+        line_itemable_id: product?.id,
         quantity: qty,
         ...resolvedCartId && !isSignedIn ? { cart_id: resolvedCartId } : {},
         ...regionId ? { region_id: regionId } : {}
       };
       console.log({ body });
-      await ((_e = actions.createLineItem) == null ? void 0 : _e.call(actions, body));
+      await actions.createLineItem?.(body);
     }
     setQuantity(sellingQTY ? Number(sellingQTY) : 1);
     if (resolvedCartId) {
@@ -160,12 +134,11 @@ function useAddToCart() {
     }
   };
   const handleAddToCart = async (product) => {
-    var _a, _b, _c;
     try {
       setIsAddToCartLoading(true);
       const storedCartId = typeof window !== "undefined" ? localStorage.getItem("cartid") : null;
-      let resolvedCartId = (cart == null ? void 0 : cart.id) ?? storedCartId;
-      console.log("handleAddToCart before cart check", { cart, storedCartId, resolvedCartId, storedCartId });
+      let resolvedCartId = cart?.id ?? storedCartId;
+      console.log("handleAddToCart before cart check", { cart, storedCartId, resolvedCartId });
       if (!cart) {
         const payload = {
           number: "",
@@ -176,9 +149,9 @@ function useAddToCart() {
           order_type: "delivery",
           ...regionId ? { region_id: regionId } : {}
         };
-        const createdCart = await ((_a = actions.createCart) == null ? void 0 : _a.call(actions, payload));
+        const createdCart = await actions.createCart?.(payload);
         console.log("handleAddToCart", { createdCart });
-        if (createdCart == null ? void 0 : createdCart.id) {
+        if (createdCart?.id) {
           resolvedCartId = createdCart.id;
           if (!isSignedIn) {
             localStorage.setItem("cartid", createdCart.id);
@@ -187,28 +160,27 @@ function useAddToCart() {
         }
       }
       await addItemToCart(product, resolvedCartId);
-      (_b = toast == null ? void 0 : toast.success) == null ? void 0 : _b.call(toast, "Item added to cart");
+      toast?.success?.("Item added to cart");
     } catch (err) {
       console.error("[useAddToCart] handleAddToCart error:", err);
-      (_c = toast == null ? void 0 : toast.error) == null ? void 0 : _c.call(toast, "Failed to add item to cart");
+      toast?.error?.("Failed to add item to cart");
     } finally {
       setIsAddToCartLoading(false);
     }
   };
   const handleDecreaseQty = async (product) => {
-    var _a, _b;
     const existingLineItem = getCartItem(product);
     if (!existingLineItem) return;
     try {
       setIsAddToCartLoading(true);
       if (existingLineItem.quantity <= 1) {
-        await ((_a = actions.deleteLineItem) == null ? void 0 : _a.call(actions, existingLineItem.id));
+        await actions.deleteLineItem?.(existingLineItem.id);
       } else {
-        await ((_b = actions.updateLineItem) == null ? void 0 : _b.call(actions, existingLineItem.id, {
+        await actions.updateLineItem?.(existingLineItem.id, {
           quantity: existingLineItem.quantity - 1
-        }));
+        });
       }
-      const activeCartId = cart == null ? void 0 : cart.id;
+      const activeCartId = cart?.id;
       if (activeCartId) {
         await refreshCart(activeCartId);
       }
@@ -219,20 +191,19 @@ function useAddToCart() {
     }
   };
   const handleDeleteLineItem = async (product) => {
-    var _a, _b, _c;
     const existingLineItem = getCartItem(product);
     if (!existingLineItem) return;
     try {
       setIsAddToCartLoading(true);
-      await ((_a = actions.deleteLineItem) == null ? void 0 : _a.call(actions, existingLineItem.id));
-      const activeCartId = cart == null ? void 0 : cart.id;
+      await actions.deleteLineItem?.(existingLineItem.id);
+      const activeCartId = cart?.id;
       if (activeCartId) {
         await refreshCart(activeCartId);
       }
-      (_b = toast == null ? void 0 : toast.success) == null ? void 0 : _b.call(toast, "Item removed from cart");
+      toast?.success?.("Item removed from cart");
     } catch (err) {
       console.error("[useAddToCart] handleDeleteLineItem error:", err);
-      (_c = toast == null ? void 0 : toast.error) == null ? void 0 : _c.call(toast, "Failed to remove item");
+      toast?.error?.("Failed to remove item");
     } finally {
       setIsAddToCartLoading(false);
     }
@@ -244,15 +215,17 @@ function useAddToCart() {
     getCartItem,
     quantity,
     setQuantity,
-    isAddToCartLoading
+    isAddToCartLoading,
+    cartItems,
+    cart
   };
 }
 
 // src/hooks/useCurrencyFormat.js
 function useCurrencyFormat() {
   const { config } = useCore();
-  const currency = (config == null ? void 0 : config.currency) ?? "USD";
-  const locale = (config == null ? void 0 : config.locale) ?? "en-US";
+  const currency = config?.currency ?? "USD";
+  const locale = config?.locale ?? "en-US";
   const formatCurrency = (amount) => {
     if (amount == null) return "";
     return new Intl.NumberFormat(locale, {
@@ -272,7 +245,7 @@ var useAuth = () => {
 // src/hooks/useLogout.js
 var useLogout = () => {
   const { auth } = useCore();
-  const logout = (auth == null ? void 0 : auth.logout) ?? (() => {
+  const logout = auth?.logout ?? (() => {
     console.warn("[useLogout] No logout function injected into CoreProvider.");
   });
   return logout;
@@ -281,86 +254,71 @@ function useVariantSelection(rawProduct) {
   const [selectedOptionsType, setSelectedOptionsType] = useState([]);
   const allVariantOptions = flatten(
     map(
-      rawProduct == null ? void 0 : rawProduct.variants,
-      (variant) => map(variant == null ? void 0 : variant.variant_options, (variantOption) => {
-        var _a, _b, _c, _d;
-        return {
-          types: variantOption.option_type,
-          values: {
-            ...variantOption.option_value,
-            // Attach variant image when applicable (e.g. Color swatches)
-            image: ((_b = (_a = variantOption.option_type) == null ? void 0 : _a.name) == null ? void 0 : _b.toLowerCase()) === "color" ? (_c = variant.product_images) == null ? void 0 : _c[0] : "",
-            variant_id: (_d = variantOption == null ? void 0 : variantOption.variant) == null ? void 0 : _d.id,
-            // All variant IDs that share this option value (useful for filtering)
-            variant_ids: flatten(
-              compact(
-                map(rawProduct == null ? void 0 : rawProduct.variants, (v) => {
-                  var _a2;
-                  const matched = filter(v == null ? void 0 : v.variant_options, [
-                    "option_value.id",
-                    (_a2 = variantOption == null ? void 0 : variantOption.option_value) == null ? void 0 : _a2.id
-                  ]);
-                  return (matched == null ? void 0 : matched.length) ? v == null ? void 0 : v.id : false;
-                })
-              )
+      rawProduct?.variants,
+      (variant) => map(variant?.variant_options, (variantOption) => ({
+        types: variantOption.option_type,
+        values: {
+          ...variantOption.option_value,
+          // Attach variant image when applicable (e.g. Color swatches)
+          image: variantOption.option_type?.name?.toLowerCase() === "color" ? variant.product_images?.[0] : "",
+          variant_id: variantOption?.variant?.id,
+          // All variant IDs that share this option value (useful for filtering)
+          variant_ids: flatten(
+            compact(
+              map(rawProduct?.variants, (v) => {
+                const matched = filter(v?.variant_options, [
+                  "option_value.id",
+                  variantOption?.option_value?.id
+                ]);
+                return matched?.length ? v?.id : false;
+              })
             )
-          }
-        };
-      })
+          )
+        }
+      }))
     )
   );
   const variantOptionTypes = uniqBy(
-    map(allVariantOptions, (v) => v == null ? void 0 : v.types).filter(Boolean),
+    map(allVariantOptions, (v) => v?.types).filter(Boolean),
     "id"
   );
   const hasVariants = variantOptionTypes.length > 0;
   useEffect(() => {
-    var _a, _b;
-    if (!((_a = rawProduct == null ? void 0 : rawProduct.variants) == null ? void 0 : _a.length) || !hasVariants) return;
+    if (!rawProduct?.variants?.length || !hasVariants) return;
     const firstVariant = rawProduct.variants.find((v) => v.in_stock || v.purchasable) ?? rawProduct.variants[0];
-    if (!((_b = firstVariant == null ? void 0 : firstVariant.variant_options) == null ? void 0 : _b.length)) return;
+    if (!firstVariant?.variant_options?.length) return;
     const autoSelections = firstVariant.variant_options.map((vo) => ({
       types: vo.option_type,
       values: vo.option_value
     }));
     setSelectedOptionsType(autoSelections);
-  }, [rawProduct == null ? void 0 : rawProduct.id]);
+  }, [rawProduct?.id]);
   const selectedVariant = (() => {
-    var _a;
-    if (!selectedOptionsType.length || !((_a = rawProduct == null ? void 0 : rawProduct.variants) == null ? void 0 : _a.length)) return null;
+    if (!selectedOptionsType.length || !rawProduct?.variants?.length) return null;
     return rawProduct.variants.find(
       (variant) => selectedOptionsType.every(
         (sel) => variant.variant_options.some(
-          (vo) => {
-            var _a2, _b, _c, _d;
-            return ((_a2 = vo.option_type) == null ? void 0 : _a2.id) === ((_b = sel.types) == null ? void 0 : _b.id) && ((_c = vo.option_value) == null ? void 0 : _c.id) === ((_d = sel.values) == null ? void 0 : _d.id);
-          }
+          (vo) => vo.option_type?.id === sel.types?.id && vo.option_value?.id === sel.values?.id
         )
       )
     ) ?? null;
   })();
   const isOptionAvailable = (optionType, optionValue) => {
-    var _a;
-    if (!((_a = rawProduct == null ? void 0 : rawProduct.variants) == null ? void 0 : _a.length)) return false;
+    if (!rawProduct?.variants?.length) return false;
     return rawProduct.variants.some(
       (variant) => (variant.in_stock || variant.purchasable) && variant.variant_options.some(
-        (vo) => {
-          var _a2, _b;
-          return ((_a2 = vo.option_type) == null ? void 0 : _a2.id) === (optionType == null ? void 0 : optionType.id) && ((_b = vo.option_value) == null ? void 0 : _b.id) === (optionValue == null ? void 0 : optionValue.id);
-        }
+        (vo) => vo.option_type?.id === optionType?.id && vo.option_value?.id === optionValue?.id
       )
     );
   };
   const getValuesForType = (optionType) => {
-    if (!(rawProduct == null ? void 0 : rawProduct.variants)) return [];
+    if (!rawProduct?.variants) return [];
     const seen = /* @__PURE__ */ new Set();
     const vals = [];
     rawProduct.variants.forEach((v) => {
-      var _a;
-      (_a = v.variant_options) == null ? void 0 : _a.forEach((vo) => {
-        var _a2, _b, _c;
-        if (((_a2 = vo.option_type) == null ? void 0 : _a2.id) === (optionType == null ? void 0 : optionType.id) && !seen.has((_b = vo.option_value) == null ? void 0 : _b.id)) {
-          seen.add((_c = vo.option_value) == null ? void 0 : _c.id);
+      v.variant_options?.forEach((vo) => {
+        if (vo.option_type?.id === optionType?.id && !seen.has(vo.option_value?.id)) {
+          seen.add(vo.option_value?.id);
           vals.push(vo.option_value);
         }
       });
@@ -369,53 +327,33 @@ function useVariantSelection(rawProduct) {
   };
   const selectOption = (optionValue, optionType) => {
     setSelectedOptionsType((prev) => {
-      var _a, _b;
       const isAlreadySelected = prev.some(
-        (s) => {
-          var _a2, _b2;
-          return ((_a2 = s.types) == null ? void 0 : _a2.id) === (optionType == null ? void 0 : optionType.id) && ((_b2 = s.values) == null ? void 0 : _b2.id) === (optionValue == null ? void 0 : optionValue.id);
-        }
+        (s) => s.types?.id === optionType?.id && s.values?.id === optionValue?.id
       );
       if (isAlreadySelected) {
-        return prev.filter((s) => {
-          var _a2;
-          return ((_a2 = s.types) == null ? void 0 : _a2.id) !== (optionType == null ? void 0 : optionType.id);
-        });
+        return prev.filter((s) => s.types?.id !== optionType?.id);
       }
       const withNewValue = [
-        ...prev.filter((p) => {
-          var _a2;
-          return ((_a2 = p.types) == null ? void 0 : _a2.id) !== (optionType == null ? void 0 : optionType.id);
-        }),
+        ...prev.filter((p) => p.types?.id !== optionType?.id),
         { types: optionType, values: optionValue }
       ];
-      const exactMatch = (_a = rawProduct == null ? void 0 : rawProduct.variants) == null ? void 0 : _a.find(
+      const exactMatch = rawProduct?.variants?.find(
         (v) => withNewValue.every(
           (sel) => v.variant_options.some(
-            (vo) => {
-              var _a2, _b2, _c, _d;
-              return ((_a2 = vo.option_type) == null ? void 0 : _a2.id) === ((_b2 = sel.types) == null ? void 0 : _b2.id) && ((_c = vo.option_value) == null ? void 0 : _c.id) === ((_d = sel.values) == null ? void 0 : _d.id);
-            }
+            (vo) => vo.option_type?.id === sel.types?.id && vo.option_value?.id === sel.values?.id
           )
         )
       );
-      const matchingVariant = exactMatch ?? ((_b = rawProduct == null ? void 0 : rawProduct.variants) == null ? void 0 : _b.find(
+      const matchingVariant = exactMatch ?? rawProduct?.variants?.find(
         (v) => v.variant_options.some(
-          (vo) => {
-            var _a2, _b2;
-            return ((_a2 = vo.option_type) == null ? void 0 : _a2.id) === (optionType == null ? void 0 : optionType.id) && ((_b2 = vo.option_value) == null ? void 0 : _b2.id) === (optionValue == null ? void 0 : optionValue.id);
-          }
+          (vo) => vo.option_type?.id === optionType?.id && vo.option_value?.id === optionValue?.id
         )
-      ));
+      );
       if (!matchingVariant) return withNewValue;
       const autoFilled = [{ types: optionType, values: optionValue }];
       matchingVariant.variant_options.forEach((vo) => {
-        var _a2;
-        if (((_a2 = vo.option_type) == null ? void 0 : _a2.id) === (optionType == null ? void 0 : optionType.id)) return;
-        if (!autoFilled.some((s) => {
-          var _a3, _b2;
-          return ((_a3 = s.types) == null ? void 0 : _a3.id) === ((_b2 = vo.option_type) == null ? void 0 : _b2.id);
-        })) {
+        if (vo.option_type?.id === optionType?.id) return;
+        if (!autoFilled.some((s) => s.types?.id === vo.option_type?.id)) {
           autoFilled.push({ types: vo.option_type, values: vo.option_value });
         }
       });
@@ -423,8 +361,7 @@ function useVariantSelection(rawProduct) {
     });
   };
   const getDisplayImages = (productImages = []) => {
-    var _a;
-    if (!((_a = selectedVariant == null ? void 0 : selectedVariant.product_images) == null ? void 0 : _a.length)) return productImages;
+    if (!selectedVariant?.product_images?.length) return productImages;
     return selectedVariant.product_images.map((img) => ({
       id: img.id,
       position: img.position ?? 0,
@@ -525,14 +462,13 @@ var CartItem = ({
   renderActions = null,
   className = ""
 }) => {
-  var _a, _b;
   const { handleAddToCart, handleDecreaseQty, handleDeleteLineItem, isAddToCartLoading } = useAddToCart();
   const { formatCurrency } = useCurrencyFormat();
-  const product = item == null ? void 0 : item.line_itemable;
-  const name = (product == null ? void 0 : product.name) ?? (item == null ? void 0 : item.name) ?? "Product";
-  const price = (item == null ? void 0 : item.price) ?? (product == null ? void 0 : product.price) ?? 0;
-  const quantity = (item == null ? void 0 : item.quantity) ?? 0;
-  const imageUrl = ((_b = (_a = product == null ? void 0 : product.product_images) == null ? void 0 : _a[0]) == null ? void 0 : _b.product_image_url) ?? (product == null ? void 0 : product.image_url) ?? null;
+  const product = item?.line_itemable;
+  const name = product?.name ?? item?.name ?? "Product";
+  const price = item?.price ?? product?.price ?? 0;
+  const quantity = item?.quantity ?? 0;
+  const imageUrl = product?.product_images?.[0]?.product_image_url ?? product?.image_url ?? null;
   const s = {
     row: {
       display: "flex",
@@ -654,7 +590,6 @@ var CartSummary = ({
   renderFooter = null,
   labels = {}
 }) => {
-  var _a;
   const { cart } = useCart();
   const { formatCurrency } = useCurrencyFormat();
   const l = {
@@ -666,11 +601,11 @@ var CartSummary = ({
     estimatedShipping: "Calculated at checkout",
     ...labels
   };
-  const itemCount = (cart == null ? void 0 : cart.item_count) ?? ((_a = cart == null ? void 0 : cart.line_items) == null ? void 0 : _a.length) ?? 0;
-  const itemTotal = (cart == null ? void 0 : cart.item_total) ?? 0;
-  const shipTotal = (cart == null ? void 0 : cart.ship_total) ?? 0;
-  const taxTotal = (cart == null ? void 0 : cart.tax_total) ?? 0;
-  const grandTotal = (cart == null ? void 0 : cart.total) ?? itemTotal + shipTotal + taxTotal;
+  const itemCount = cart?.item_count ?? cart?.line_items?.length ?? 0;
+  const itemTotal = cart?.item_total ?? 0;
+  const shipTotal = cart?.ship_total ?? 0;
+  const taxTotal = cart?.tax_total ?? 0;
+  const grandTotal = cart?.total ?? itemTotal + shipTotal + taxTotal;
   const s = {
     wrapper: {
       background: "rgba(0,0,0,0.03)",
@@ -724,7 +659,7 @@ var CartSummary = ({
       /* @__PURE__ */ jsx("span", { children: l.total }),
       /* @__PURE__ */ jsx("span", { children: formatCurrency(grandTotal) })
     ] }),
-    renderFooter == null ? void 0 : renderFooter()
+    renderFooter?.()
   ] });
 };
 var EmptyState = ({
@@ -779,7 +714,7 @@ var CartPage = ({
   summaryLabels = {}
 }) => {
   const { cart, isCartLoading } = useCart();
-  const lineItems = (cart == null ? void 0 : cart.line_items) ?? [];
+  const lineItems = cart?.line_items ?? [];
   const isEmpty = !isCartLoading && lineItems.length === 0;
   const s = {
     page: {
@@ -858,7 +793,493 @@ var Hello = () => {
   console.log("Cart:", cart, isCartLoading);
   return /* @__PURE__ */ jsx("div", { children: isCartLoading ? "Loading..." : "Core Working \u2705" });
 };
+var DeleteIcon = ({
+  onClick,
+  className = "",
+  title = "",
+  disabled = false
+}) => /* @__PURE__ */ jsx(
+  "svg",
+  {
+    onClick,
+    disabled,
+    className,
+    width: "20",
+    height: "20",
+    viewBox: "0 0 20 20",
+    fill: "none",
+    xmlns: "http://www.w3.org/2000/svg",
+    title,
+    children: /* @__PURE__ */ jsx(
+      "path",
+      {
+        d: "M2.5 5h15M8.5 8.5v5M11.5 8.5v5M3 5.5v11c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2v-11M7 5V3.5c0-.3.2-.5.5-.5h5c.3 0 .5.2.5.5V5",
+        stroke: "currentColor",
+        strokeWidth: "1.5",
+        strokeLinecap: "round",
+        strokeLinejoin: "round"
+      }
+    )
+  }
+);
+var CustomizationModal = ({
+  isOpen,
+  onClose,
+  product,
+  customizationsList,
+  onConfirm,
+  initialValues = {},
+  initialQuantity = 1,
+  isEditMode = false,
+  isAddToCartLoading = false
+}) => {
+  const [customizations, setCustomizations] = useState({});
+  const [quantity, setQuantity] = useState(initialQuantity);
+  useEffect(() => {
+    if (isOpen) {
+      setCustomizations(initialValues);
+      setQuantity(initialQuantity);
+    }
+  }, [isOpen, initialValues, initialQuantity]);
+  const handleCustomizationChange = (customizationId, value) => {
+    setCustomizations((prev) => ({
+      ...prev,
+      [customizationId]: value
+    }));
+  };
+  const handleConfirm = () => {
+    onConfirm(customizations, quantity);
+  };
+  if (!isOpen) return null;
+  return /* @__PURE__ */ jsx("div", { className: "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50", children: /* @__PURE__ */ jsxs("div", { className: "bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4", children: [
+    /* @__PURE__ */ jsxs("h2", { className: "text-xl font-[Nunito-bold] text-[var(--main)] mb-4", children: [
+      isEditMode ? "Edit" : "Customize",
+      " ",
+      product?.name
+    ] }),
+    /* @__PURE__ */ jsx("div", { className: "space-y-4 mb-6 max-h-[400px] overflow-y-auto", children: customizationsList.map((customization) => /* @__PURE__ */ jsxs("div", { children: [
+      /* @__PURE__ */ jsx("label", { className: "block text-sm font-[Nunito-medium] text-[var(--main)] mb-2", children: customization.name }),
+      customization.customization_type === "select" ? /* @__PURE__ */ jsxs(
+        "select",
+        {
+          value: customizations[customization.id]?.value || "",
+          onChange: (e) => handleCustomizationChange(customization.id, e.target.value),
+          className: "w-full border border-[#e8e5df] rounded-md p-2 text-sm",
+          children: [
+            /* @__PURE__ */ jsx("option", { value: "", children: "Select an option" }),
+            customization.customization_values?.map((opt) => /* @__PURE__ */ jsx("option", { value: opt.value, children: opt.label }, opt.id))
+          ]
+        }
+      ) : /* @__PURE__ */ jsx(
+        "input",
+        {
+          type: "text",
+          value: customizations[customization.id]?.value || "",
+          onChange: (e) => handleCustomizationChange(customization.id, e.target.value),
+          placeholder: `Enter ${customization.name}`,
+          className: "w-full border border-[#e8e5df] rounded-md p-2 text-sm"
+        }
+      )
+    ] }, customization.id)) }),
+    /* @__PURE__ */ jsxs("div", { className: "mb-6", children: [
+      /* @__PURE__ */ jsx("label", { className: "block text-sm font-[Nunito-medium] text-[var(--main)] mb-2", children: "Quantity" }),
+      /* @__PURE__ */ jsxs("div", { className: "flex items-center border border-[#e8e5df] rounded-md w-fit", children: [
+        /* @__PURE__ */ jsx(
+          "button",
+          {
+            onClick: () => setQuantity(Math.max(1, quantity - 1)),
+            disabled: isAddToCartLoading,
+            className: "w-8 h-8 flex items-center justify-center text-gray-500 hover:text-[#00214c] disabled:opacity-50",
+            children: "-"
+          }
+        ),
+        /* @__PURE__ */ jsx("span", { className: "w-10 text-center font-semibold text-[#00214c]", children: quantity }),
+        /* @__PURE__ */ jsx(
+          "button",
+          {
+            onClick: () => setQuantity(quantity + 1),
+            disabled: isAddToCartLoading,
+            className: "w-8 h-8 flex items-center justify-center text-gray-500 hover:text-[#00214c] disabled:opacity-50",
+            children: "+"
+          }
+        )
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxs("div", { className: "flex gap-2", children: [
+      /* @__PURE__ */ jsx(
+        "button",
+        {
+          onClick: onClose,
+          disabled: isAddToCartLoading,
+          className: "flex-1 px-4 py-2 border border-[#e8e5df] rounded-md text-sm font-[Nunito-medium] hover:bg-gray-50 disabled:opacity-50",
+          children: "Cancel"
+        }
+      ),
+      /* @__PURE__ */ jsx(
+        "button",
+        {
+          onClick: handleConfirm,
+          disabled: isAddToCartLoading,
+          className: "flex-1 px-4 py-2 bg-[#00214c] text-white rounded-md text-sm font-[Nunito-medium] hover:bg-[#0d346b] disabled:opacity-50",
+          children: isAddToCartLoading ? "Loading..." : isEditMode ? "Update" : "Add to Cart"
+        }
+      )
+    ] })
+  ] }) });
+};
+var CustomizationModal_default = CustomizationModal;
+var ViewCustomizationModal = ({
+  isOpen,
+  onClose,
+  customizations = [],
+  productName = ""
+}) => {
+  if (!isOpen) return null;
+  return /* @__PURE__ */ jsx("div", { className: "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50", children: /* @__PURE__ */ jsxs("div", { className: "bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4", children: [
+    /* @__PURE__ */ jsxs("h2", { className: "text-xl font-[Nunito-bold] text-[var(--main)] mb-4", children: [
+      "Customizations for ",
+      productName
+    ] }),
+    /* @__PURE__ */ jsx("div", { className: "space-y-3 mb-6 max-h-[400px] overflow-y-auto", children: customizations.length > 0 ? customizations.map((customization, index) => /* @__PURE__ */ jsxs(
+      "div",
+      {
+        className: "border border-[#e8e5df] rounded-md p-3",
+        children: [
+          /* @__PURE__ */ jsx("p", { className: "text-sm font-[Nunito-medium] text-[var(--main)]", children: customization.name || `Custom ${index + 1}` }),
+          /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-600 mt-1", children: customization.value })
+        ]
+      },
+      `${customization.product_customization_id}-${index}`
+    )) : /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-500 text-center py-4", children: "No customizations added" }) }),
+    /* @__PURE__ */ jsx(
+      "button",
+      {
+        onClick: onClose,
+        className: "w-full px-4 py-2 bg-[#00214c] text-white rounded-md text-sm font-[Nunito-medium] hover:bg-[#0d346b]",
+        children: "Close"
+      }
+    )
+  ] }) });
+};
+var ViewCustomizationModal_default = ViewCustomizationModal;
+var ProductlistCard = ({ product, component, orderType }) => {
+  const { name, price, shipping_charge } = product?.line_itemable ?? {};
+  const productImage = product?.image;
+  const quantity = product?.quantity;
+  const displayPrice = (price ?? 0) / 100;
+  const { formatCurrency } = useCurrencyFormat();
+  const {
+    handleDeleteLineItem,
+    deleteLineItemById,
+    handleDecreaseQty,
+    handleAddToCart,
+    isAddToCartLoading
+  } = useAddToCart();
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const handleDeleteItem = async () => {
+    await deleteLineItemById(product?.id);
+  };
+  const handleEditConfirm = async (newCustomizations, newQty) => {
+    try {
+      await deleteLineItemById(product?.id);
+      await handleAddToCart(product?.line_itemable, newCustomizations, newQty);
+      setIsEditModalOpen(false);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+  const initialCustomizationObj = (product?.line_items_customizations || []).reduce((acc, c) => {
+    acc[c.product_customization_id] = c;
+    return acc;
+  }, {});
+  const customizationsList = product?.line_itemable?.product_customizations || [];
+  const hasCustomizations = product?.line_items_customizations?.length > 0 || customizationsList.length > 0;
+  const isDeleted = !product?.line_itemable || product?.line_itemable_deleted;
+  if (isDeleted) {
+    return /* @__PURE__ */ jsxs("div", { className: "flex justify-between gap-4", children: [
+      /* @__PURE__ */ jsxs("div", { className: "flex gap-[10px] flex-1 min-w-0 opacity-50", children: [
+        /* @__PURE__ */ jsxs("div", { className: "w-[112px] h-[124px] flex-shrink-0 overflow-hidden relative", children: [
+          /* @__PURE__ */ jsx(
+            "img",
+            {
+              src: productImage || "/noProduct.svg",
+              alt: name || "Product",
+              className: "w-[112px] h-[124px] object-cover rounded-lg"
+            }
+          ),
+          /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-lg", children: /* @__PURE__ */ jsx("span", { className: "text-white text-xs font-[Nunito-bold] text-center", children: "UNAVAILABLE" }) })
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between h-[124px] flex-1 min-w-0", children: [
+          /* @__PURE__ */ jsx("div", { className: "min-w-0", children: /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
+            /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-base text-[var(--main)] line-clamp-1", children: name }),
+            /* @__PURE__ */ jsx("span", { className: "text-xs bg-red-100 text-red-700 px-2 py-1 rounded font-[Nunito-medium] flex-shrink-0", children: "Deleted" })
+          ] }) }),
+          /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsxs("p", { className: "font-[Nunito-medium] text-base text-[var(--main)]", children: [
+            quantity,
+            " x ",
+            formatCurrency(displayPrice)
+          ] }) })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between items-end h-[124px] flex-shrink-0", children: [
+        /* @__PURE__ */ jsx("div", { className: "flex flex-col items-end text-right opacity-50", children: /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-base text-[var(--main)] line-clamp-2", children: formatCurrency(displayPrice * quantity) }) }),
+        component !== "order" && /* @__PURE__ */ jsx(
+          DeleteIcon,
+          {
+            onClick: handleDeleteItem,
+            className: "cursor-pointer opacity-100 hover:opacity-80 transition-opacity",
+            title: "Delete item"
+          }
+        )
+      ] })
+    ] });
+  }
+  return /* @__PURE__ */ jsxs("div", { className: "flex justify-between gap-4", children: [
+    /* @__PURE__ */ jsxs("div", { className: "flex gap-[10px] flex-1 min-w-0", children: [
+      /* @__PURE__ */ jsx("div", { className: "w-[112px] h-[124px] flex-shrink-0 overflow-hidden", children: /* @__PURE__ */ jsx(
+        "img",
+        {
+          src: productImage || "/noImage.webp",
+          alt: name || "Product",
+          className: "w-[112px] h-[124px] object-cover rounded-lg"
+        }
+      ) }),
+      /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between h-[124px] flex-1 min-w-0", children: [
+        /* @__PURE__ */ jsxs("div", { className: "min-w-0", children: [
+          /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-base text-[var(--main)] line-clamp-1", children: name }),
+          product?.line_items_customizations?.length > 0 && /* @__PURE__ */ jsx("div", { className: "mt-1 flex flex-col gap-0.5", children: product.line_items_customizations.length > 3 ? /* @__PURE__ */ jsx(
+            "button",
+            {
+              onClick: () => setIsViewModalOpen(true),
+              className: "text-xs text-[#00214c] underline hover:text-[#0d346b] transition-colors text-left font-medium",
+              children: "customizations: view"
+            }
+          ) : product.line_items_customizations.map((c) => /* @__PURE__ */ jsxs(
+            "p",
+            {
+              className: "text-xs text-gray-500 line-clamp-1",
+              children: [
+                /* @__PURE__ */ jsxs("span", { className: "font-medium", children: [
+                  c.name || "Custom",
+                  ":"
+                ] }),
+                " ",
+                c.value
+              ]
+            },
+            c.product_customization_id
+          )) })
+        ] }),
+        /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsxs("p", { className: "font-[Nunito-medium] text-base text-[var(--main)]", children: [
+          quantity,
+          " x ",
+          formatCurrency(displayPrice)
+        ] }) })
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between items-end h-[124px] flex-shrink-0", children: [
+      /* @__PURE__ */ jsx("div", { className: "flex flex-col items-end text-right", children: component !== "order" ? /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-base text-[var(--main)] line-clamp-1", children: formatCurrency(displayPrice * quantity) }) : /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-base text-[var(--main)] line-clamp-2", children: formatCurrency(displayPrice * quantity) }) }),
+      component !== "order" && /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3", children: [
+        /* @__PURE__ */ jsxs("div", { className: "flex items-center border border-[#e8e5df] rounded-md h-[28px] bg-[#f9f9f9]", children: [
+          /* @__PURE__ */ jsx(
+            "button",
+            {
+              onClick: () => handleDecreaseQty(
+                product?.line_itemable,
+                product?.line_items_customizations
+              ),
+              disabled: isAddToCartLoading,
+              className: "w-7 h-full flex items-center justify-center text-lg text-gray-500 hover:text-[#00214c] transition-colors disabled:opacity-50 pb-0.5",
+              children: "-"
+            }
+          ),
+          /* @__PURE__ */ jsx("span", { className: "w-6 text-center text-sm font-semibold text-[#00214c] bg-white h-full flex items-center justify-center border-x border-[#e8e5df]", children: quantity }),
+          /* @__PURE__ */ jsx(
+            "button",
+            {
+              onClick: () => handleAddToCart(
+                product?.line_itemable,
+                product?.line_items_customizations,
+                1
+              ),
+              disabled: isAddToCartLoading,
+              className: "w-7 h-full flex items-center justify-center text-base text-gray-500 hover:text-[#00214c] transition-colors disabled:opacity-50 pb-0.5",
+              children: "+"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsx(
+          DeleteIcon,
+          {
+            onClick: handleDeleteItem,
+            disabled: isAddToCartLoading,
+            className: "cursor-pointer opacity-100 hover:opacity-80 transition-opacity disabled:opacity-50",
+            title: "Delete item"
+          }
+        )
+      ] })
+    ] }),
+    hasCustomizations && /* @__PURE__ */ jsx(
+      CustomizationModal_default,
+      {
+        isOpen: isEditModalOpen,
+        onClose: () => setIsEditModalOpen(false),
+        product: product?.line_itemable,
+        customizationsList,
+        onConfirm: handleEditConfirm,
+        initialValues: initialCustomizationObj,
+        initialQuantity: quantity,
+        isEditMode: true,
+        isAddToCartLoading
+      }
+    ),
+    /* @__PURE__ */ jsx(
+      ViewCustomizationModal_default,
+      {
+        isOpen: isViewModalOpen,
+        onClose: () => setIsViewModalOpen(false),
+        customizations: product?.line_items_customizations || [],
+        productName: name
+      }
+    )
+  ] });
+};
+var ProductlistCard_default = ProductlistCard;
+var Checkout = ({ hasDeletedItems }) => {
+  const { user, isSignedIn, isLoaded } = useUser();
+  if (!isLoaded) return null;
+  return !isSignedIn ? /* @__PURE__ */ jsx(LoginPage, {}) : /* @__PURE__ */ jsx(OrderInfo, { clerkUser: user, hasDeletedItems });
+};
+var LoginPage = () => {
+  const { openSignIn, openSignUp } = useClerk();
+  return /* @__PURE__ */ jsxs("div", { className: "w-full h-full flex flex-col items-center justify-center gap-6", children: [
+    /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center", children: [
+      /* @__PURE__ */ jsx("div", { className: "w-16 h-16 bg-[#00214c]/5 rounded-full flex items-center justify-center mb-4", children: /* @__PURE__ */ jsx(
+        "svg",
+        {
+          className: "w-8 h-8 text-[#00214c]",
+          fill: "none",
+          stroke: "currentColor",
+          viewBox: "0 0 24 24",
+          children: /* @__PURE__ */ jsx(
+            "path",
+            {
+              strokeLinecap: "round",
+              strokeLinejoin: "round",
+              strokeWidth: 2,
+              d: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+            }
+          )
+        }
+      ) }),
+      /* @__PURE__ */ jsxs("div", { className: "text-center", children: [
+        /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-[20px] text-[var(--main)]", children: "Sign in to continue" }),
+        /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[14px] text-[var(--secondary)] mt-1", children: "Please sign in or create an account to checkout." })
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxs("div", { className: "w-full space-y-3", children: [
+      /* @__PURE__ */ jsx(
+        "button",
+        {
+          className: "w-full font-[Nunito-medium] bg-[var(--main)] text-[var(--secondaryBg)] py-[10px] rounded-lg cursor-pointer hover:opacity-90 transition-opacity",
+          onClick: () => openSignIn(),
+          children: "Sign in"
+        }
+      ),
+      /* @__PURE__ */ jsxs(
+        "button",
+        {
+          className: "w-full font-[Nunito-regular] border border-[var(--main)] py-[10px] text-[var(--main)] rounded-lg cursor-pointer hover:bg-[var(--secondaryBg)] transition-colors",
+          onClick: () => openSignUp(),
+          children: [
+            "New here?",
+            " ",
+            /* @__PURE__ */ jsx("span", { className: "font-[Nunito-medium]", children: "Register your account" })
+          ]
+        }
+      )
+    ] })
+  ] });
+};
+var OrderInfo = ({ clerkUser, hasDeletedItems }) => {
+  return /* @__PURE__ */ jsx("div", { className: "flex flex-col items-center justify-center gap-6", children: /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-[16px] text-[var(--main)]", children: "Order Information will be added soon" }) });
+};
+var Checkout_default = Checkout;
+var ViewCart = () => {
+  const { cart, cartItems } = useAddToCart();
+  const { isLoaded } = useUser();
+  const { formatCurrency } = useCurrencyFormat();
+  const {
+    line_items: cartItem = cartItems,
+    display_total,
+    display_item_total,
+    display_ship_total,
+    display_tax_total,
+    order_type
+  } = cart || {};
+  console.log({ cart, cartItems });
+  const items = cartItems ?? [];
+  const isLoading = !isLoaded;
+  const deletedItems = items.filter(
+    (item) => !item?.line_itemable || item?.line_itemable_deleted
+  );
+  const hasDeletedItems = deletedItems.length > 0;
+  return /* @__PURE__ */ jsx("div", { className: "mx-4 md:mx-[24px] my-[100px] flex justify-center", children: isLoading ? (
+    // <ScreenLoading />
+    /* @__PURE__ */ jsx(Fragment, { children: "Loading" })
+  ) : items.length === 0 ? (
+    // <EmptyScreen
+    //     icon={<ShoppingBagIcon />}
+    //     title={"Your Cart Feels a Little Empty"}
+    //     description="Add a touch of charm to your space and style. Browse our handcrafted collections and find something you love."
+    // />
+    /* @__PURE__ */ jsx(Fragment, { children: "Your Cart Feels a Little Empty" })
+  ) : /* @__PURE__ */ jsxs("div", { className: "flex flex-row flex-wrap gap-[16px] max-w-[1248px] w-full", children: [
+    /* @__PURE__ */ jsx("div", { className: "flex-1 mt-8 md:mt-0", children: /* @__PURE__ */ jsx(Checkout_default, { hasDeletedItems }) }),
+    /* @__PURE__ */ jsx("div", { className: "border border-[var(--borders)] sticky hidden md:block" }),
+    /* @__PURE__ */ jsxs("div", { className: "flex-1 md:sticky top-4 self-start mt-[18px] md:mt-0 order-first md:order-last", children: [
+      hasDeletedItems && /* @__PURE__ */ jsx("div", { className: "bg-yellow-50 border border-yellow-200 rounded-md p-3 mb-4", children: /* @__PURE__ */ jsx("p", { className: "text-sm text-yellow-800 font-[Nunito-medium]", children: "\u26A0\uFE0F Some items in your cart are no longer available. Please remove them before checkout." }) }),
+      /* @__PURE__ */ jsxs("div", { children: [
+        /* @__PURE__ */ jsxs("div", { className: "font-[Nunito-medium] text-[20px] text-[var(--main)]", children: [
+          "ORDER ITEMS (",
+          items.length,
+          ")"
+        ] }),
+        /* @__PURE__ */ jsx("div", { className: "max-h-[500px] overflow-auto mt-3", children: /* @__PURE__ */ jsx("div", { className: "flex flex-col gap-y-[16px]", children: items.map((item) => /* @__PURE__ */ jsx(
+          ProductlistCard_default,
+          {
+            product: item,
+            orderType: order_type
+          },
+          item?.id
+        )) }) }),
+        /* @__PURE__ */ jsxs("div", { className: "mt-8", children: [
+          /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-[20px] text-[var(--main)]", children: "Bill summary" }),
+          /* @__PURE__ */ jsxs("div", { className: "mt-[24px] space-y-[8px]", children: [
+            /* @__PURE__ */ jsxs("div", { className: "flex justify-between", children: [
+              /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[14px] text-[var(--main)]", children: "Item total" }),
+              /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[14px] text-[var(--main)]", children: display_item_total ? formatCurrency(display_item_total) : "\u2014" })
+            ] }),
+            /* @__PURE__ */ jsxs("div", { className: "flex justify-between", children: [
+              /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[14px] text-[var(--main)]", children: "Tax" }),
+              /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[14px] text-[var(--main)]", children: display_tax_total ? formatCurrency(display_tax_total) : "\u2014" })
+            ] }),
+            order_type !== "pickup" && /* @__PURE__ */ jsxs("div", { className: "flex justify-between", children: [
+              /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[14px] text-[var(--main)]", children: "Shipping" }),
+              /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[14px] text-[var(--main)]", children: display_ship_total === "0.00" || display_ship_total === 0 ? "Free" : display_ship_total ? formatCurrency(display_ship_total) : "\u2014" })
+            ] }),
+            /* @__PURE__ */ jsx("div", { className: "pt-[16px] border-t border-[var(--borders)]", children: /* @__PURE__ */ jsxs("div", { className: "flex justify-between", children: [
+              /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-[16px] text-[var(--main)]", children: "Total payment" }),
+              /* @__PURE__ */ jsx("p", { className: "font-[Nunito-bold] text-[16px] text-[var(--main)]", children: display_total ? formatCurrency(display_total) : "\u2014" })
+            ] }) })
+          ] })
+        ] })
+      ] })
+    ] })
+  ] }) });
+};
 
-export { CartItem, CartPage, CartSummary, CoreProvider, EmptyState, Hello, Spinner, useAddToCart, useAuth, useCart, userCartInfo_default as useCartInfo, useCore, useCurrencyFormat, useLogout, useVariantSelection };
+export { CartItem, CartPage, CartSummary, CoreProvider, EmptyState, Hello, Spinner, ViewCart, useAddToCart, useAuth, useCart, userCartInfo_default as useCartInfo, useCore, useCurrencyFormat, useLogout, useVariantSelection };
 //# sourceMappingURL=index.js.map
 //# sourceMappingURL=index.js.map

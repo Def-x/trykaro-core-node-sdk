@@ -31,7 +31,6 @@ export const CoreProvider = ({
     actions = {},
     toast = null,
     auth = null,
-    initialCart,
 }) => {
     const [cart, setCart] = useState();
     const [isCartLoading, setIsCartLoading] = useState(false);
@@ -41,13 +40,13 @@ export const CoreProvider = ({
     useEffect(() => {
         // Skip if cart was already hydrated from SSR or no action available
         console.log("before initialCart")
-        if (initialCart || !actions?.getCart) return;
-        console.log("before initialCart", { initialCart, actions })
+        if (!actions?.getCart) return;
+        console.log("before loadCart", { actions })
 
         const loadCart = async () => {
             try {
                 setIsCartLoading(true);
-                console.log("loadCart", { isSignedIn })
+
                 let resolvedCart = null;
                 const isSignedIn = auth?.isSignedIn ?? false;
 

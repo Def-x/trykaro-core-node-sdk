@@ -1,24 +1,39 @@
 import { defineConfig } from "tsup";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
-    entry: ["src/index.js"],
-    format: ["esm"],
-    clean: true,
-    sourcemap: true,
-    dts: false,         // JS-only package — no TypeScript declarations needed
-    treeshake: true,
+  entry: ["src/index.js"],
+  format: ["esm"],
+  clean: true,
+  sourcemap: true,
+  dts: false, // JS-only package — no TypeScript declarations needed
+  treeshake: true,
 
-    // External deps — consumers provide these. Prevents duplicate React/lodash instances.
-    external: ["react", "react-dom", "lodash"],
+  // External deps — consumers provide these. Prevents duplicate React/lodash instances.
+  external: ["react", "react-dom", "lodash", "@clerk/nextjs"],
 
-    // Handle .js files as JSX
-    loader: {
-        ".js": "jsx",
-    },
+  // Handle .js files as JSX
+  loader: {
+    ".js": "jsx",
+  },
 
-    esbuildOptions(options) {
-        // Use the automatic JSX runtime (react/jsx-runtime).
-        // This means no need for `import React from "react"` in every file.
-        options.jsx = "automatic";
-    },
+  esbuildOptions(options) {
+    // Use the automatic JSX runtime (react/jsx-runtime).
+    // This means no need for `import React from "react"` in every file.
+    options.jsx = "automatic";
+
+    // Add path alias support
+    options.alias = {
+      "@": path.resolve(__dirname, "src"),
+      "@/hooks": path.resolve(__dirname, "src/hooks"),
+      "@/components": path.resolve(__dirname, "src/components"),
+      "@/context": path.resolve(__dirname, "src/context"),
+      "@/styles": path.resolve(__dirname, "src/styles"),
+      "@/config": path.resolve(__dirname, "src/config"),
+      "@/public": path.resolve(__dirname, "public"),
+    };
+  },
 });

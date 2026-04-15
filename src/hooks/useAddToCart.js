@@ -31,6 +31,7 @@ export function useAddToCart() {
 
     const isSignedIn = auth?.isSignedIn ?? false;
     const regionId = config?.regionId ?? null;
+    const cartItems = cart?.line_items ?? [];
 
     // ─── Helpers ────────────────────────────────────────────────────────────
 
@@ -113,7 +114,7 @@ export function useAddToCart() {
                     : null;
 
             let resolvedCartId = cart?.id ?? storedCartId;
-            console.log("handleAddToCart before cart check", { cart, storedCartId, resolvedCartId, storedCartId })
+            console.log("handleAddToCart before cart check", { cart, storedCartId, resolvedCartId })
             // Create cart if needed
             if (!cart) {
                 const payload = {
@@ -211,5 +212,7 @@ export function useAddToCart() {
         quantity,
         setQuantity,
         isAddToCartLoading,
+        cartItems,
+        cart
     };
 }

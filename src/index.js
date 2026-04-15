@@ -21,3 +21,4 @@ export { EmptyState } from "./components/ui/EmptyState";
 
 // ─── Debug / Dev ──────────────────────────────────────────────────────────────
 export { Hello } from "./components/hello";
+export { ViewCart } from "./components/cart/ViewCart"
