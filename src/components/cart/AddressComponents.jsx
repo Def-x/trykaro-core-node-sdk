@@ -1,0 +1,354 @@
+"use client";
+
+import React, { useState, useCallback, useEffect } from "react";
+import { useCore } from "../../context/CoreProvider";
+
+// ─── AddressFormInline (when no addresses exist) ───────────────────────────────
+export const AddressFormInline = ({ refetch }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div>
+      <p className="font-[Nunito-regular] text-[14px] text-[var(--secondary)] mb-3">
+        No addresses saved yet.
+      </p>
+      <button
+        onClick={() => setIsOpen(true)}
+        className="font-[Nunito-medium] text-[var(--main)] underline text-sm"
+      >
+        + Add your first address
+      </button>
+      {/* Popup integration placeholder */}
+      {isOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <p className="font-[Nunito-medium]">Address Form Popup</p>
+            <button
+              onClick={() => setIsOpen(false)}
+              className="mt-4 px-4 py-2 bg-gray-200 rounded"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── AddressSelection ──────────────────────────────────────────────────────────
+export const AddressSelection = ({
+  cart,
+  setCart,
+  address,
+  sameAsShipping,
+  clerkUser,
+  setSameAsShipping,
+  shippingAddressId,
+  billingAddressId,
+  setSelectedAddress,
+  isCartHaveBillingAddress,
+  isCarthaveShippingAddress,
+  refetch,
+}) => {
+  const { actions } = useCore();
+  const [isOpenAddAddress, setIsOpenAddAddress] = useState(false);
+
+  console.log({ actions });
+  const updateCart = useCallback(
+    async (apiData) => {
+      try {
+        // Call updateCart action from context
+        if (actions?.updateCart) {
+          await actions.updateCart(apiData);
+          setCart((prev) => ({
+            ...prev,
+            ...apiData,
+          }));
+        }
+      } catch (err) {
+        console.error("Failed to update cart address:", err);
+      }
+    },
+    [actions, setCart],
+  );
+
+  const onSwitchChange = () => {
+    const next = !sameAsShipping;
+    setSameAsShipping(next);
+
+    if (next) {
+      updateCart({
+        id: cart?.id,
+        billing_address_id: shippingAddressId,
+        shipping_address_id: shippingAddressId,
+      });
+    } else {
+      const billingAddr = address.find((a) => a?.id !== shippingAddressId);
+      updateCart({
+        id: cart?.id,
+        billing_address_id: billingAddr?.id,
+        shipping_address_id: shippingAddressId,
+      });
+    }
+  };
+
+  const onSelectedAddress = (addressId, type) => {
+    const apiData = { id: cart?.id };
+    if (type === "billing") {
+      setSelectedAddress((prev) => ({ ...prev, billingAddressId: addressId }));
+      apiData.billing_address_id = addressId;
+    } else {
+      setSelectedAddress((prev) => ({ ...prev, shippingAddressId: addressId }));
+      apiData.shipping_address_id = addressId;
+    }
+    updateCart(apiData);
+  };
+
+  useEffect(() => {
+    if (!clerkUser) return;
+    const apiData = { id: cart?.id };
+    if (!isCartHaveBillingAddress && billingAddressId)
+      apiData.billing_address_id = billingAddressId;
+    if (!isCarthaveShippingAddress && shippingAddressId)
+      apiData.shipping_address_id = sameAsShipping
+        ? billingAddressId
+        : shippingAddressId;
+    if (apiData.billing_address_id || apiData.shipping_address_id) {
+      updateCart(apiData);
+    }
+  }, [address, shippingAddressId, billingAddressId]);
+
+  return (
+    <div className="w-full flex justify-center">
+      <div className="w-full space-y-8">
+        {/* Shipping Address */}
+        <div>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="font-[Nunito-medium] text-[20px] text-[var(--main)] tracking-wide">
+              SHIPPING ADDRESS
+            </h2>
+            <button
+              className="text-base font-[Nunito-medium] text-[var(--main)] hover:underline"
+              onClick={() => setIsOpenAddAddress(true)}
+            >
+              Add new address
+            </button>
+          </div>
+          <div className="w-full flex flex-col gap-y-[8px]">
+            {address.map((data) => (
+              <AddressSelectionCard
+                key={data?.id}
+                data={data}
+                isSelected={data?.id === shippingAddressId}
+                onClick={() => onSelectedAddress(data?.id, "shipping")}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Billing Address */}
+        <div>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="font-[Nunito-medium] text-[20px] text-[var(--main)] tracking-wide">
+              BILLING ADDRESS
+            </h2>
+            <button
+              className="text-base font-[Nunito-medium] text-[var(--main)] hover:underline"
+              onClick={() => setIsOpenAddAddress(true)}
+            >
+              Add new address
+            </button>
+          </div>
+
+          {/* Same as shipping toggle */}
+          <div
+            className={`flex items-center justify-between mb-6 p-4 rounded-lg border cursor-pointer ${
+              sameAsShipping
+                ? "border-[var(--main)]"
+                : "border-[var(--borders)]"
+            }`}
+            onClick={onSwitchChange}
+          >
+            <p className="font-[Nunito-medium] text-base text-[var(--main)]">
+              Same as Shipping address
+            </p>
+            <div className="relative w-12 h-6 flex items-center">
+              <div
+                className={`w-full h-full rounded-full transition-colors duration-300 ${
+                  sameAsShipping ? "bg-[#00214c]" : "bg-gray-300"
+                }`}
+              />
+              <div
+                className={`absolute left-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-300 ${
+                  sameAsShipping ? "translate-x-6" : "translate-x-0"
+                }`}
+              />
+            </div>
+          </div>
+
+          {!sameAsShipping && (
+            <div className="w-full flex flex-col gap-y-[8px]">
+              {address.map((data) => {
+                const isShipping = data?.id === shippingAddressId;
+                if (isShipping) return null;
+                return (
+                  <AddressSelectionCard
+                    key={data?.id}
+                    data={data}
+                    isSelected={data?.id === billingAddressId}
+                    onClick={() => onSelectedAddress(data?.id, "billing")}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Add address popup placeholder */}
+      {isOpenAddAddress && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <p className="font-[Nunito-medium]">Address Form Popup</p>
+            <button
+              onClick={() => setIsOpenAddAddress(false)}
+              className="mt-4 px-4 py-2 bg-gray-200 rounded"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── AddressSelectionCard ──────────────────────────────────────────────────────
+export const AddressSelectionCard = ({
+  data,
+  isSelected,
+  onClick,
+  isShippingAddress,
+}) => {
+  const {
+    label,
+    firstname,
+    lastname,
+    phone,
+    address1,
+    address2,
+    city,
+    country_name,
+    state_name,
+  } = data || {};
+
+  const fullName = `${firstname ?? ""} ${lastname ?? ""}`.trim();
+  const fullAddress = [address1, address2, city, state_name, country_name]
+    .filter(Boolean)
+    .join(", ");
+
+  return (
+    <div
+      onClick={onClick}
+      className={`w-full flex flex-col border-2 cursor-pointer transition-all duration-200 rounded-lg p-[16px] gap-y-[8px] ${
+        isSelected
+          ? "border-[#1e1e1e] bg-gray-50 shadow-sm"
+          : "border-gray-200 hover:border-gray-300"
+      }`}
+    >
+      <p className="font-[Nunito-medium] text-[var(--main)] text-base truncate">
+        {label}
+        {isShippingAddress && (
+          <span className="font-[Nunito-regular] text-[14px] text-[var(--secondary)] ml-1">
+            (Current shipping address)
+          </span>
+        )}
+      </p>
+      <div className="border-t border-[var(--borders)]" />
+      <p className="font-[Nunito-regular] text-[14px] text-[var(--main)] break-words">
+        {fullName} | {phone}
+      </p>
+      <div className="border-t border-[var(--borders)]" />
+      <p
+        className="font-[Nunito-regular] text-[14px] text-[var(--main)] w-full break-words overflow-hidden text-ellipsis"
+        style={{
+          display: "-webkit-box",
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: "vertical",
+        }}
+      >
+        {fullAddress}
+      </p>
+    </div>
+  );
+};
+
+// ─── AddressCard ───────────────────────────────────────────────────────────────
+export const AddressCard = ({
+  addressType,
+  address,
+  type,
+  isSelected,
+  onClick,
+}) => {
+  const isPayment = type === "stripe";
+  return (
+    <div
+      className={`w-full border p-[16px] transition-all duration-150 rounded-lg ${
+        isPayment || isSelected
+          ? "border-[var(--main)]"
+          : "border-[var(--borders)]"
+      } ${!isPayment ? "cursor-pointer" : ""}`}
+      onClick={onClick}
+    >
+      {isPayment ? (
+        <div className="flex flex-row items-center justify-between">
+          <div className="flex flex-col justify-between">
+            <p className="font-[Nunito-medium] text-base text-[var(--main)]">
+              {addressType}
+            </p>
+            <p
+              className="font-[Nunito-regular] text-[var(--main)] text-[14px] mt-[8px] break-words"
+              style={{
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden",
+              }}
+            >
+              {address}
+            </p>
+          </div>
+          <div className="ml-4 flex-shrink-0">
+            {/* Razorpay logo placeholder */}
+            <div className="w-[60px] h-[30px] bg-[var(--secondaryBg)] border border-[var(--borders)] rounded flex items-center justify-center">
+              <span className="text-[10px] font-[Nunito-bold] text-[var(--main)]">
+                Razorpay
+              </span>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div>
+          <div className="flex flex-row justify-between items-center">
+            <p className="font-[Nunito-medium] text-base text-[var(--main)]">
+              {addressType}
+            </p>
+          </div>
+          <p
+            className="font-[Nunito-regular] text-[var(--main)] text-[14px] mt-[8px] break-words"
+            style={{
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
+          >
+            {address}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};

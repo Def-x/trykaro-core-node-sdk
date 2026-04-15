@@ -1,7 +1,10 @@
-import React6, { createContext, useState, useEffect, useMemo, useContext } from 'react';
+import React6, { createContext, useState, useEffect, useMemo, useContext, useCallback } from 'react';
 import { jsx, jsxs, Fragment } from 'react/jsx-runtime';
 import { flatten, map, compact, filter, uniqBy } from 'lodash';
 import { useUser, useClerk } from '@clerk/nextjs';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useRazorpay } from 'react-razorpay';
 
 // src/context/CoreProvider.js
 var CoreContext = createContext(null);
@@ -31,7 +34,10 @@ var CoreProvider = ({
           const storedCartId = typeof window !== "undefined" ? localStorage.getItem("cartid") : null;
           console.log({ storedCartId });
           if (storedCartId && actions?.getCartById) {
-            resolvedCart = await actions.getCartById(storedCartId, config?.regionId);
+            resolvedCart = await actions.getCartById(
+              storedCartId,
+              config?.regionId
+            );
           }
         }
         console.log({ resolvedCart });
@@ -1146,6 +1152,294 @@ var ProductlistCard = ({ product, component, orderType }) => {
   ] });
 };
 var ProductlistCard_default = ProductlistCard;
+var AddressFormInline = ({ refetch }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  return /* @__PURE__ */ jsxs("div", { children: [
+    /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[14px] text-[var(--secondary)] mb-3", children: "No addresses saved yet." }),
+    /* @__PURE__ */ jsx(
+      "button",
+      {
+        onClick: () => setIsOpen(true),
+        className: "font-[Nunito-medium] text-[var(--main)] underline text-sm",
+        children: "+ Add your first address"
+      }
+    ),
+    isOpen && /* @__PURE__ */ jsx("div", { className: "fixed inset-0 bg-black/50 flex items-center justify-center z-50", children: /* @__PURE__ */ jsxs("div", { className: "bg-white rounded-lg p-6 max-w-md w-full mx-4", children: [
+      /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium]", children: "Address Form Popup" }),
+      /* @__PURE__ */ jsx(
+        "button",
+        {
+          onClick: () => setIsOpen(false),
+          className: "mt-4 px-4 py-2 bg-gray-200 rounded",
+          children: "Close"
+        }
+      )
+    ] }) })
+  ] });
+};
+var AddressSelection = ({
+  cart,
+  setCart,
+  address,
+  sameAsShipping,
+  clerkUser,
+  setSameAsShipping,
+  shippingAddressId,
+  billingAddressId,
+  setSelectedAddress,
+  isCartHaveBillingAddress,
+  isCarthaveShippingAddress,
+  refetch
+}) => {
+  const { actions } = useCore();
+  const [isOpenAddAddress, setIsOpenAddAddress] = useState(false);
+  console.log({ actions });
+  const updateCart = useCallback(
+    async (apiData) => {
+      try {
+        if (actions?.updateCart) {
+          await actions.updateCart(apiData);
+          setCart((prev) => ({
+            ...prev,
+            ...apiData
+          }));
+        }
+      } catch (err) {
+        console.error("Failed to update cart address:", err);
+      }
+    },
+    [actions, setCart]
+  );
+  const onSwitchChange = () => {
+    const next = !sameAsShipping;
+    setSameAsShipping(next);
+    if (next) {
+      updateCart({
+        id: cart?.id,
+        billing_address_id: shippingAddressId,
+        shipping_address_id: shippingAddressId
+      });
+    } else {
+      const billingAddr = address.find((a) => a?.id !== shippingAddressId);
+      updateCart({
+        id: cart?.id,
+        billing_address_id: billingAddr?.id,
+        shipping_address_id: shippingAddressId
+      });
+    }
+  };
+  const onSelectedAddress = (addressId, type) => {
+    const apiData = { id: cart?.id };
+    if (type === "billing") {
+      setSelectedAddress((prev) => ({ ...prev, billingAddressId: addressId }));
+      apiData.billing_address_id = addressId;
+    } else {
+      setSelectedAddress((prev) => ({ ...prev, shippingAddressId: addressId }));
+      apiData.shipping_address_id = addressId;
+    }
+    updateCart(apiData);
+  };
+  useEffect(() => {
+    if (!clerkUser) return;
+    const apiData = { id: cart?.id };
+    if (!isCartHaveBillingAddress && billingAddressId)
+      apiData.billing_address_id = billingAddressId;
+    if (!isCarthaveShippingAddress && shippingAddressId)
+      apiData.shipping_address_id = sameAsShipping ? billingAddressId : shippingAddressId;
+    if (apiData.billing_address_id || apiData.shipping_address_id) {
+      updateCart(apiData);
+    }
+  }, [address, shippingAddressId, billingAddressId]);
+  return /* @__PURE__ */ jsxs("div", { className: "w-full flex justify-center", children: [
+    /* @__PURE__ */ jsxs("div", { className: "w-full space-y-8", children: [
+      /* @__PURE__ */ jsxs("div", { children: [
+        /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center mb-4", children: [
+          /* @__PURE__ */ jsx("h2", { className: "font-[Nunito-medium] text-[20px] text-[var(--main)] tracking-wide", children: "SHIPPING ADDRESS" }),
+          /* @__PURE__ */ jsx(
+            "button",
+            {
+              className: "text-base font-[Nunito-medium] text-[var(--main)] hover:underline",
+              onClick: () => setIsOpenAddAddress(true),
+              children: "Add new address"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsx("div", { className: "w-full flex flex-col gap-y-[8px]", children: address.map((data) => /* @__PURE__ */ jsx(
+          AddressSelectionCard,
+          {
+            data,
+            isSelected: data?.id === shippingAddressId,
+            onClick: () => onSelectedAddress(data?.id, "shipping")
+          },
+          data?.id
+        )) })
+      ] }),
+      /* @__PURE__ */ jsxs("div", { children: [
+        /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center mb-4", children: [
+          /* @__PURE__ */ jsx("h2", { className: "font-[Nunito-medium] text-[20px] text-[var(--main)] tracking-wide", children: "BILLING ADDRESS" }),
+          /* @__PURE__ */ jsx(
+            "button",
+            {
+              className: "text-base font-[Nunito-medium] text-[var(--main)] hover:underline",
+              onClick: () => setIsOpenAddAddress(true),
+              children: "Add new address"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxs(
+          "div",
+          {
+            className: `flex items-center justify-between mb-6 p-4 rounded-lg border cursor-pointer ${sameAsShipping ? "border-[var(--main)]" : "border-[var(--borders)]"}`,
+            onClick: onSwitchChange,
+            children: [
+              /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-base text-[var(--main)]", children: "Same as Shipping address" }),
+              /* @__PURE__ */ jsxs("div", { className: "relative w-12 h-6 flex items-center", children: [
+                /* @__PURE__ */ jsx(
+                  "div",
+                  {
+                    className: `w-full h-full rounded-full transition-colors duration-300 ${sameAsShipping ? "bg-[#00214c]" : "bg-gray-300"}`
+                  }
+                ),
+                /* @__PURE__ */ jsx(
+                  "div",
+                  {
+                    className: `absolute left-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-300 ${sameAsShipping ? "translate-x-6" : "translate-x-0"}`
+                  }
+                )
+              ] })
+            ]
+          }
+        ),
+        !sameAsShipping && /* @__PURE__ */ jsx("div", { className: "w-full flex flex-col gap-y-[8px]", children: address.map((data) => {
+          const isShipping = data?.id === shippingAddressId;
+          if (isShipping) return null;
+          return /* @__PURE__ */ jsx(
+            AddressSelectionCard,
+            {
+              data,
+              isSelected: data?.id === billingAddressId,
+              onClick: () => onSelectedAddress(data?.id, "billing")
+            },
+            data?.id
+          );
+        }) })
+      ] })
+    ] }),
+    isOpenAddAddress && /* @__PURE__ */ jsx("div", { className: "fixed inset-0 bg-black/50 flex items-center justify-center z-50", children: /* @__PURE__ */ jsxs("div", { className: "bg-white rounded-lg p-6 max-w-md w-full mx-4", children: [
+      /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium]", children: "Address Form Popup" }),
+      /* @__PURE__ */ jsx(
+        "button",
+        {
+          onClick: () => setIsOpenAddAddress(false),
+          className: "mt-4 px-4 py-2 bg-gray-200 rounded",
+          children: "Close"
+        }
+      )
+    ] }) })
+  ] });
+};
+var AddressSelectionCard = ({
+  data,
+  isSelected,
+  onClick,
+  isShippingAddress
+}) => {
+  const {
+    label,
+    firstname,
+    lastname,
+    phone,
+    address1,
+    address2,
+    city,
+    country_name,
+    state_name
+  } = data || {};
+  const fullName = `${firstname ?? ""} ${lastname ?? ""}`.trim();
+  const fullAddress = [address1, address2, city, state_name, country_name].filter(Boolean).join(", ");
+  return /* @__PURE__ */ jsxs(
+    "div",
+    {
+      onClick,
+      className: `w-full flex flex-col border-2 cursor-pointer transition-all duration-200 rounded-lg p-[16px] gap-y-[8px] ${isSelected ? "border-[#1e1e1e] bg-gray-50 shadow-sm" : "border-gray-200 hover:border-gray-300"}`,
+      children: [
+        /* @__PURE__ */ jsxs("p", { className: "font-[Nunito-medium] text-[var(--main)] text-base truncate", children: [
+          label,
+          isShippingAddress && /* @__PURE__ */ jsx("span", { className: "font-[Nunito-regular] text-[14px] text-[var(--secondary)] ml-1", children: "(Current shipping address)" })
+        ] }),
+        /* @__PURE__ */ jsx("div", { className: "border-t border-[var(--borders)]" }),
+        /* @__PURE__ */ jsxs("p", { className: "font-[Nunito-regular] text-[14px] text-[var(--main)] break-words", children: [
+          fullName,
+          " | ",
+          phone
+        ] }),
+        /* @__PURE__ */ jsx("div", { className: "border-t border-[var(--borders)]" }),
+        /* @__PURE__ */ jsx(
+          "p",
+          {
+            className: "font-[Nunito-regular] text-[14px] text-[var(--main)] w-full break-words overflow-hidden text-ellipsis",
+            style: {
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical"
+            },
+            children: fullAddress
+          }
+        )
+      ]
+    }
+  );
+};
+var AddressCard = ({
+  addressType,
+  address,
+  type,
+  isSelected,
+  onClick
+}) => {
+  const isPayment = type === "stripe";
+  return /* @__PURE__ */ jsx(
+    "div",
+    {
+      className: `w-full border p-[16px] transition-all duration-150 rounded-lg ${isPayment || isSelected ? "border-[var(--main)]" : "border-[var(--borders)]"} ${!isPayment ? "cursor-pointer" : ""}`,
+      onClick,
+      children: isPayment ? /* @__PURE__ */ jsxs("div", { className: "flex flex-row items-center justify-between", children: [
+        /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between", children: [
+          /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-base text-[var(--main)]", children: addressType }),
+          /* @__PURE__ */ jsx(
+            "p",
+            {
+              className: "font-[Nunito-regular] text-[var(--main)] text-[14px] mt-[8px] break-words",
+              style: {
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden"
+              },
+              children: address
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsx("div", { className: "ml-4 flex-shrink-0", children: /* @__PURE__ */ jsx("div", { className: "w-[60px] h-[30px] bg-[var(--secondaryBg)] border border-[var(--borders)] rounded flex items-center justify-center", children: /* @__PURE__ */ jsx("span", { className: "text-[10px] font-[Nunito-bold] text-[var(--main)]", children: "Razorpay" }) }) })
+      ] }) : /* @__PURE__ */ jsxs("div", { children: [
+        /* @__PURE__ */ jsx("div", { className: "flex flex-row justify-between items-center", children: /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-base text-[var(--main)]", children: addressType }) }),
+        /* @__PURE__ */ jsx(
+          "p",
+          {
+            className: "font-[Nunito-regular] text-[var(--main)] text-[14px] mt-[8px] break-words",
+            style: {
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden"
+            },
+            children: address
+          }
+        )
+      ] })
+    }
+  );
+};
 var Checkout = ({ hasDeletedItems }) => {
   const { user, isSignedIn, isLoaded } = useUser();
   if (!isLoaded) return null;
@@ -1203,7 +1497,238 @@ var LoginPage = () => {
   ] });
 };
 var OrderInfo = ({ clerkUser, hasDeletedItems }) => {
-  return /* @__PURE__ */ jsx("div", { className: "flex flex-col items-center justify-center gap-6", children: /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-[16px] text-[var(--main)]", children: "Order Information will be added soon" }) });
+  const router = useRouter();
+  const { Razorpay } = useRazorpay();
+  const { cart, setCart, actions, config, auth } = useCore();
+  const [addresses, setAddresses] = useState([]);
+  const [isAddressLoading, setIsAddressLoading] = useState(true);
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const isCartHaveBillingAddress = !!cart?.billing_address;
+  const isCarthaveShippingAddress = !!cart?.shipping_address;
+  const [orderType, setOrderType] = useState(cart?.order_type ?? "delivery");
+  const [sameAsShipping, setSameAsShipping] = useState(
+    cart?.billing_address?.id === cart?.shipping_address?.id
+  );
+  const [selectedAddress, setSelectedAddress] = useState({
+    shippingAddressId: cart?.shipping_address?.id ?? null,
+    billingAddressId: cart?.billing_address?.id ?? null
+  });
+  const { shippingAddressId, billingAddressId } = selectedAddress;
+  const fetchAddresses = useCallback(async () => {
+    try {
+      setIsAddressLoading(true);
+      if (actions?.getUserAddress && auth?.isSignedIn) {
+        const data = await actions.getUserAddress();
+        setAddresses(Array.isArray(data) ? data : [data]);
+      }
+    } catch (err) {
+      console.error("Failed to fetch addresses:", err);
+      setAddresses([]);
+    } finally {
+      setIsAddressLoading(false);
+    }
+  }, [actions, auth?.isSignedIn]);
+  useEffect(() => {
+    fetchAddresses();
+  }, [fetchAddresses]);
+  useEffect(() => {
+    setOrderType(cart?.order_type ?? "delivery");
+    const shippingId = cart?.shipping_address?.id ?? addresses?.[0]?.id;
+    const billingId = cart?.billing_address?.id ?? addresses?.[0]?.id;
+    setSelectedAddress({
+      shippingAddressId: shippingId,
+      billingAddressId: billingId
+    });
+    setSameAsShipping(billingId === shippingId);
+  }, [cart, addresses]);
+  const onUpdateOrderType = async (type) => {
+    try {
+      setOrderType(type);
+      if (actions?.updateCart && cart?.id) {
+        await actions.updateCart({
+          id: cart.id,
+          order_type: type
+        });
+        setCart((prev) => ({ ...prev, order_type: type }));
+      }
+    } catch (err) {
+      console.error("Failed to update order type:", err);
+    }
+  };
+  const onRazorPayHandler = (res) => {
+    const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? "";
+    const options = {
+      key: razorpayKey,
+      amount: res?.cart?.total / 100,
+      currency: "INR",
+      name: "Store",
+      description: "Order Payment",
+      order_id: res?.razor_order_id,
+      handler: async (response) => {
+        try {
+          setIsProcessingPayment(true);
+          if (actions?.updateRazorPayment) {
+            await actions.updateRazorPayment(
+              res?.id,
+              response.razorpay_payment_id
+            );
+          }
+          if (res?.id) {
+            router.push(`/order/${res.id}?show=true`);
+          }
+        } catch (err) {
+          console.error("Payment update failed:", err);
+          setIsProcessingPayment(false);
+        }
+      },
+      prefill: {
+        name: clerkUser ? `${clerkUser.firstName ?? ""} ${clerkUser.lastName ?? ""}`.trim() : "",
+        email: clerkUser?.primaryEmailAddress?.emailAddress ?? "",
+        contact: clerkUser?.primaryPhoneNumber ? `${clerkUser.primaryPhoneNumber.phoneNumber}` : ""
+      },
+      theme: { color: "#1e1e1e" }
+    };
+    const razorpay = new Razorpay(options);
+    razorpay.on("payment.failed", (response) => {
+      console.error("Razorpay payment failed:", response);
+    });
+    razorpay.open();
+  };
+  const onPlaceOrder = async () => {
+    if (hasDeletedItems || !cart?.id) return;
+    try {
+      setIsPlacingOrder(true);
+      if (actions?.createRazorOrder) {
+        const orderResponse = await actions.createRazorOrder(cart.id);
+        onRazorPayHandler(orderResponse);
+      }
+    } catch (err) {
+      console.error("Failed to create order:", err);
+    } finally {
+      setIsPlacingOrder(false);
+    }
+  };
+  return /* @__PURE__ */ jsxs("div", { children: [
+    /* @__PURE__ */ jsx("h1", { className: "font-[Nunito-medium] text-[20px] text-[var(--main)] leading-[24px]", children: "ORDER TYPE" }),
+    /* @__PURE__ */ jsx("div", { className: "mt-[16px] flex flex-col gap-y-[16px]", children: /* @__PURE__ */ jsx(
+      AddressCard,
+      {
+        onClick: () => onUpdateOrderType("delivery"),
+        isSelected: orderType === "delivery",
+        addressType: "Delivery",
+        address: "Get your order delivered to your address at ease",
+        type: "delivery"
+      }
+    ) }),
+    orderType !== "pickup" && /* @__PURE__ */ jsx("div", { className: "mt-[32px]", children: isAddressLoading ? /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2 text-[var(--secondary)] text-sm font-[Nunito-regular]", children: [
+      /* @__PURE__ */ jsx("div", { className: "w-4 h-4 border-2 border-[var(--main)] border-t-transparent rounded-full animate-spin" }),
+      "Loading addresses\u2026"
+    ] }) : addresses.length > 0 ? /* @__PURE__ */ jsx(
+      AddressSelection,
+      {
+        address: addresses,
+        cart,
+        setCart,
+        clerkUser,
+        refetch: fetchAddresses,
+        sameAsShipping,
+        setSameAsShipping,
+        shippingAddressId,
+        billingAddressId,
+        setSelectedAddress,
+        isCartHaveBillingAddress,
+        isCarthaveShippingAddress
+      }
+    ) : /* @__PURE__ */ jsx(AddressFormInline, { refetch: fetchAddresses }) }),
+    /* @__PURE__ */ jsxs("div", { className: "mt-[32px]", children: [
+      /* @__PURE__ */ jsx("h1", { className: "font-[Nunito-medium] text-[20px] text-[var(--main)]", children: "PAYMENT" }),
+      /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[14px] text-[var(--secondary)]", children: "All transactions are secure and encrypted." }),
+      /* @__PURE__ */ jsx("div", { className: "mt-[16px]", children: /* @__PURE__ */ jsx(
+        AddressCard,
+        {
+          addressType: "Pay with Razorpay",
+          address: "Once you click Checkout, you'll be redirected to a secure Razorpay payment window to complete your payment.",
+          type: "stripe"
+        }
+      ) })
+    ] }),
+    /* @__PURE__ */ jsxs("div", { className: "mt-[32px]", children: [
+      /* @__PURE__ */ jsx(
+        "button",
+        {
+          onClick: onPlaceOrder,
+          disabled: hasDeletedItems || isPlacingOrder || isAddressLoading,
+          className: `px-5 py-3 w-full rounded-lg cursor-pointer font-[Nunito-medium] text-[15px] transition-all duration-300 ${hasDeletedItems || isPlacingOrder || isAddressLoading ? "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none" : "bg-[#00214c] text-white hover:bg-[#000] hover:shadow-lg transform active:scale-[0.98]"}`,
+          children: isPlacingOrder ? "Processing\u2026" : hasDeletedItems ? "Remove Deleted Items to Checkout" : "Checkout"
+        }
+      ),
+      /* @__PURE__ */ jsxs("div", { className: "mt-4 text-center", children: [
+        /* @__PURE__ */ jsxs("p", { className: "text-[11px] text-[#8c92a4] font-[Nunito-regular] leading-relaxed", children: [
+          "By placing your order, you agree to our",
+          " ",
+          /* @__PURE__ */ jsx(
+            Link,
+            {
+              href: "/terms-and-conditions",
+              className: "text-[#00214c] underline hover:text-[#c8a95a] transition-colors",
+              children: "Terms & Conditions"
+            }
+          ),
+          " ",
+          "and",
+          " ",
+          /* @__PURE__ */ jsx(
+            Link,
+            {
+              href: "/privacy-policy",
+              className: "text-[#00214c] underline hover:text-[#c8a95a] transition-colors",
+              children: "Privacy Policy"
+            }
+          ),
+          "."
+        ] }),
+        /* @__PURE__ */ jsx("div", { className: "mt-2 flex justify-center gap-3", children: /* @__PURE__ */ jsx(
+          Link,
+          {
+            href: "/refund-policy",
+            className: "text-[10px] text-[#8c92a4] hover:text-[#00214c] transition-colors underline uppercase tracking-wider",
+            children: "Refund Policy"
+          }
+        ) })
+      ] }),
+      hasDeletedItems && /* @__PURE__ */ jsx("p", { className: "text-xs text-red-600 mt-2 font-[Nunito-regular]", children: "Please remove unavailable items before proceeding to checkout." })
+    ] }),
+    isProcessingPayment && /* @__PURE__ */ jsx("div", { className: "fixed inset-0 z-[200] flex flex-col items-center justify-center bg-white/95 backdrop-blur-md animate-fadeIn", children: /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center gap-8 max-w-md w-full px-6", children: [
+      /* @__PURE__ */ jsxs("div", { className: "relative", children: [
+        /* @__PURE__ */ jsx("div", { className: "w-24 h-24 border-[3px] border-[#00214c]/5 rounded-full" }),
+        /* @__PURE__ */ jsx("div", { className: "absolute top-0 left-0 w-24 h-24 border-[3px] border-[#c8a95a] border-t-transparent rounded-full animate-spin" }),
+        /* @__PURE__ */ jsx("div", { className: "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2", children: /* @__PURE__ */ jsx("div", { className: "w-3 h-3 bg-[#00214c] rounded-full animate-pulse shadow-[0_0_15px_rgba(0,33,76,0.3)]" }) })
+      ] }),
+      /* @__PURE__ */ jsxs("div", { className: "text-center space-y-4", children: [
+        /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
+          /* @__PURE__ */ jsx("h2", { className: "font-serif italic text-3xl text-[#00214c] tracking-tight", children: "Processing your payment" }),
+          /* @__PURE__ */ jsx("div", { className: "w-12 h-[1px] bg-[#c8a95a] mx-auto opacity-50" })
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "space-y-2", children: [
+          /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-[#2d2d2d] text-base", children: "We're finalizing your order with Razorpay." }),
+          /* @__PURE__ */ jsxs("p", { className: "font-[Nunito-regular] text-[#8c92a4] text-sm leading-relaxed", children: [
+            "Please do not refresh the page or close this window. ",
+            /* @__PURE__ */ jsx("br", {}),
+            "This will only take a moment."
+          ] })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsx("div", { className: "flex gap-1.5 mt-2", children: [0, 1, 2].map((i) => /* @__PURE__ */ jsx(
+        "div",
+        {
+          className: "w-1.5 h-1.5 bg-[#c8a95a] rounded-full opacity-20 animate-pulse",
+          style: { animationDelay: `${i * 0.2}s` }
+        },
+        i
+      )) })
+    ] }) })
+  ] });
 };
 var Checkout_default = Checkout;
 var ViewCart = () => {

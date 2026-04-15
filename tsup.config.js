@@ -13,8 +13,15 @@ export default defineConfig({
   treeshake: true,
 
   // External deps — consumers provide these. Prevents duplicate React/lodash instances.
-  external: ["react", "react-dom", "lodash", "@clerk/nextjs"],
-
+  external: [
+    "react",
+    "react-dom",
+    "lodash",
+    "@clerk/nextjs",
+    "next/link",
+    "next/navigation",
+    "react-razorpay",
+  ],
   // Handle .js files as JSX
   loader: {
     ".js": "jsx",
