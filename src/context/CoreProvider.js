@@ -39,6 +39,7 @@ export const CoreProvider = ({
   actions = {},
   toast = null,
   auth = null,
+  orgData
 }) => {
   const [cart, setCart] = useState();
   const [isCartLoading, setIsCartLoading] = useState(false);
@@ -105,6 +106,9 @@ export const CoreProvider = ({
       toast,
       auth,
       config,
+
+      //organization data
+      orgData,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [cart, isCartLoading, region, actions, toast, auth, config],
@@ -123,7 +127,7 @@ export const useCore = () => {
   if (!context) {
     throw new Error(
       "[useCore] must be used inside <CoreProvider>. " +
-        "Wrap your app (or the relevant subtree) with <CoreProvider>.",
+      "Wrap your app (or the relevant subtree) with <CoreProvider>.",
     );
   }
 

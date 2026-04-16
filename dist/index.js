@@ -13,7 +13,8 @@ var CoreProvider = ({
   config = {},
   actions = {},
   toast = null,
-  auth = null
+  auth = null,
+  orgData
 }) => {
   const [cart, setCart] = useState();
   const [isCartLoading, setIsCartLoading] = useState(false);
@@ -64,7 +65,9 @@ var CoreProvider = ({
       actions,
       toast,
       auth,
-      config
+      config,
+      //organization data
+      orgData
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [cart, isCartLoading, region, actions, toast, auth, config]
@@ -229,9 +232,9 @@ function useAddToCart() {
 
 // src/hooks/useCurrencyFormat.js
 function useCurrencyFormat() {
-  const { config } = useCore();
-  const currency = config?.currency ?? "USD";
-  const locale = config?.locale ?? "en-US";
+  const { orgData } = useCore();
+  const currency = orgData?.organization_setting?.currency ?? "\u20B9";
+  const locale = orgData?.organization_setting?.locale ?? "en-IN";
   const formatCurrency = (amount) => {
     if (amount == null) return "";
     return new Intl.NumberFormat(locale, {

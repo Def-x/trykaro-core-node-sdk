@@ -17,10 +17,10 @@ import { useCore } from "../context/CoreProvider";
  *  formatCurrency(1999.5) // "₹1,999.50"
  */
 export function useCurrencyFormat() {
-    const { config } = useCore();
+    const { orgData } = useCore();
 
-    const currency = config?.currency ?? "USD";
-    const locale = config?.locale ?? "en-US";
+    const currency = orgData?.organization_setting?.currency ?? "₹";
+    const locale = orgData?.organization_setting?.locale ?? "en-IN";
 
     const formatCurrency = (amount) => {
         if (amount == null) return "";
