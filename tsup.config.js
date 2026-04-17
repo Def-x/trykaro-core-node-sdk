@@ -11,7 +11,6 @@ export default defineConfig({
   sourcemap: true,
   dts: false, // JS-only package — no TypeScript declarations needed
   treeshake: true,
-
   // External deps — consumers provide these. Prevents duplicate React/lodash instances.
   external: [
     "react",

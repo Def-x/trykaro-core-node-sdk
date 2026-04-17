@@ -1,6 +1,8 @@
 "use client";
 
-import { useCore } from "../context/CoreProvider";
+import { useRouter } from "next/navigation";
+import { useClerk } from "@clerk/nextjs";
+import Cookies from "js-cookie";
 
 /**
  * useLogout()
@@ -19,11 +21,17 @@ import { useCore } from "../context/CoreProvider";
  *  <button onClick={logout}>Sign out</button>
  */
 export const useLogout = () => {
-    const { auth } = useCore();
+    const { signOut } = useClerk();
+    const router = useRouter();
 
-    const logout = auth?.logout ?? (() => {
-        console.warn("[useLogout] No logout function injected into CoreProvider.");
-    });
+    const logout = async () => {
+        localStorage.removeItem("cartid");
+        localStorage.removeItem("access_token");
+        Cookies.remove("access_token", { path: "/" });
+        await signOut();
+        router.push("/");
+        router.refresh();
+    };
 
     return logout;
 };

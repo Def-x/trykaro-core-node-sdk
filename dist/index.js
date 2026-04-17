@@ -1,9 +1,11 @@
+"use client";
 import React6, { createContext, useState, useEffect, useMemo, useContext, useCallback } from 'react';
 import { jsx, jsxs, Fragment } from 'react/jsx-runtime';
-import { flatten, map, compact, filter, uniqBy } from 'lodash';
-import { useUser, useClerk } from '@clerk/nextjs';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useClerk, useUser } from '@clerk/nextjs';
+import Cookies from 'js-cookie';
+import { flatten, map, compact, filter, uniqBy } from 'lodash';
+import Link from 'next/link';
 import { useRazorpay } from 'react-razorpay';
 import { createPortal } from 'react-dom';
 
@@ -265,13 +267,17 @@ var useAuth = () => {
   const { auth } = useCore();
   return auth ?? {};
 };
-
-// src/hooks/useLogout.js
 var useLogout = () => {
-  const { auth } = useCore();
-  const logout = auth?.logout ?? (() => {
-    console.warn("[useLogout] No logout function injected into CoreProvider.");
-  });
+  const { signOut } = useClerk();
+  const router = useRouter();
+  const logout = async () => {
+    localStorage.removeItem("cartid");
+    localStorage.removeItem("access_token");
+    Cookies.remove("access_token", { path: "/" });
+    await signOut();
+    router.push("/");
+    router.refresh();
+  };
   return logout;
 };
 function useVariantSelection(rawProduct) {
@@ -812,11 +818,6 @@ var CartPage = ({
     ] })
   ] });
 };
-var Hello = () => {
-  const { cart, isCartLoading } = useCore();
-  console.log("Cart:", cart, isCartLoading);
-  return /* @__PURE__ */ jsx("div", { children: isCartLoading ? "Loading..." : "Core Working \u2705" });
-};
 var DeleteIcon = ({
   onClick,
   className = "",
@@ -1169,6 +1170,340 @@ var ProductlistCard = ({ product, component, orderType }) => {
   ] });
 };
 var ProductlistCard_default = ProductlistCard;
+var Popup = ({
+  isOpen,
+  onClose,
+  title,
+  children,
+  maxWidth = "max-w-[600px]",
+  style = {}
+}) => {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+      setMounted(false);
+    };
+  }, [isOpen]);
+  if (!isOpen || !mounted) return null;
+  const modalContent = /* @__PURE__ */ jsx(
+    "div",
+    {
+      className: "fixed inset-0 bg-black/60 flex items-center justify-center z-[999999] p-4 backdrop-blur-[2px] transition-all duration-300",
+      onClick: (e) => {
+        if (e.target === e.currentTarget) onClose();
+      },
+      children: /* @__PURE__ */ jsxs(
+        "div",
+        {
+          className: `bg-white rounded-lg shadow-2xl w-full ${maxWidth} overflow-hidden max-h-[90vh] overflow-y-auto relative border border-gray-100 animate-in fade-in zoom-in duration-200`,
+          style,
+          children: [
+            (title || onClose) && /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center p-6 border-b border-gray-100 bg-white sticky top-0 z-10", children: [
+              title && /* @__PURE__ */ jsx("h2", { className: "text-[20px] font-[Nunito-bold] text-[#00214c] uppercase tracking-wide", children: title }),
+              onClose && /* @__PURE__ */ jsx(
+                "button",
+                {
+                  onClick: onClose,
+                  className: "text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-full hover:bg-gray-100 ml-auto",
+                  "aria-label": "Close",
+                  children: /* @__PURE__ */ jsx(
+                    "svg",
+                    {
+                      className: "w-6 h-6",
+                      fill: "none",
+                      stroke: "currentColor",
+                      viewBox: "0 0 24 24",
+                      children: /* @__PURE__ */ jsx(
+                        "path",
+                        {
+                          strokeLinecap: "round",
+                          strokeLinejoin: "round",
+                          strokeWidth: 2,
+                          d: "M6 18L18 6M6 6l12 12"
+                        }
+                      )
+                    }
+                  )
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsx("div", { className: "p-6", children })
+          ]
+        }
+      )
+    }
+  );
+  return createPortal(modalContent, document.body);
+};
+var AddressForm = ({
+  initialData,
+  onSuccess,
+  onCancel,
+  submitLabel = "Save Address"
+}) => {
+  const { actions, toast } = useCore();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    address_type: initialData?.address_type || "shipping",
+    address1: initialData?.address1 || "",
+    address2: initialData?.address2 || "",
+    city: initialData?.city || "",
+    zipcode: initialData?.zipcode || "",
+    phone: initialData?.phone || "",
+    firstname: initialData?.firstname || "",
+    lastname: initialData?.lastname || "",
+    state_name: initialData?.state_name || "",
+    country_name: initialData?.country_name || "India",
+    country_iso3: initialData?.country_iso3 || "IND",
+    country_iso: initialData?.country_iso || "IN",
+    state_code: initialData?.state_code || "",
+    label: initialData?.label || "Home"
+  });
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      if (initialData?.id) {
+        if (actions?.updateAddress) {
+          await actions.updateAddress(initialData.id, formData);
+          toast?.success?.("Address updated successfully!");
+        } else {
+          throw new Error("actions.updateAddress is not defined");
+        }
+      } else {
+        if (actions?.createAddress) {
+          await actions.createAddress(formData);
+          toast?.success?.("Address added successfully!");
+        } else {
+          throw new Error("actions.createAddress is not defined");
+        }
+      }
+      onSuccess?.();
+    } catch (err) {
+      console.error("Failed to save address:", err);
+      toast?.error?.(err.message || "Failed to save address. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  const inputCls = "w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#00214c] font-[Nunito-regular]";
+  const labelCls = "text-sm font-[Nunito-bold] text-[#00214c]";
+  return /* @__PURE__ */ jsxs("form", { onSubmit: handleSubmit, className: "space-y-4", children: [
+    /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
+      /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
+        /* @__PURE__ */ jsx("label", { className: labelCls, children: "First Name *" }),
+        /* @__PURE__ */ jsx(
+          "input",
+          {
+            type: "text",
+            name: "firstname",
+            value: formData.firstname,
+            onChange: handleChange,
+            placeholder: "First name",
+            required: true,
+            className: inputCls
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
+        /* @__PURE__ */ jsx("label", { className: labelCls, children: "Last Name *" }),
+        /* @__PURE__ */ jsx(
+          "input",
+          {
+            type: "text",
+            name: "lastname",
+            value: formData.lastname,
+            onChange: handleChange,
+            placeholder: "Last name",
+            required: true,
+            className: inputCls
+          }
+        )
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
+      /* @__PURE__ */ jsx("label", { className: labelCls, children: "Phone *" }),
+      /* @__PURE__ */ jsx(
+        "input",
+        {
+          type: "text",
+          name: "phone",
+          value: formData.phone,
+          onChange: handleChange,
+          placeholder: "Phone number",
+          required: true,
+          className: inputCls
+        }
+      )
+    ] }),
+    /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
+      /* @__PURE__ */ jsx("label", { className: labelCls, children: "Address Line 1 *" }),
+      /* @__PURE__ */ jsx(
+        "input",
+        {
+          type: "text",
+          name: "address1",
+          value: formData.address1,
+          onChange: handleChange,
+          placeholder: "Street address",
+          required: true,
+          className: inputCls
+        }
+      )
+    ] }),
+    /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
+      /* @__PURE__ */ jsx("label", { className: labelCls, children: "Address Line 2" }),
+      /* @__PURE__ */ jsx(
+        "input",
+        {
+          type: "text",
+          name: "address2",
+          value: formData.address2,
+          onChange: handleChange,
+          placeholder: "Apartment, suite, etc.",
+          className: inputCls
+        }
+      )
+    ] }),
+    /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
+      /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
+        /* @__PURE__ */ jsx("label", { className: labelCls, children: "City *" }),
+        /* @__PURE__ */ jsx(
+          "input",
+          {
+            type: "text",
+            name: "city",
+            value: formData.city,
+            onChange: handleChange,
+            placeholder: "City",
+            required: true,
+            className: inputCls
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
+        /* @__PURE__ */ jsx("label", { className: labelCls, children: "State/Province *" }),
+        /* @__PURE__ */ jsx(
+          "input",
+          {
+            type: "text",
+            name: "state_name",
+            value: formData.state_name,
+            onChange: handleChange,
+            placeholder: "State",
+            required: true,
+            className: inputCls
+          }
+        )
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
+      /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
+        /* @__PURE__ */ jsx("label", { className: labelCls, children: "Country *" }),
+        /* @__PURE__ */ jsx(
+          "input",
+          {
+            type: "text",
+            name: "country_name",
+            value: formData.country_name,
+            onChange: handleChange,
+            placeholder: "Country",
+            required: true,
+            className: `${inputCls} bg-gray-50`
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
+        /* @__PURE__ */ jsx("label", { className: labelCls, children: "Postal Code *" }),
+        /* @__PURE__ */ jsx(
+          "input",
+          {
+            type: "text",
+            name: "zipcode",
+            value: formData.zipcode,
+            onChange: handleChange,
+            placeholder: "Postal code",
+            required: true,
+            className: inputCls
+          }
+        )
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
+      /* @__PURE__ */ jsx("label", { className: labelCls, children: "Label (e.g., Home, Office)" }),
+      /* @__PURE__ */ jsx(
+        "input",
+        {
+          type: "text",
+          name: "label",
+          value: formData.label,
+          onChange: handleChange,
+          placeholder: "Label",
+          className: inputCls
+        }
+      )
+    ] }),
+    /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-3 pt-4", children: [
+      /* @__PURE__ */ jsxs(
+        "button",
+        {
+          type: "submit",
+          disabled: isSubmitting,
+          className: `w-full py-3 bg-[#00214c] text-white rounded-md font-[Nunito-bold] transition-colors flex items-center justify-center gap-2 uppercase tracking-widest text-[12px] shadow-lg shadow-blue-100 ${isSubmitting ? "opacity-70 cursor-not-allowed" : "hover:bg-black"}`,
+          children: [
+            isSubmitting && /* @__PURE__ */ jsx("div", { className: "w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" }),
+            isSubmitting ? "Saving..." : submitLabel
+          ]
+        }
+      ),
+      /* @__PURE__ */ jsxs("div", { className: "flex gap-4", children: [
+        onCancel && /* @__PURE__ */ jsx(
+          "button",
+          {
+            type: "button",
+            onClick: onCancel,
+            className: "flex-1 py-3 border border-gray-100 rounded-md text-[#00214c] font-[Nunito-bold] hover:bg-gray-50 transition-colors uppercase tracking-widest text-[12px]",
+            children: "Cancel"
+          }
+        ),
+        initialData?.id && actions?.deleteAddress && /* @__PURE__ */ jsx(
+          "button",
+          {
+            type: "button",
+            disabled: isSubmitting,
+            onClick: async () => {
+              if (window.confirm("Are you sure you want to delete this address?")) {
+                setIsSubmitting(true);
+                try {
+                  await actions.deleteAddress(initialData.id);
+                  toast?.success?.("Address deleted successfully.");
+                  onSuccess?.();
+                } catch (err) {
+                  toast?.error?.("Failed to delete address.");
+                } finally {
+                  setIsSubmitting(false);
+                }
+              }
+            },
+            className: "flex-1 py-3 border border-red-100 text-red-500 rounded-md font-[Nunito-bold] hover:bg-red-50 transition-colors uppercase tracking-widest text-[12px]",
+            children: "Delete Address"
+          }
+        )
+      ] })
+    ] })
+  ] });
+};
 var AddressFormInline = ({ refetch }) => {
   const [isOpen, setIsOpen] = useState(false);
   return /* @__PURE__ */ jsxs("div", { children: [
@@ -1192,264 +1527,17 @@ var AddressFormInline = ({ refetch }) => {
   ] });
 };
 var AddAddressForm = ({ isOpen, onClose, refetch }) => {
-  const { actions, toast } = useCore();
-  const [mounted, setMounted] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState({
-    address_type: "shipping",
-    address1: "",
-    address2: "",
-    city: "",
-    zipcode: "",
-    phone: "",
-    firstname: "",
-    lastname: "",
-    state_name: "",
-    country_name: "India",
-    country_iso3: "IND",
-    country_iso: "IN",
-    state_code: "",
-    label: "Home"
-  });
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    try {
-      if (actions?.createAddress) {
-        await actions.createAddress(formData);
-        toast?.success?.("Address added successfully!");
+  return /* @__PURE__ */ jsx(Popup, { isOpen, onClose, title: "Add New Address", children: /* @__PURE__ */ jsx(
+    AddressForm,
+    {
+      onSuccess: () => {
         refetch?.();
         onClose();
-      } else {
-        console.error("actions.createAddress is not defined");
-        toast?.error?.("Failed to add address: Action not found");
-      }
-    } catch (err) {
-      console.error("Failed to add address:", err);
-      toast?.error?.("Failed to add address. Please try again.");
-    } finally {
-      setIsSubmitting(false);
+      },
+      onCancel: onClose,
+      submitLabel: "Add Address"
     }
-  };
-  useEffect(() => {
-    setMounted(true);
-    return () => setMounted(false);
-  }, []);
-  if (!isOpen || !mounted) return null;
-  const modalContent = /* @__PURE__ */ jsx("div", { className: "fixed inset-0 bg-black/60 flex items-center justify-center z-[999999] p-4 backdrop-blur-[2px]", children: /* @__PURE__ */ jsxs("div", { className: "bg-white rounded-lg shadow-2xl w-full max-w-[600px] overflow-hidden max-h-[90vh] overflow-y-auto relative border border-gray-100", children: [
-    /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center p-6 border-b border-gray-100 bg-white sticky top-0 z-10", children: [
-      /* @__PURE__ */ jsx("h2", { className: "text-[20px] font-[Nunito-bold] text-[#00214c]", children: "Add New Address" }),
-      /* @__PURE__ */ jsx(
-        "button",
-        {
-          onClick: onClose,
-          className: "text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-full hover:bg-gray-100",
-          children: /* @__PURE__ */ jsx(
-            "svg",
-            {
-              className: "w-6 h-6",
-              fill: "none",
-              stroke: "currentColor",
-              viewBox: "0 0 24 24",
-              children: /* @__PURE__ */ jsx(
-                "path",
-                {
-                  strokeLinecap: "round",
-                  strokeLinejoin: "round",
-                  strokeWidth: 2,
-                  d: "M6 18L18 6M6 6l12 12"
-                }
-              )
-            }
-          )
-        }
-      )
-    ] }),
-    /* @__PURE__ */ jsxs("form", { onSubmit: handleSubmit, className: "p-6 space-y-4", children: [
-      /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
-        /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
-          /* @__PURE__ */ jsx("label", { className: "text-sm font-[Nunito-bold] text-[#00214c]", children: "First Name *" }),
-          /* @__PURE__ */ jsx(
-            "input",
-            {
-              type: "text",
-              name: "firstname",
-              value: formData.firstname,
-              onChange: handleChange,
-              placeholder: "First name",
-              required: true,
-              className: "w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#00214c] font-[Nunito-regular]"
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
-          /* @__PURE__ */ jsx("label", { className: "text-sm font-[Nunito-bold] text-[#00214c]", children: "Last Name *" }),
-          /* @__PURE__ */ jsx(
-            "input",
-            {
-              type: "text",
-              name: "lastname",
-              value: formData.lastname,
-              onChange: handleChange,
-              placeholder: "Last name",
-              required: true,
-              className: "w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#00214c] font-[Nunito-regular]"
-            }
-          )
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
-        /* @__PURE__ */ jsx("label", { className: "text-sm font-[Nunito-bold] text-[#00214c]", children: "Phone *" }),
-        /* @__PURE__ */ jsx(
-          "input",
-          {
-            type: "text",
-            name: "phone",
-            value: formData.phone,
-            onChange: handleChange,
-            placeholder: "Phone number",
-            required: true,
-            className: "w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#00214c] font-[Nunito-regular]"
-          }
-        )
-      ] }),
-      /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
-        /* @__PURE__ */ jsx("label", { className: "text-sm font-[Nunito-bold] text-[#00214c]", children: "Address Line 1 *" }),
-        /* @__PURE__ */ jsx(
-          "input",
-          {
-            type: "text",
-            name: "address1",
-            value: formData.address1,
-            onChange: handleChange,
-            placeholder: "Street address",
-            required: true,
-            className: "w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#00214c] font-[Nunito-regular]"
-          }
-        )
-      ] }),
-      /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
-        /* @__PURE__ */ jsx("label", { className: "text-sm font-[Nunito-bold] text-[#00214c]", children: "Address Line 2" }),
-        /* @__PURE__ */ jsx(
-          "input",
-          {
-            type: "text",
-            name: "address2",
-            value: formData.address2,
-            onChange: handleChange,
-            placeholder: "Apartment, suite, etc.",
-            className: "w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#00214c] font-[Nunito-regular]"
-          }
-        )
-      ] }),
-      /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
-        /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
-          /* @__PURE__ */ jsx("label", { className: "text-sm font-[Nunito-bold] text-[#00214c]", children: "City *" }),
-          /* @__PURE__ */ jsx(
-            "input",
-            {
-              type: "text",
-              name: "city",
-              value: formData.city,
-              onChange: handleChange,
-              placeholder: "City",
-              required: true,
-              className: "w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#00214c] font-[Nunito-regular]"
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
-          /* @__PURE__ */ jsx("label", { className: "text-sm font-[Nunito-bold] text-[#00214c]", children: "State/Province *" }),
-          /* @__PURE__ */ jsx(
-            "input",
-            {
-              type: "text",
-              name: "state_name",
-              value: formData.state_name,
-              onChange: handleChange,
-              placeholder: "State",
-              required: true,
-              className: "w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#00214c] font-[Nunito-regular]"
-            }
-          )
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
-        /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
-          /* @__PURE__ */ jsx("label", { className: "text-sm font-[Nunito-bold] text-[#00214c]", children: "Country *" }),
-          /* @__PURE__ */ jsx(
-            "input",
-            {
-              type: "text",
-              name: "country_name",
-              value: formData.country_name,
-              onChange: handleChange,
-              placeholder: "Country",
-              required: true,
-              className: "w-full border border-gray-300 rounded-md p-3 text-sm bg-gray-50 focus:outline-none font-[Nunito-regular]"
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
-          /* @__PURE__ */ jsx("label", { className: "text-sm font-[Nunito-bold] text-[#00214c]", children: "Postal Code *" }),
-          /* @__PURE__ */ jsx(
-            "input",
-            {
-              type: "text",
-              name: "zipcode",
-              value: formData.zipcode,
-              onChange: handleChange,
-              placeholder: "Postal code",
-              required: true,
-              className: "w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#00214c] font-[Nunito-regular]"
-            }
-          )
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
-        /* @__PURE__ */ jsx("label", { className: "text-sm font-[Nunito-bold] text-[#00214c]", children: "Label (e.g., Home, Office)" }),
-        /* @__PURE__ */ jsx(
-          "input",
-          {
-            type: "text",
-            name: "label",
-            value: formData.label,
-            onChange: handleChange,
-            placeholder: "Label",
-            className: "w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#00214c] font-[Nunito-regular]"
-          }
-        )
-      ] }),
-      /* @__PURE__ */ jsxs("div", { className: "flex gap-4 pt-4", children: [
-        /* @__PURE__ */ jsx(
-          "button",
-          {
-            type: "button",
-            onClick: onClose,
-            className: "flex-1 py-3 border border-gray-300 rounded-md text-[#00214c] font-[Nunito-bold] hover:bg-gray-50 transition-colors",
-            children: "Cancel"
-          }
-        ),
-        /* @__PURE__ */ jsxs(
-          "button",
-          {
-            type: "submit",
-            disabled: isSubmitting,
-            className: `flex-1 py-3 bg-black text-white rounded-md font-[Nunito-bold] transition-colors flex items-center justify-center gap-2 ${isSubmitting ? "opacity-70 cursor-not-allowed" : "hover:bg-black/90"}`,
-            children: [
-              isSubmitting && /* @__PURE__ */ jsx("div", { className: "w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" }),
-              isSubmitting ? "Adding..." : "Add Address"
-            ]
-          }
-        )
-      ] })
-    ] })
-  ] }) });
-  return createPortal(modalContent, document.body);
+  ) });
 };
 var AddressSelection = ({
   cart,
@@ -2070,7 +2158,511 @@ var ViewCart = () => {
     ] })
   ] }) });
 };
+var AddressCard2 = ({ address, onEdit, onDelete }) => {
+  const { actions, toast } = useCore();
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      if (actions?.deleteAddress) {
+        await actions.deleteAddress(address.id);
+        toast?.success?.("Address deleted successfully.");
+        onDelete?.();
+      } else {
+        throw new Error("actions.deleteAddress is not defined");
+      }
+    } catch (err) {
+      console.error("Failed to delete address:", err);
+      toast?.error?.("Could not delete address. Please try again.");
+    } finally {
+      setIsDeleting(false);
+      setShowConfirm(false);
+    }
+  };
+  const {
+    label,
+    firstname,
+    lastname,
+    phone,
+    address1,
+    address2,
+    city,
+    country_name,
+    state_name
+  } = address || {};
+  const fullName = `${firstname ?? ""} ${lastname ?? ""}`.trim();
+  const fullAddress = [address1, address2, city, state_name, country_name].filter(Boolean).join(", ");
+  return /* @__PURE__ */ jsxs(Fragment, { children: [
+    /* @__PURE__ */ jsxs("div", { className: "border border-gray-100 p-6 flex flex-col gap-y-4 hover:border-[#00214c] transition-all duration-300 bg-white shadow-sm hover:shadow-md group", children: [
+      /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
+        /* @__PURE__ */ jsx("h3", { className: "font-[Nunito-bold] text-[13px] text-[#00214c] uppercase tracking-widest bg-gray-50 px-2 py-1", children: label || "Address" }),
+        /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3", children: [
+          /* @__PURE__ */ jsxs(
+            "button",
+            {
+              className: "flex items-center gap-1.5 font-[Nunito-medium] text-[12px] text-[#2563EB] hover:text-[#1d4ed8] transition-colors uppercase tracking-widest",
+              onClick: onEdit,
+              children: [
+                /* @__PURE__ */ jsx("svg", { className: "w-3.5 h-3.5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" }) }),
+                "Edit"
+              ]
+            }
+          ),
+          /* @__PURE__ */ jsx("span", { className: "text-gray-200 text-[10px]", children: "|" }),
+          /* @__PURE__ */ jsxs(
+            "button",
+            {
+              className: "flex items-center gap-1.5 font-[Nunito-medium] text-[12px] text-red-500 hover:text-red-700 transition-colors uppercase tracking-widest",
+              onClick: () => setShowConfirm(true),
+              children: [
+                /* @__PURE__ */ jsx("svg", { className: "w-3.5 h-3.5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" }) }),
+                "Delete"
+              ]
+            }
+          )
+        ] })
+      ] }),
+      /* @__PURE__ */ jsx("div", { className: "border-t border-gray-50" }),
+      /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
+        /* @__PURE__ */ jsx("p", { className: "font-[Nunito-bold] text-[14px] text-[#2d2d2d] uppercase", children: fullName }),
+        /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-[13px] text-gray-500", children: phone })
+      ] }),
+      /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[13px] text-gray-400 leading-relaxed line-clamp-2", children: fullAddress })
+    ] }),
+    /* @__PURE__ */ jsx(
+      Popup,
+      {
+        isOpen: showConfirm,
+        onClose: () => setShowConfirm(false),
+        title: "Delete Address",
+        maxWidth: "max-w-[400px]",
+        style: { maxWidth: "400px" },
+        children: /* @__PURE__ */ jsxs("div", { className: "text-center py-4", children: [
+          /* @__PURE__ */ jsxs("p", { className: "font-[Nunito-regular] text-[15px] text-gray-600 mb-8", children: [
+            "Are you sure you want to delete ",
+            /* @__PURE__ */ jsxs("span", { className: "font-[Nunito-bold] text-[#00214c]", children: [
+              '"',
+              label || "this address",
+              '"'
+            ] }),
+            "? This action cannot be undone."
+          ] }),
+          /* @__PURE__ */ jsxs("div", { className: "flex gap-4", children: [
+            /* @__PURE__ */ jsx(
+              "button",
+              {
+                onClick: () => setShowConfirm(false),
+                disabled: isDeleting,
+                className: "flex-1 h-[48px] text-[14px] font-[Nunito-bold] border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors uppercase tracking-widest",
+                children: "Cancel"
+              }
+            ),
+            /* @__PURE__ */ jsx(
+              "button",
+              {
+                onClick: handleDelete,
+                disabled: isDeleting,
+                className: "flex-1 h-[48px] text-[14px] font-[Nunito-bold] bg-red-600 text-white hover:bg-red-700 transition-colors flex items-center justify-center gap-2 uppercase tracking-widest shadow-lg shadow-red-100",
+                children: isDeleting ? /* @__PURE__ */ jsx(Spinner, { size: "sm", color: "white" }) : "Delete"
+              }
+            )
+          ] })
+        ] })
+      }
+    )
+  ] });
+};
+var ProfileForm = ({ user, onSuccess, onCancel }) => {
+  const { actions, toast } = useCore();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const userData = user?.attributes || user?.data?.attributes || user || {};
+  const [formData, setFormData] = useState({
+    firstName: userData.first_name || "",
+    lastName: userData.last_name || "",
+    email: userData.email || ""
+  });
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      if (actions?.updateUser) {
+        await actions.updateUser(userData?.id, {
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          email: formData.email
+        });
+        toast?.success?.("Profile updated successfully!");
+        onSuccess?.();
+      } else {
+        throw new Error("actions.updateUser is not defined");
+      }
+    } catch (err) {
+      console.error("Error updating profile:", err);
+      toast?.error?.(err.message || "Failed to update profile. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  const inputCls = "w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#00214c] font-[Nunito-regular]";
+  const labelCls = "text-sm font-[Nunito-bold] text-[#00214c] uppercase tracking-widest text-[11px]";
+  return /* @__PURE__ */ jsxs("form", { onSubmit: handleSubmit, className: "space-y-6", children: [
+    /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-6", children: [
+      /* @__PURE__ */ jsxs("div", { className: "space-y-2", children: [
+        /* @__PURE__ */ jsx("label", { className: labelCls, children: "First Name" }),
+        /* @__PURE__ */ jsx(
+          "input",
+          {
+            type: "text",
+            name: "firstName",
+            value: formData.firstName,
+            onChange: handleChange,
+            placeholder: "Enter first name",
+            required: true,
+            className: inputCls
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsxs("div", { className: "space-y-2", children: [
+        /* @__PURE__ */ jsx("label", { className: labelCls, children: "Last Name" }),
+        /* @__PURE__ */ jsx(
+          "input",
+          {
+            type: "text",
+            name: "lastName",
+            value: formData.lastName,
+            onChange: handleChange,
+            placeholder: "Enter last name",
+            required: true,
+            className: inputCls
+          }
+        )
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxs("div", { className: "space-y-2", children: [
+      /* @__PURE__ */ jsx("label", { className: labelCls, children: "Email Address" }),
+      /* @__PURE__ */ jsx(
+        "input",
+        {
+          type: "email",
+          name: "email",
+          value: formData.email,
+          onChange: handleChange,
+          placeholder: "Enter email address",
+          required: true,
+          className: inputCls
+        }
+      )
+    ] }),
+    /* @__PURE__ */ jsxs("div", { className: "flex gap-4 pt-4", children: [
+      onCancel && /* @__PURE__ */ jsx(
+        "button",
+        {
+          type: "button",
+          onClick: onCancel,
+          className: "flex-1 py-3 border border-gray-300 rounded-md text-[#00214c] font-[Nunito-bold] hover:bg-gray-50 transition-colors uppercase tracking-widest text-[12px]",
+          children: "Cancel"
+        }
+      ),
+      /* @__PURE__ */ jsx(
+        "button",
+        {
+          type: "submit",
+          disabled: isSubmitting,
+          className: `flex-1 py-3 bg-[#00214c] text-white rounded-md font-[Nunito-bold] transition-colors flex items-center justify-center gap-2 uppercase tracking-widest text-[12px] shadow-lg shadow-blue-100 ${isSubmitting ? "opacity-70 cursor-not-allowed" : "hover:bg-black"}`,
+          children: isSubmitting ? /* @__PURE__ */ jsx(Spinner, { size: "sm", color: "white" }) : "Save Changes"
+        }
+      )
+    ] })
+  ] });
+};
+var UserInfo = ({ user, isLoading, refetch }) => {
+  const { actions } = useCore();
+  const [addresses, setAddresses] = useState([]);
+  const [isAddrLoading, setIsAddrLoading] = useState(false);
+  const [modalState, setModalState] = useState({ type: null, data: null });
+  const fetchAddresses = useCallback(async () => {
+    if (!actions?.getUserAddress) return;
+    setIsAddrLoading(true);
+    try {
+      const addrs = await actions.getUserAddress();
+      console.log("addrs", { addrs });
+      setAddresses(addrs || []);
+    } catch (error) {
+      console.error("Error fetching addresses:", error);
+    } finally {
+      setIsAddrLoading(false);
+    }
+  }, [actions]);
+  useEffect(() => {
+    fetchAddresses();
+  }, [fetchAddresses]);
+  const closeModal = () => setModalState({ type: null, data: null });
+  console.log({ addresses });
+  if (isLoading) {
+    return /* @__PURE__ */ jsx("div", { className: "flex justify-center py-20", children: /* @__PURE__ */ jsx(Spinner, {}) });
+  }
+  const userData = user || {};
+  return /* @__PURE__ */ jsxs("div", { className: "animate-in fade-in slide-in-from-bottom-4 duration-500", children: [
+    /* @__PURE__ */ jsx("h1", { className: "font-[Nunito-regular] text-[32px] text-[#00214c] mb-10 tracking-tight", children: "MY PROFILE" }),
+    /* @__PURE__ */ jsxs("section", { className: "mb-12", children: [
+      /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-end mb-4", children: [
+        /* @__PURE__ */ jsx("h2", { className: "font-[Nunito-medium] text-[20px] text-[#2d2d2d] uppercase tracking-wider", children: "Profile" }),
+        /* @__PURE__ */ jsx(
+          "button",
+          {
+            onClick: () => setModalState({ type: "profile", data: user }),
+            className: "text-[14px] font-[Nunito-medium] text-[#2563EB] hover:underline uppercase tracking-widest transition-all",
+            children: "Edit"
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsx("div", { className: "border border-gray-100 p-8 shadow-sm bg-white hover:shadow-md transition-shadow duration-300", children: /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6", children: [
+        /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-1", children: [
+          /* @__PURE__ */ jsx("label", { className: "text-[12px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest", children: "First name" }),
+          /* @__PURE__ */ jsx("p", { className: "border-b border-gray-100 pb-2 text-[15px] font-[Nunito-medium] text-[#00214c]", children: userData.first_name || "\u2014" })
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-1", children: [
+          /* @__PURE__ */ jsx("label", { className: "text-[12px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest", children: "Last name" }),
+          /* @__PURE__ */ jsx("p", { className: "border-b border-gray-100 pb-2 text-[15px] font-[Nunito-medium] text-[#00214c]", children: userData.last_name || "\u2014" })
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-1 md:col-span-2", children: [
+          /* @__PURE__ */ jsx("label", { className: "text-[12px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest", children: "Email address" }),
+          /* @__PURE__ */ jsx("p", { className: "border-b border-gray-100 pb-2 text-[15px] font-[Nunito-medium] text-[#00214c]", children: userData.email || "\u2014" })
+        ] })
+      ] }) })
+    ] }),
+    /* @__PURE__ */ jsxs("section", { children: [
+      /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-end mb-4", children: [
+        /* @__PURE__ */ jsx("h2", { className: "font-[Nunito-medium] text-[20px] text-[#2d2d2d] uppercase tracking-wider", children: "Addresses" }),
+        /* @__PURE__ */ jsx(
+          "button",
+          {
+            onClick: () => setModalState({ type: "new_address", data: null }),
+            className: "text-[14px] font-[Nunito-medium] text-[#2563EB] hover:underline uppercase tracking-widest transition-all",
+            children: "Add new address"
+          }
+        )
+      ] }),
+      isAddrLoading ? /* @__PURE__ */ jsx("div", { className: "flex justify-center py-10", children: /* @__PURE__ */ jsx(Spinner, {}) }) : addresses.length > 0 ? /* @__PURE__ */ jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-6", children: addresses.map((addr) => /* @__PURE__ */ jsx(
+        AddressCard2,
+        {
+          address: addr,
+          onEdit: () => setModalState({ type: "edit_address", data: addr }),
+          onDelete: fetchAddresses
+        },
+        addr.id
+      )) }) : /* @__PURE__ */ jsx(
+        EmptyState,
+        {
+          icon: "\u{1F4CD}",
+          title: "No Addresses Saved",
+          description: "You haven't added any shipping or billing addresses yet. Add one to make your checkout faster.",
+          action: /* @__PURE__ */ jsx(
+            "button",
+            {
+              onClick: () => setModalState({ type: "new_address", data: null }),
+              className: "mt-4 px-8 py-3 bg-[#00214c] text-white font-[Nunito-bold] text-[13px] uppercase tracking-widest hover:bg-black transition-colors",
+              children: "Add Your First Address"
+            }
+          ),
+          className: "border border-dashed border-gray-200 bg-gray-50/10"
+        }
+      )
+    ] }),
+    /* @__PURE__ */ jsx(
+      Popup,
+      {
+        isOpen: !!modalState.type,
+        onClose: closeModal,
+        title: modalState.type === "profile" ? "Edit Profile" : modalState.type === "new_address" ? "Add New Address" : "Edit Address",
+        children: modalState.type === "profile" ? /* @__PURE__ */ jsx(
+          ProfileForm,
+          {
+            user,
+            onSuccess: () => {
+              refetch();
+              closeModal();
+            },
+            onCancel: closeModal
+          }
+        ) : /* @__PURE__ */ jsx(
+          AddressForm,
+          {
+            initialData: modalState.data,
+            onSuccess: () => {
+              fetchAddresses();
+              closeModal();
+            },
+            onCancel: closeModal,
+            submitLabel: modalState.type === "new_address" ? "Add Address" : "Update Address"
+          }
+        )
+      }
+    )
+  ] });
+};
+var OrdersList = ({ initialOrders }) => {
+  const { actions, config } = useCore();
+  const { formatCurrency } = useCurrencyFormat();
+  const [orders, setOrders] = useState(initialOrders || []);
+  const [isLoading, setIsLoading] = useState(!initialOrders);
+  useEffect(() => {
+    if (initialOrders) return;
+    const fetchOrders = async () => {
+      setIsLoading(true);
+      try {
+        if (actions?.getOrders) {
+          const data = await actions.getOrders(config?.storeId);
+          setOrders(data || []);
+        }
+      } catch (error) {
+        console.error("Error fetching orders:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchOrders();
+  }, [actions, config?.storeId, initialOrders]);
+  if (isLoading) {
+    return /* @__PURE__ */ jsx("div", { className: "flex justify-center py-20", children: /* @__PURE__ */ jsx(Spinner, {}) });
+  }
+  return /* @__PURE__ */ jsxs("div", { className: "animate-in fade-in slide-in-from-bottom-4 duration-500", children: [
+    /* @__PURE__ */ jsx("h1", { className: "font-[Nunito-regular] text-[32px] text-[#00214c] mb-10 tracking-tight uppercase", children: "MY ORDERS" }),
+    orders.length > 0 ? /* @__PURE__ */ jsx("div", { className: "space-y-6", children: orders.map((order) => /* @__PURE__ */ jsx(OrderCard, { order, formatCurrency }, order.id)) }) : /* @__PURE__ */ jsx(
+      EmptyState,
+      {
+        icon: "\u{1F4E6}",
+        title: "No Orders Found",
+        description: "It looks like you haven't placed any orders yet. Once you do, they will appear here.",
+        action: /* @__PURE__ */ jsx("button", { className: "mt-4 px-8 py-3 bg-[#00214c] text-white font-[Nunito-bold] text-[13px] uppercase tracking-widest hover:bg-black transition-colors rounded-none", children: "Start Shopping" }),
+        className: "border border-dashed border-gray-200 bg-gray-50/30"
+      }
+    )
+  ] });
+};
+var OrderCard = ({ order, formatCurrency }) => {
+  const {
+    id,
+    number,
+    display_total,
+    state,
+    completed_at,
+    order_type = "Delivery",
+    line_items = []
+  } = order;
+  const dateStr = completed_at ? new Date(completed_at).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  }) : "Pending";
+  return /* @__PURE__ */ jsxs("div", { className: "border border-gray-100 bg-white shadow-sm hover:shadow-md transition-all duration-300", children: [
+    /* @__PURE__ */ jsxs("div", { className: "p-4 border-b border-gray-50 flex justify-between items-center bg-gray-50/50", children: [
+      /* @__PURE__ */ jsxs("span", { className: "font-[Nunito-bold] text-[15px] text-[#00214c]", children: [
+        "ORD#",
+        number || id
+      ] }),
+      /* @__PURE__ */ jsx("span", { className: "font-[Nunito-bold] text-[15px] text-[#00214c]", children: display_total ? formatCurrency(display_total) : "\u2014" })
+    ] }),
+    /* @__PURE__ */ jsxs("div", { className: "p-4 flex gap-4 overflow-x-auto min-h-[120px] items-center", children: [
+      line_items.map((item, idx) => /* @__PURE__ */ jsxs("div", { className: "relative group shrink-0", children: [
+        /* @__PURE__ */ jsx("div", { className: "w-20 h-20 border border-gray-100 bg-white flex items-center justify-center p-1 overflow-hidden transition-transform duration-300 group-hover:scale-105", children: item.variant?.images?.[0]?.styles?.[0]?.url ? /* @__PURE__ */ jsx(
+          "img",
+          {
+            src: item.variant.images[0].styles[0].url,
+            alt: item.name,
+            className: "w-full h-full object-contain"
+          }
+        ) : /* @__PURE__ */ jsx("div", { className: "w-full h-full bg-gray-50 flex items-center justify-center text-[10px] text-gray-300", children: "No Image" }) }),
+        /* @__PURE__ */ jsx("span", { className: "absolute -top-2 -right-2 bg-[#00214c] text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white shadow-sm", children: item.quantity })
+      ] }, idx)),
+      line_items.length === 0 && /* @__PURE__ */ jsx("p", { className: "text-gray-300 italic text-sm", children: "No items info" })
+    ] }),
+    /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-2 border-t border-gray-50 divide-x divide-gray-50", children: [
+      /* @__PURE__ */ jsxs("div", { className: "p-3 text-center", children: [
+        /* @__PURE__ */ jsx("p", { className: "text-[10px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest mb-1", children: "Order date" }),
+        /* @__PURE__ */ jsx("p", { className: "text-[12px] font-[Nunito-medium] text-[#2d2d2d]", children: dateStr })
+      ] }),
+      /* @__PURE__ */ jsxs("div", { className: "p-3 text-center", children: [
+        /* @__PURE__ */ jsx("p", { className: "text-[10px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest mb-1", children: "Order type" }),
+        /* @__PURE__ */ jsx("p", { className: "text-[12px] font-[Nunito-medium] text-[#2d2d2d]", children: order_type })
+      ] })
+    ] })
+  ] });
+};
+var AccountPage = ({ initialTab = "profile" }) => {
+  const { auth, actions } = useCore();
+  const logout = useLogout();
+  const [activeTab, setActiveTab] = useState(initialTab);
+  const [userData, setUserData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const fetchUserData = async () => {
+    setIsLoading(true);
+    try {
+      if (actions?.getUser) {
+        const user = await actions.getUser();
+        console.log("user", { user });
+        setUserData(user);
+      } else {
+        setUserData(auth?.user);
+      }
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  useEffect(() => {
+    fetchUserData();
+  }, [auth?.user]);
+  const navItems = [
+    { id: "profile", label: "My Profile" },
+    { id: "orders", label: "My Orders" }
+  ];
+  return /* @__PURE__ */ jsx("div", { className: "min-h-screen bg-white", children: /* @__PURE__ */ jsxs("div", { className: "px-4 md:px-8 lg:px-[32px] py-[40px] md:py-[100px] flex flex-col md:flex-row items-start justify-between gap-8 w-full", children: [
+    /* @__PURE__ */ jsxs("aside", { className: "w-full md:w-[280px] lg:w-[320px] md:sticky top-[40px]", children: [
+      /* @__PURE__ */ jsx("h1", { className: "font-[Nunito-regular] text-[40px] md:text-[48px] leading-[1.05] text-[#00214c] mb-8 tracking-tight uppercase", children: "MY ACCOUNT" }),
+      /* @__PURE__ */ jsx("nav", { children: /* @__PURE__ */ jsxs("ul", { className: "space-y-1 font-[Nunito-medium]", children: [
+        navItems.map((item) => /* @__PURE__ */ jsx("li", { children: /* @__PURE__ */ jsx(
+          "button",
+          {
+            onClick: () => setActiveTab(item.id),
+            className: `w-full text-left px-4 py-3 text-[14px] uppercase tracking-wider transition-all duration-200 ${activeTab === item.id ? "bg-[#00214c] text-white" : "text-[#2d2d2d] hover:bg-[#f5f2ec]"}`,
+            children: item.label
+          }
+        ) }, item.id)),
+        /* @__PURE__ */ jsx("li", { children: /* @__PURE__ */ jsx(
+          "button",
+          {
+            onClick: logout,
+            className: "w-full text-left px-4 py-3 text-[14px] uppercase tracking-wider text-[#2d2d2d] hover:bg-[#f5f2ec] transition-all duration-200 mt-4 border-t border-gray-100 pt-5",
+            children: "Logout"
+          }
+        ) })
+      ] }) })
+    ] }),
+    /* @__PURE__ */ jsx("main", { className: "flex-1 min-w-0 w-full max-w-[860px]", children: activeTab === "profile" ? /* @__PURE__ */ jsx(
+      UserInfo,
+      {
+        user: userData,
+        isLoading,
+        refetch: fetchUserData
+      }
+    ) : /* @__PURE__ */ jsx(OrdersList, {}) })
+  ] }) });
+};
+var Hello = () => {
+  const { cart, isCartLoading } = useCore();
+  console.log("Cart:", cart, isCartLoading);
+  return /* @__PURE__ */ jsx("div", { children: isCartLoading ? "Loading..." : "Core Working \u2705" });
+};
 
-export { CartItem, CartPage, CartSummary, CoreProvider, EmptyState, Hello, Spinner, ViewCart, useAddToCart, useAuth, useCart, userCartInfo_default as useCartInfo, useCore, useCurrencyFormat, useLogout, useVariantSelection };
+export { AccountPage, AddressCard2 as AddressCard, AddressForm, CartItem, CartPage, CartSummary, CoreProvider, EmptyState, Hello, OrdersList, Popup, ProfileForm, Spinner, UserInfo, ViewCart, useAddToCart, useAuth, useCart, userCartInfo_default as useCartInfo, useCore, useCurrencyFormat, useLogout, useVariantSelection };
 //# sourceMappingURL=index.js.map
 //# sourceMappingURL=index.js.map

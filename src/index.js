@@ -1,3 +1,4 @@
+
 // ─── Context ──────────────────────────────────────────────────────────────────
 export { CoreProvider, useCore } from "./context/CoreProvider";
 
@@ -14,11 +15,22 @@ export { default as useCartInfo } from "./hooks/userCartInfo";
 export { CartPage } from "./components/cart/CartPage";
 export { CartItem } from "./components/cart/CartItem";
 export { CartSummary } from "./components/cart/CartSummary";
+export { ViewCart } from "./components/cart/ViewCart";
+
+// ─── Account Components ───────────────────────────────────────────────────────
+export { AccountPage } from "./components/account/AccountPage";
+export { UserInfo } from "./components/account/UserInfo";
+export { AddressCard } from "./components/account/AddressCard";
+export { OrdersList } from "./components/account/OrdersList";
+export { ProfileForm } from "./components/account/ProfileForm";
 
 // ─── UI Primitives ────────────────────────────────────────────────────────────
 export { Spinner } from "./components/ui/Spinner";
 export { EmptyState } from "./components/ui/EmptyState";
+export { Popup } from "./components/ui/Popup";
+
+// ─── Common Components ────────────────────────────────────────────────────────
+export { AddressForm } from "./components/common/AddressForm";
 
 // ─── Debug / Dev ──────────────────────────────────────────────────────────────
 export { Hello } from "./components/hello";
-export { ViewCart } from "./components/cart/ViewCart"
