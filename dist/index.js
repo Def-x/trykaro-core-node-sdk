@@ -5,6 +5,7 @@ import { useUser, useClerk } from '@clerk/nextjs';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useRazorpay } from 'react-razorpay';
+import { createPortal } from 'react-dom';
 
 // src/context/CoreProvider.js
 var CoreContext = createContext(null);
@@ -144,7 +145,6 @@ function useAddToCart() {
   };
   const handleAddToCart = async (product) => {
     try {
-      setIsAddToCartLoading(true);
       const storedCartId = typeof window !== "undefined" ? localStorage.getItem("cartid") : null;
       let resolvedCartId = cart?.id ?? storedCartId;
       console.log("handleAddToCart before cart check", { cart, storedCartId, resolvedCartId });
@@ -200,11 +200,9 @@ function useAddToCart() {
     }
   };
   const handleDeleteLineItem = async (product) => {
-    const existingLineItem = getCartItem(product);
-    if (!existingLineItem) return;
     try {
-      setIsAddToCartLoading(true);
-      await actions.deleteLineItem?.(existingLineItem.id);
+      console.log({ product }, product?.id);
+      await actions.deleteLineItem?.(product?.id);
       const activeCartId = cart?.id;
       if (activeCartId) {
         await refreshCart(activeCartId);
@@ -979,7 +977,6 @@ var ProductlistCard = ({ product, component, orderType }) => {
   const { formatCurrency } = useCurrencyFormat();
   const {
     handleDeleteLineItem,
-    deleteLineItemById,
     handleDecreaseQty,
     handleAddToCart,
     isAddToCartLoading
@@ -987,11 +984,12 @@ var ProductlistCard = ({ product, component, orderType }) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const handleDeleteItem = async () => {
-    await deleteLineItemById(product?.id);
+    console.log("called handleDeleteItem", { product });
+    await handleDeleteLineItem(product);
   };
   const handleEditConfirm = async (newCustomizations, newQty) => {
     try {
-      await deleteLineItemById(product?.id);
+      await handleDeleteLineItem(product);
       await handleAddToCart(product?.line_itemable, newCustomizations, newQty);
       setIsEditModalOpen(false);
     } catch (err) {
@@ -1167,18 +1165,275 @@ var AddressFormInline = ({ refetch }) => {
         children: "+ Add your first address"
       }
     ),
-    isOpen && /* @__PURE__ */ jsx("div", { className: "fixed inset-0 bg-black/50 flex items-center justify-center z-50", children: /* @__PURE__ */ jsxs("div", { className: "bg-white rounded-lg p-6 max-w-md w-full mx-4", children: [
-      /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium]", children: "Address Form Popup" }),
+    /* @__PURE__ */ jsx(
+      AddAddressForm,
+      {
+        isOpen,
+        onClose: () => setIsOpen(false),
+        refetch
+      }
+    )
+  ] });
+};
+var AddAddressForm = ({ isOpen, onClose, refetch }) => {
+  const { actions, toast } = useCore();
+  const [mounted, setMounted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    address_type: "shipping",
+    address1: "",
+    address2: "",
+    city: "",
+    zipcode: "",
+    phone: "",
+    firstname: "",
+    lastname: "",
+    state_name: "",
+    country_name: "India",
+    country_iso3: "IND",
+    country_iso: "IN",
+    state_code: "",
+    label: "Home"
+  });
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      if (actions?.createAddress) {
+        await actions.createAddress(formData);
+        toast?.success?.("Address added successfully!");
+        refetch?.();
+        onClose();
+      } else {
+        console.error("actions.createAddress is not defined");
+        toast?.error?.("Failed to add address: Action not found");
+      }
+    } catch (err) {
+      console.error("Failed to add address:", err);
+      toast?.error?.("Failed to add address. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+  if (!isOpen || !mounted) return null;
+  const modalContent = /* @__PURE__ */ jsx("div", { className: "fixed inset-0 bg-black/60 flex items-center justify-center z-[999999] p-4 backdrop-blur-[2px]", children: /* @__PURE__ */ jsxs("div", { className: "bg-white rounded-lg shadow-2xl w-full max-w-[600px] overflow-hidden max-h-[90vh] overflow-y-auto relative border border-gray-100", children: [
+    /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center p-6 border-b border-gray-100 bg-white sticky top-0 z-10", children: [
+      /* @__PURE__ */ jsx("h2", { className: "text-[20px] font-[Nunito-bold] text-[#00214c]", children: "Add New Address" }),
       /* @__PURE__ */ jsx(
         "button",
         {
-          onClick: () => setIsOpen(false),
-          className: "mt-4 px-4 py-2 bg-gray-200 rounded",
-          children: "Close"
+          onClick: onClose,
+          className: "text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-full hover:bg-gray-100",
+          children: /* @__PURE__ */ jsx(
+            "svg",
+            {
+              className: "w-6 h-6",
+              fill: "none",
+              stroke: "currentColor",
+              viewBox: "0 0 24 24",
+              children: /* @__PURE__ */ jsx(
+                "path",
+                {
+                  strokeLinecap: "round",
+                  strokeLinejoin: "round",
+                  strokeWidth: 2,
+                  d: "M6 18L18 6M6 6l12 12"
+                }
+              )
+            }
+          )
         }
       )
-    ] }) })
-  ] });
+    ] }),
+    /* @__PURE__ */ jsxs("form", { onSubmit: handleSubmit, className: "p-6 space-y-4", children: [
+      /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
+        /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
+          /* @__PURE__ */ jsx("label", { className: "text-sm font-[Nunito-bold] text-[#00214c]", children: "First Name *" }),
+          /* @__PURE__ */ jsx(
+            "input",
+            {
+              type: "text",
+              name: "firstname",
+              value: formData.firstname,
+              onChange: handleChange,
+              placeholder: "First name",
+              required: true,
+              className: "w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#00214c] font-[Nunito-regular]"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
+          /* @__PURE__ */ jsx("label", { className: "text-sm font-[Nunito-bold] text-[#00214c]", children: "Last Name *" }),
+          /* @__PURE__ */ jsx(
+            "input",
+            {
+              type: "text",
+              name: "lastname",
+              value: formData.lastname,
+              onChange: handleChange,
+              placeholder: "Last name",
+              required: true,
+              className: "w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#00214c] font-[Nunito-regular]"
+            }
+          )
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
+        /* @__PURE__ */ jsx("label", { className: "text-sm font-[Nunito-bold] text-[#00214c]", children: "Phone *" }),
+        /* @__PURE__ */ jsx(
+          "input",
+          {
+            type: "text",
+            name: "phone",
+            value: formData.phone,
+            onChange: handleChange,
+            placeholder: "Phone number",
+            required: true,
+            className: "w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#00214c] font-[Nunito-regular]"
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
+        /* @__PURE__ */ jsx("label", { className: "text-sm font-[Nunito-bold] text-[#00214c]", children: "Address Line 1 *" }),
+        /* @__PURE__ */ jsx(
+          "input",
+          {
+            type: "text",
+            name: "address1",
+            value: formData.address1,
+            onChange: handleChange,
+            placeholder: "Street address",
+            required: true,
+            className: "w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#00214c] font-[Nunito-regular]"
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
+        /* @__PURE__ */ jsx("label", { className: "text-sm font-[Nunito-bold] text-[#00214c]", children: "Address Line 2" }),
+        /* @__PURE__ */ jsx(
+          "input",
+          {
+            type: "text",
+            name: "address2",
+            value: formData.address2,
+            onChange: handleChange,
+            placeholder: "Apartment, suite, etc.",
+            className: "w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#00214c] font-[Nunito-regular]"
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
+        /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
+          /* @__PURE__ */ jsx("label", { className: "text-sm font-[Nunito-bold] text-[#00214c]", children: "City *" }),
+          /* @__PURE__ */ jsx(
+            "input",
+            {
+              type: "text",
+              name: "city",
+              value: formData.city,
+              onChange: handleChange,
+              placeholder: "City",
+              required: true,
+              className: "w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#00214c] font-[Nunito-regular]"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
+          /* @__PURE__ */ jsx("label", { className: "text-sm font-[Nunito-bold] text-[#00214c]", children: "State/Province *" }),
+          /* @__PURE__ */ jsx(
+            "input",
+            {
+              type: "text",
+              name: "state_name",
+              value: formData.state_name,
+              onChange: handleChange,
+              placeholder: "State",
+              required: true,
+              className: "w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#00214c] font-[Nunito-regular]"
+            }
+          )
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
+        /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
+          /* @__PURE__ */ jsx("label", { className: "text-sm font-[Nunito-bold] text-[#00214c]", children: "Country *" }),
+          /* @__PURE__ */ jsx(
+            "input",
+            {
+              type: "text",
+              name: "country_name",
+              value: formData.country_name,
+              onChange: handleChange,
+              placeholder: "Country",
+              required: true,
+              className: "w-full border border-gray-300 rounded-md p-3 text-sm bg-gray-50 focus:outline-none font-[Nunito-regular]"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
+          /* @__PURE__ */ jsx("label", { className: "text-sm font-[Nunito-bold] text-[#00214c]", children: "Postal Code *" }),
+          /* @__PURE__ */ jsx(
+            "input",
+            {
+              type: "text",
+              name: "zipcode",
+              value: formData.zipcode,
+              onChange: handleChange,
+              placeholder: "Postal code",
+              required: true,
+              className: "w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#00214c] font-[Nunito-regular]"
+            }
+          )
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
+        /* @__PURE__ */ jsx("label", { className: "text-sm font-[Nunito-bold] text-[#00214c]", children: "Label (e.g., Home, Office)" }),
+        /* @__PURE__ */ jsx(
+          "input",
+          {
+            type: "text",
+            name: "label",
+            value: formData.label,
+            onChange: handleChange,
+            placeholder: "Label",
+            className: "w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#00214c] font-[Nunito-regular]"
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsxs("div", { className: "flex gap-4 pt-4", children: [
+        /* @__PURE__ */ jsx(
+          "button",
+          {
+            type: "button",
+            onClick: onClose,
+            className: "flex-1 py-3 border border-gray-300 rounded-md text-[#00214c] font-[Nunito-bold] hover:bg-gray-50 transition-colors",
+            children: "Cancel"
+          }
+        ),
+        /* @__PURE__ */ jsxs(
+          "button",
+          {
+            type: "submit",
+            disabled: isSubmitting,
+            className: `flex-1 py-3 bg-black text-white rounded-md font-[Nunito-bold] transition-colors flex items-center justify-center gap-2 ${isSubmitting ? "opacity-70 cursor-not-allowed" : "hover:bg-black/90"}`,
+            children: [
+              isSubmitting && /* @__PURE__ */ jsx("div", { className: "w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" }),
+              isSubmitting ? "Adding..." : "Add Address"
+            ]
+          }
+        )
+      ] })
+    ] })
+  ] }) });
+  return createPortal(modalContent, document.body);
 };
 var AddressSelection = ({
   cart,
@@ -1199,13 +1454,12 @@ var AddressSelection = ({
   console.log({ actions });
   const updateCart = useCallback(
     async (apiData) => {
+      console.log({ apiData });
       try {
         if (actions?.updateCart) {
-          await actions.updateCart(apiData);
-          setCart((prev) => ({
-            ...prev,
-            ...apiData
-          }));
+          const res = await actions.updateCart(apiData?.id, apiData);
+          console.log({ res });
+          setCart((prev) => res);
         }
       } catch (err) {
         console.error("Failed to update cart address:", err);
@@ -1328,17 +1582,14 @@ var AddressSelection = ({
         }) })
       ] })
     ] }),
-    isOpenAddAddress && /* @__PURE__ */ jsx("div", { className: "fixed inset-0 bg-black/50 flex items-center justify-center z-50", children: /* @__PURE__ */ jsxs("div", { className: "bg-white rounded-lg p-6 max-w-md w-full mx-4", children: [
-      /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium]", children: "Address Form Popup" }),
-      /* @__PURE__ */ jsx(
-        "button",
-        {
-          onClick: () => setIsOpenAddAddress(false),
-          className: "mt-4 px-4 py-2 bg-gray-200 rounded",
-          children: "Close"
-        }
-      )
-    ] }) })
+    /* @__PURE__ */ jsx(
+      AddAddressForm,
+      {
+        isOpen: isOpenAddAddress,
+        onClose: () => setIsOpenAddAddress(false),
+        refetch
+      }
+    )
   ] });
 };
 var AddressSelectionCard = ({
@@ -1561,6 +1812,7 @@ var OrderInfo = ({ clerkUser, hasDeletedItems }) => {
   };
   const onRazorPayHandler = (res) => {
     const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? "";
+    console.log({ razorpayKey });
     const options = {
       key: razorpayKey,
       amount: res?.cart?.total / 100,

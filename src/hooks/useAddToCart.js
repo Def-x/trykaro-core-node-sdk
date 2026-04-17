@@ -72,7 +72,6 @@ export function useAddToCart() {
         const qty = quantity ?? 1;
 
         const existingLineItem = getCartItem(product);
-
         if (existingLineItem) {
             // Quantity already exists → increment
             const newQty = existingLineItem.quantity + qty;
@@ -106,7 +105,7 @@ export function useAddToCart() {
      */
     const handleAddToCart = async (product) => {
         try {
-            setIsAddToCartLoading(true);
+            // setIsAddToCartLoading(true);
 
             const storedCartId =
                 typeof window !== "undefined"
@@ -183,12 +182,11 @@ export function useAddToCart() {
      * Remove a line item entirely from the cart.
      */
     const handleDeleteLineItem = async (product) => {
-        const existingLineItem = getCartItem(product);
-        if (!existingLineItem) return;
 
         try {
-            setIsAddToCartLoading(true);
-            await actions.deleteLineItem?.(existingLineItem.id);
+            // setIsAddToCartLoading(true);
+            console.log({ product }, product?.id)
+            await actions.deleteLineItem?.(product?.id);
 
             const activeCartId = cart?.id;
             if (activeCartId) {

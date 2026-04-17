@@ -16,7 +16,6 @@ const ProductlistCard = ({ product, component, orderType }) => {
   const { formatCurrency } = useCurrencyFormat();
   const {
     handleDeleteLineItem,
-    deleteLineItemById,
     handleDecreaseQty,
     handleAddToCart,
     isAddToCartLoading,
@@ -26,13 +25,14 @@ const ProductlistCard = ({ product, component, orderType }) => {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
   const handleDeleteItem = async () => {
-    await deleteLineItemById(product?.id);
+    console.log("called handleDeleteItem", { product })
+    await handleDeleteLineItem(product);
   };
 
   const handleEditConfirm = async (newCustomizations, newQty) => {
     try {
       // 1. Delete the old configured line item
-      await deleteLineItemById(product?.id);
+      await handleDeleteLineItem(product);
       // 2. Add the new line item
       await handleAddToCart(product?.line_itemable, newCustomizations, newQty);
       setIsEditModalOpen(false);

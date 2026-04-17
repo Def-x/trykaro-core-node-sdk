@@ -149,6 +149,7 @@ const OrderInfo = ({ clerkUser, hasDeletedItems }) => {
   const onRazorPayHandler = (res) => {
     const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? "";
 
+    console.log({ razorpayKey })
     const options = {
       key: razorpayKey,
       amount: res?.cart?.total / 100,
@@ -277,11 +278,10 @@ const OrderInfo = ({ clerkUser, hasDeletedItems }) => {
         <button
           onClick={onPlaceOrder}
           disabled={hasDeletedItems || isPlacingOrder || isAddressLoading}
-          className={`px-5 py-3 w-full rounded-lg cursor-pointer font-[Nunito-medium] text-[15px] transition-all duration-300 ${
-            hasDeletedItems || isPlacingOrder || isAddressLoading
-              ? "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none"
-              : "bg-[#00214c] text-white hover:bg-[#000] hover:shadow-lg transform active:scale-[0.98]"
-          }`}
+          className={`px-5 py-3 w-full rounded-lg cursor-pointer font-[Nunito-medium] text-[15px] transition-all duration-300 ${hasDeletedItems || isPlacingOrder || isAddressLoading
+            ? "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none"
+            : "bg-[#00214c] text-white hover:bg-[#000] hover:shadow-lg transform active:scale-[0.98]"
+            }`}
         >
           {isPlacingOrder
             ? "Processing…"

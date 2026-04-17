@@ -122,7 +122,7 @@ export const ViewCart = () => {
                       </p>
                       <p className="font-[Nunito-regular] text-[14px] text-[var(--main)]">
                         {display_ship_total === "0.00" ||
-                        display_ship_total === 0
+                          display_ship_total === 0
                           ? "Free"
                           : display_ship_total
                             ? formatCurrency(display_ship_total)
