@@ -79,24 +79,32 @@ export const OrdersList = ({ initialOrders }) => {
  * OrderCard internal component
  */
 const OrderCard = ({ order, formatCurrency }) => {
+  // The provided JSON shows data can be root-level or nested under 'order' and 'cart'
+  const o = order.order || order || {};
+  const cart = o.cart || order.cart || {};
+  
   const {
     id,
-    number,
-    display_total,
-    state,
+    order_number,
+    order_status,
+    payment_status,
     completed_at,
-    order_type = "Delivery",
-    line_items = [],
-  } = order;
+  } = o;
 
-  const dateStr = completed_at 
+  const {
+    number: cartNumber,
+    display_total,
+    line_items = [],
+  } = cart;
+
+  const dateStr = completed_at
     ? new Date(completed_at).toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      })
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
     : "Pending";
 
   return (
@@ -104,7 +112,7 @@ const OrderCard = ({ order, formatCurrency }) => {
       {/* Header */}
       <div className="p-4 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
         <span className="font-[Nunito-bold] text-[15px] text-[#00214c]">
-          ORD#{number || id}
+          {order_number || cartNumber || id}
         </span>
         <span className="font-[Nunito-bold] text-[15px] text-[#00214c]">
           {display_total ? formatCurrency(display_total) : "—"}
@@ -113,36 +121,58 @@ const OrderCard = ({ order, formatCurrency }) => {
 
       {/* Body - Product Images */}
       <div className="p-4 flex gap-4 overflow-x-auto min-h-[120px] items-center">
-        {line_items.map((item, idx) => (
-          <div key={idx} className="relative group shrink-0">
-             <div className="w-20 h-20 border border-gray-100 bg-white flex items-center justify-center p-1 overflow-hidden transition-transform duration-300 group-hover:scale-105">
-                {item.variant?.images?.[0]?.styles?.[0]?.url ? (
-                    <img 
-                      src={item.variant.images[0].styles[0].url} 
-                      alt={item.name}
-                      className="w-full h-full object-contain"
-                    />
+        {line_items.map((item, idx) => {
+          const lineItemable = item.line_itemable || {};
+          const product = lineItemable.product || {};
+          // Check for images in line_itemable (variant/product images structure)
+          const imgUrl = 
+            lineItemable.product_images?.[0]?.styles?.[0]?.url || 
+            item.variant?.images?.[0]?.styles?.[0]?.url ||
+            product.images?.[0]?.styles?.[0]?.url;
+
+          return (
+            <div key={idx} className="relative group shrink-0">
+              <div className="w-20 h-20 border border-gray-100 bg-white flex items-center justify-center p-1 overflow-hidden transition-transform duration-300 group-hover:scale-105">
+                {imgUrl ? (
+                  <img
+                    src={imgUrl}
+                    alt={item.name || product.name || "Product"}
+                    className="w-full h-full object-contain"
+                  />
                 ) : (
-                    <div className="w-full h-full bg-gray-50 flex items-center justify-center text-[10px] text-gray-300">No Image</div>
+                  <div className="w-full h-full bg-gray-50 flex items-center justify-center text-[10px] text-gray-300">No Image</div>
                 )}
-             </div>
-             <span className="absolute -top-2 -right-2 bg-[#00214c] text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white shadow-sm">
+              </div>
+              <span className="absolute -top-2 -right-2 bg-[#00214c] text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white shadow-sm">
                 {item.quantity}
-             </span>
-          </div>
-        ))}
+              </span>
+            </div>
+          );
+        })}
         {line_items.length === 0 && <p className="text-gray-300 italic text-sm">No items info</p>}
       </div>
 
       {/* Footer */}
-      <div className="grid grid-cols-2 border-t border-gray-50 divide-x divide-gray-50">
+      <div className="grid grid-cols-3 border-t border-gray-50 divide-x divide-gray-50">
         <div className="p-3 text-center">
-           <p className="text-[10px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest mb-1">Order date</p>
-           <p className="text-[12px] font-[Nunito-medium] text-[#2d2d2d]">{dateStr}</p>
+          <p className="text-[10px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest mb-1">Order date</p>
+          <p className="text-[12px] font-[Nunito-medium] text-[#2d2d2d]">{dateStr}</p>
         </div>
         <div className="p-3 text-center">
-           <p className="text-[10px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest mb-1">Order type</p>
-           <p className="text-[12px] font-[Nunito-medium] text-[#2d2d2d]">{order_type}</p>
+          <p className="text-[10px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest mb-1">Status</p>
+          <p className={`text-[12px] font-[Nunito-bold] uppercase tracking-tighter ${
+            order_status === 'placed' ? 'text-green-600' : 'text-[#00214c]'
+          }`}>
+            {order_status || "Processing"}
+          </p>
+        </div>
+        <div className="p-3 text-center">
+          <p className="text-[10px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest mb-1">Payment</p>
+          <p className={`text-[12px] font-[Nunito-bold] uppercase tracking-tighter ${
+            payment_status === 'received' || payment_status === 'paid' ? 'text-green-600' : 'text-orange-500'
+          }`}>
+            {payment_status || "Pending"}
+          </p>
         </div>
       </div>
     </div>
