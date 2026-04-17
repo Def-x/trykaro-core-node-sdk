@@ -25,7 +25,6 @@ export const ViewCart = () => {
     order_type,
   } = cart || {};
 
-  console.log({ cart, cartItems });
   // Treat cartItems from context as single source of truth
   const items = cartItems ?? [];
   const isLoading = !isLoaded;

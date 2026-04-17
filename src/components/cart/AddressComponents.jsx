@@ -312,15 +312,13 @@ export const AddressSelection = ({
   const { actions } = useCore();
   const [isOpenAddAddress, setIsOpenAddAddress] = useState(false);
 
-  console.log({ actions });
+
   const updateCart = useCallback(
     async (apiData) => {
-      console.log({ apiData })
       try {
         // Call updateCart action from context
         if (actions?.updateCart) {
           const res = await actions.updateCart(apiData?.id, apiData);
-          console.log({ res })
           setCart((prev) => (res));
         }
       } catch (err) {

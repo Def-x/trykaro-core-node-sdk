@@ -149,7 +149,6 @@ const OrderInfo = ({ clerkUser, hasDeletedItems }) => {
   const onRazorPayHandler = (res) => {
     const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? "";
 
-    console.log({ razorpayKey })
     const options = {
       key: razorpayKey,
       amount: res?.cart?.total / 100,

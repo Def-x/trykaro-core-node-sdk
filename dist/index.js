@@ -21,9 +21,7 @@ var CoreProvider = ({
   const [isCartLoading, setIsCartLoading] = useState(false);
   const [region, setRegion] = useState(config?.region ?? null);
   useEffect(() => {
-    console.log("before initialCart");
     if (!actions?.getCart) return;
-    console.log("before loadCart", { actions });
     const loadCart = async () => {
       try {
         setIsCartLoading(true);
@@ -34,7 +32,6 @@ var CoreProvider = ({
           resolvedCart = Array.isArray(data) ? data[0] : data;
         } else {
           const storedCartId = typeof window !== "undefined" ? localStorage.getItem("cartid") : null;
-          console.log({ storedCartId });
           if (storedCartId && actions?.getCartById) {
             resolvedCart = await actions.getCartById(
               storedCartId,
@@ -42,7 +39,6 @@ var CoreProvider = ({
             );
           }
         }
-        console.log({ resolvedCart });
         setCart(resolvedCart ?? null);
       } catch (err) {
         console.error("[CoreProvider] cart load error:", err);
@@ -51,7 +47,6 @@ var CoreProvider = ({
       }
     };
     loadCart();
-    console.log("load script");
   }, [config?.regionId, auth?.isSignedIn]);
   const value = useMemo(
     () => ({
@@ -97,15 +92,40 @@ function useAddToCart() {
   const isSignedIn = auth?.isSignedIn ?? false;
   const regionId = config?.regionId ?? null;
   const cartItems = cart?.line_items ?? [];
-  const getCartItem = (product) => {
-    console.log("getCartItem", { product, cart });
+  console.log({ cartItems });
+  const normalizeCustomizations = (c) => {
+    if (!c) return [];
+    if (Array.isArray(c)) {
+      return c.map((item) => ({
+        id: item.product_customization_id || item.id,
+        value: item.value
+      }));
+    }
+    if (typeof c === "object") {
+      return Object.entries(c).map(([id, val]) => ({
+        id: parseInt(id),
+        value: typeof val === "object" ? val?.value : val
+      }));
+    }
+    return [];
+  };
+  const areCustomizationsEqual = (c1, c2) => {
+    const norm1 = normalizeCustomizations(c1);
+    const norm2 = normalizeCustomizations(c2);
+    if (norm1.length !== norm2.length) return false;
+    norm1.sort((a, b) => a.id - b.id);
+    norm2.sort((a, b) => a.id - b.id);
+    return norm1.every(
+      (item, index) => item.id === norm2[index].id && String(item.value) === String(norm2[index].value)
+    );
+  };
+  const getCartItem = (product, customizations = []) => {
     if (!cart?.line_items) return null;
     return cart.line_items.find(
-      (item) => item.line_itemable?.id === product?.id
+      (item) => item.line_itemable?.id === product?.id && areCustomizationsEqual(item.line_items_customizations, customizations)
     ) ?? null;
   };
   const refreshCart = async (cartId) => {
-    console.log("refersh cart", { cartId, isSignedIn });
     try {
       let updatedCart;
       if (isSignedIn) {
@@ -114,17 +134,15 @@ function useAddToCart() {
       } else {
         updatedCart = await actions.getCartById?.(cartId, regionId);
       }
-      console.log({ updatedCart });
       setCart(updatedCart ?? null);
     } catch (err) {
       console.error("[useAddToCart] refreshCart error:", err);
     }
   };
-  const addItemToCart = async (product, resolvedCartId) => {
-    console.log("addItemToCart", { product, resolvedCartId });
+  const addItemToCart = async (product, resolvedCartId, customizations = [], overrideQty = null) => {
     const sellingQTY = product?.selling_quantity?.values?.[0]?.label;
-    const qty = quantity ?? 1;
-    const existingLineItem = getCartItem(product);
+    const qty = overrideQty !== null ? overrideQty : quantity ?? 1;
+    const existingLineItem = getCartItem(product, customizations);
     if (existingLineItem) {
       const newQty = existingLineItem.quantity + qty;
       await actions.updateLineItem?.(existingLineItem.id, { quantity: newQty });
@@ -132,10 +150,10 @@ function useAddToCart() {
       const body = {
         line_itemable_id: product?.id,
         quantity: qty,
+        line_items_customizations: customizations,
         ...resolvedCartId && !isSignedIn ? { cart_id: resolvedCartId } : {},
         ...regionId ? { region_id: regionId } : {}
       };
-      console.log({ body });
       await actions.createLineItem?.(body);
     }
     setQuantity(sellingQTY ? Number(sellingQTY) : 1);
@@ -143,11 +161,12 @@ function useAddToCart() {
       await refreshCart(resolvedCartId);
     }
   };
-  const handleAddToCart = async (product) => {
+  const handleAddToCart = async (product, customizations = [], overrideQty = null) => {
+    console.log({ product, customizations, overrideQty });
     try {
+      setIsAddToCartLoading(true);
       const storedCartId = typeof window !== "undefined" ? localStorage.getItem("cartid") : null;
       let resolvedCartId = cart?.id ?? storedCartId;
-      console.log("handleAddToCart before cart check", { cart, storedCartId, resolvedCartId });
       if (!cart) {
         const payload = {
           number: "",
@@ -159,7 +178,6 @@ function useAddToCart() {
           ...regionId ? { region_id: regionId } : {}
         };
         const createdCart = await actions.createCart?.(payload);
-        console.log("handleAddToCart", { createdCart });
         if (createdCart?.id) {
           resolvedCartId = createdCart.id;
           if (!isSignedIn) {
@@ -168,7 +186,7 @@ function useAddToCart() {
           setCart(createdCart);
         }
       }
-      await addItemToCart(product, resolvedCartId);
+      await addItemToCart(product, resolvedCartId, customizations, overrideQty);
       toast?.success?.("Item added to cart");
     } catch (err) {
       console.error("[useAddToCart] handleAddToCart error:", err);
@@ -177,8 +195,8 @@ function useAddToCart() {
       setIsAddToCartLoading(false);
     }
   };
-  const handleDecreaseQty = async (product) => {
-    const existingLineItem = getCartItem(product);
+  const handleDecreaseQty = async (product, customizations = []) => {
+    const existingLineItem = getCartItem(product, customizations);
     if (!existingLineItem) return;
     try {
       setIsAddToCartLoading(true);
@@ -201,7 +219,6 @@ function useAddToCart() {
   };
   const handleDeleteLineItem = async (product) => {
     try {
-      console.log({ product }, product?.id);
       await actions.deleteLineItem?.(product?.id);
       const activeCartId = cart?.id;
       if (activeCartId) {
@@ -984,7 +1001,6 @@ var ProductlistCard = ({ product, component, orderType }) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const handleDeleteItem = async () => {
-    console.log("called handleDeleteItem", { product });
     await handleDeleteLineItem(product);
   };
   const handleEditConfirm = async (newCustomizations, newQty) => {
@@ -1451,14 +1467,11 @@ var AddressSelection = ({
 }) => {
   const { actions } = useCore();
   const [isOpenAddAddress, setIsOpenAddAddress] = useState(false);
-  console.log({ actions });
   const updateCart = useCallback(
     async (apiData) => {
-      console.log({ apiData });
       try {
         if (actions?.updateCart) {
           const res = await actions.updateCart(apiData?.id, apiData);
-          console.log({ res });
           setCart((prev) => res);
         }
       } catch (err) {
@@ -1812,7 +1825,6 @@ var OrderInfo = ({ clerkUser, hasDeletedItems }) => {
   };
   const onRazorPayHandler = (res) => {
     const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? "";
-    console.log({ razorpayKey });
     const options = {
       key: razorpayKey,
       amount: res?.cart?.total / 100,
@@ -1998,7 +2010,6 @@ var ViewCart = () => {
     display_tax_total,
     order_type
   } = cart || {};
-  console.log({ cart, cartItems });
   const items = cartItems ?? [];
   const isLoading = !isLoaded;
   const deletedItems = items.filter(

@@ -32,23 +32,58 @@ export function useAddToCart() {
     const isSignedIn = auth?.isSignedIn ?? false;
     const regionId = config?.regionId ?? null;
     const cartItems = cart?.line_items ?? [];
-
+    console.log({ cartItems })
     // ─── Helpers ────────────────────────────────────────────────────────────
+    /** Normalize customizations into a standard format: [{ id, value }] */
+    const normalizeCustomizations = (c) => {
+        if (!c) return [];
+        if (Array.isArray(c)) {
+            return c.map((item) => ({
+                id: item.product_customization_id || item.id,
+                value: item.value,
+            }));
+        }
+        if (typeof c === "object") {
+            return Object.entries(c).map(([id, val]) => ({
+                id: parseInt(id),
+                value: typeof val === "object" ? val?.value : val,
+            }));
+        }
+        return [];
+    };
 
-    /** Returns the existing line item for a product, or null */
-    const getCartItem = (product) => {
-        console.log("getCartItem", { product, cart })
+    /** Compare two sets of customizations for equality */
+    const areCustomizationsEqual = (c1, c2) => {
+        const norm1 = normalizeCustomizations(c1);
+        const norm2 = normalizeCustomizations(c2);
+
+        if (norm1.length !== norm2.length) return false;
+
+        // Sort by id for consistent comparison
+        norm1.sort((a, b) => a.id - b.id);
+        norm2.sort((a, b) => a.id - b.id);
+
+        return norm1.every(
+            (item, index) =>
+                item.id === norm2[index].id &&
+                String(item.value) === String(norm2[index].value)
+        );
+    };
+
+    /** Returns the existing line item for a product + customizations, or null */
+    const getCartItem = (product, customizations = []) => {
         if (!cart?.line_items) return null;
         return (
             cart.line_items.find(
-                (item) => item.line_itemable?.id === product?.id
+                (item) =>
+                    item.line_itemable?.id === product?.id &&
+                    areCustomizationsEqual(item.line_items_customizations, customizations)
             ) ?? null
         );
     };
 
     /** Re-fetch the cart after a mutation and sync context */
     const refreshCart = async (cartId) => {
-        console.log("refersh cart", { cartId, isSignedIn })
         try {
             let updatedCart;
             if (isSignedIn) {
@@ -58,7 +93,6 @@ export function useAddToCart() {
                 updatedCart = await actions.getCartById?.(cartId, regionId);
             }
 
-            console.log({ updatedCart })
             setCart(updatedCart ?? null);
         } catch (err) {
             console.error("[useAddToCart] refreshCart error:", err);
@@ -66,12 +100,10 @@ export function useAddToCart() {
     };
 
     // ─── Internal: add or update a line item ────────────────────────────────
-    const addItemToCart = async (product, resolvedCartId) => {
-        console.log("addItemToCart", { product, resolvedCartId })
+    const addItemToCart = async (product, resolvedCartId, customizations = [], overrideQty = null) => {
         const sellingQTY = product?.selling_quantity?.values?.[0]?.label;
-        const qty = quantity ?? 1;
-
-        const existingLineItem = getCartItem(product);
+        const qty = overrideQty !== null ? overrideQty : (quantity ?? 1);
+        const existingLineItem = getCartItem(product, customizations);
         if (existingLineItem) {
             // Quantity already exists → increment
             const newQty = existingLineItem.quantity + qty;
@@ -81,10 +113,11 @@ export function useAddToCart() {
             const body = {
                 line_itemable_id: product?.id,
                 quantity: qty,
+                line_items_customizations: customizations,
                 ...(resolvedCartId && !isSignedIn ? { cart_id: resolvedCartId } : {}),
                 ...(regionId ? { region_id: regionId } : {}),
             };
-            console.log({ body })
+
             await actions.createLineItem?.(body);
         }
 
@@ -103,9 +136,10 @@ export function useAddToCart() {
      * Add a product to the cart.
      * Creates a cart first if one doesn't exist yet.
      */
-    const handleAddToCart = async (product) => {
+    const handleAddToCart = async (product, customizations = [], overrideQty = null) => {
+        console.log({ product, customizations, overrideQty })
         try {
-            // setIsAddToCartLoading(true);
+            setIsAddToCartLoading(true);
 
             const storedCartId =
                 typeof window !== "undefined"
@@ -113,7 +147,6 @@ export function useAddToCart() {
                     : null;
 
             let resolvedCartId = cart?.id ?? storedCartId;
-            console.log("handleAddToCart before cart check", { cart, storedCartId, resolvedCartId })
             // Create cart if needed
             if (!cart) {
                 const payload = {
@@ -127,7 +160,6 @@ export function useAddToCart() {
                 };
 
                 const createdCart = await actions.createCart?.(payload);
-                console.log("handleAddToCart", { createdCart })
                 if (createdCart?.id) {
                     resolvedCartId = createdCart.id;
                     if (!isSignedIn) {
@@ -137,7 +169,7 @@ export function useAddToCart() {
                 }
             }
 
-            await addItemToCart(product, resolvedCartId);
+            await addItemToCart(product, resolvedCartId, customizations, overrideQty);
 
             toast?.success?.("Item added to cart");
         } catch (err) {
@@ -152,8 +184,8 @@ export function useAddToCart() {
      * Decrease quantity by 1.
      * Deletes the line item entirely if quantity reaches 0.
      */
-    const handleDecreaseQty = async (product) => {
-        const existingLineItem = getCartItem(product);
+    const handleDecreaseQty = async (product, customizations = []) => {
+        const existingLineItem = getCartItem(product, customizations);
         if (!existingLineItem) return;
 
         try {
@@ -185,7 +217,6 @@ export function useAddToCart() {
 
         try {
             // setIsAddToCartLoading(true);
-            console.log({ product }, product?.id)
             await actions.deleteLineItem?.(product?.id);
 
             const activeCartId = cart?.id;

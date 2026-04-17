@@ -48,9 +48,7 @@ export const CoreProvider = ({
   // ─── Initial Cart Load ─────────────────────────────────────────────────
   useEffect(() => {
     // Skip if cart was already hydrated from SSR or no action available
-    console.log("before initialCart");
     if (!actions?.getCart) return;
-    console.log("before loadCart", { actions });
 
     const loadCart = async () => {
       try {
@@ -67,7 +65,6 @@ export const CoreProvider = ({
             typeof window !== "undefined"
               ? localStorage.getItem("cartid")
               : null;
-          console.log({ storedCartId });
           if (storedCartId && actions?.getCartById) {
             resolvedCart = await actions.getCartById(
               storedCartId,
@@ -75,7 +72,6 @@ export const CoreProvider = ({
             );
           }
         }
-        console.log({ resolvedCart });
         setCart(resolvedCart ?? null);
       } catch (err) {
         console.error("[CoreProvider] cart load error:", err);
@@ -85,7 +81,6 @@ export const CoreProvider = ({
     };
 
     loadCart();
-    console.log("load script");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config?.regionId, auth?.isSignedIn]);
 

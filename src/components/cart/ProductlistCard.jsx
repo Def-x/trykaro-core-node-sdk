@@ -25,7 +25,6 @@ const ProductlistCard = ({ product, component, orderType }) => {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
   const handleDeleteItem = async () => {
-    console.log("called handleDeleteItem", { product })
     await handleDeleteLineItem(product);
   };
 
