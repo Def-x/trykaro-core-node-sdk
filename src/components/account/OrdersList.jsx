@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useCore } from "../../context/CoreProvider";
 import { Spinner } from "../ui/Spinner";
 import { useCurrencyFormat } from "../../hooks/useCurrencyFormat";
@@ -79,10 +80,11 @@ export const OrdersList = ({ initialOrders }) => {
  * OrderCard internal component
  */
 const OrderCard = ({ order, formatCurrency }) => {
+  const router = useRouter();
   // The provided JSON shows data can be root-level or nested under 'order' and 'cart'
   const o = order.order || order || {};
   const cart = o.cart || order.cart || {};
-  
+  console.log({ order })
   const {
     id,
     order_number,
@@ -108,7 +110,10 @@ const OrderCard = ({ order, formatCurrency }) => {
     : "Pending";
 
   return (
-    <div className="border border-gray-100 bg-white shadow-sm hover:shadow-md transition-all duration-300">
+    <div
+      className="border border-gray-100 bg-white shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer"
+      onClick={() => router.push(`/order/${id}`)}
+    >
       {/* Header */}
       <div className="p-4 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
         <span className="font-[Nunito-bold] text-[15px] text-[#00214c]">
@@ -125,8 +130,8 @@ const OrderCard = ({ order, formatCurrency }) => {
           const lineItemable = item.line_itemable || {};
           const product = lineItemable.product || {};
           // Check for images in line_itemable (variant/product images structure)
-          const imgUrl = 
-            lineItemable.product_images?.[0]?.styles?.[0]?.url || 
+          const imgUrl =
+            lineItemable.product_images?.[0]?.styles?.[0]?.url ||
             item.variant?.images?.[0]?.styles?.[0]?.url ||
             product.images?.[0]?.styles?.[0]?.url;
 
@@ -160,17 +165,15 @@ const OrderCard = ({ order, formatCurrency }) => {
         </div>
         <div className="p-3 text-center">
           <p className="text-[10px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest mb-1">Status</p>
-          <p className={`text-[12px] font-[Nunito-bold] uppercase tracking-tighter ${
-            order_status === 'placed' ? 'text-green-600' : 'text-[#00214c]'
-          }`}>
+          <p className={`text-[12px] font-[Nunito-bold] uppercase tracking-tighter ${order_status === 'placed' ? 'text-green-600' : 'text-[#00214c]'
+            }`}>
             {order_status || "Processing"}
           </p>
         </div>
         <div className="p-3 text-center">
           <p className="text-[10px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest mb-1">Payment</p>
-          <p className={`text-[12px] font-[Nunito-bold] uppercase tracking-tighter ${
-            payment_status === 'received' || payment_status === 'paid' ? 'text-green-600' : 'text-orange-500'
-          }`}>
+          <p className={`text-[12px] font-[Nunito-bold] uppercase tracking-tighter ${payment_status === 'received' || payment_status === 'paid' ? 'text-green-600' : 'text-orange-500'
+            }`}>
             {payment_status || "Pending"}
           </p>
         </div>

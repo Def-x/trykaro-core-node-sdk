@@ -14,11 +14,11 @@ import { useCore } from "../../context/CoreProvider";
  * - onCancel: function (optional) - Called when cancel button is clicked
  * - submitLabel: string (optional) - Label for the submit button (default: 'Save Address')
  */
-export const AddressForm = ({ 
-  initialData, 
-  onSuccess, 
-  onCancel, 
-  submitLabel = "Save Address" 
+export const AddressForm = ({
+  initialData,
+  onSuccess,
+  onCancel,
+  submitLabel = "Save Address"
 }) => {
   const { actions, toast } = useCore();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -54,7 +54,7 @@ export const AddressForm = ({
           await actions.updateAddress(initialData.id, formData);
           toast?.success?.("Address updated successfully!");
         } else {
-           throw new Error("actions.updateAddress is not defined");
+          throw new Error("actions.updateAddress is not defined");
         }
       } else {
         // Create new address
@@ -215,9 +215,8 @@ export const AddressForm = ({
         <button
           type="submit"
           disabled={isSubmitting}
-          className={`w-full py-3 bg-[#00214c] text-white rounded-md font-[Nunito-bold] transition-colors flex items-center justify-center gap-2 uppercase tracking-widest text-[12px] shadow-lg shadow-blue-100 ${
-            isSubmitting ? "opacity-70 cursor-not-allowed" : "hover:bg-black"
-          }`}
+          className={`w-full py-3 bg-[#00214c] text-white rounded-md font-[Nunito-bold] transition-colors flex items-center justify-center gap-2 uppercase tracking-widest text-[12px] shadow-lg shadow-blue-100 ${isSubmitting ? "opacity-70 cursor-not-allowed" : "hover:bg-black"
+            }`}
         >
           {isSubmitting && (
             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -235,7 +234,7 @@ export const AddressForm = ({
               Cancel
             </button>
           )}
-          
+
           {initialData?.id && actions?.deleteAddress && (
             <button
               type="button"

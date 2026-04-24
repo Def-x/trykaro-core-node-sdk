@@ -24,6 +24,9 @@ export { AddressCard } from "./components/account/AddressCard";
 export { OrdersList } from "./components/account/OrdersList";
 export { ProfileForm } from "./components/account/ProfileForm";
 
+// ─── Order Components ─────────────────────────────────────────────────────────
+export { Order } from "./components/orders/Order";
+
 // ─── UI Primitives ────────────────────────────────────────────────────────────
 export { Spinner } from "./components/ui/Spinner";
 export { EmptyState } from "./components/ui/EmptyState";
