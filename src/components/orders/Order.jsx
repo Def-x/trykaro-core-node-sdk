@@ -28,9 +28,9 @@ const fallbackToast = {
 };
 
 export const Order = (props) => {
-  const { orderId } = props;
   const params = useParams();
-  const id = orderId || params?.orderid;
+  const id = params?.orderid
+  console.log({ id })
   const searchParams = useSearchParams();
   const router = useRouter();
   const { formatCurrency } = useCurrencyFormat();
@@ -46,6 +46,7 @@ export const Order = (props) => {
   const [isError, setIsError] = useState(false);
   const [isFetchingInvoice, setIsFetchingInvoice] = useState(false);
 
+  console.log({ data })
   useEffect(() => {
     if (!id) return;
 
@@ -56,7 +57,8 @@ export const Order = (props) => {
         if (!actions?.getOrderById) {
           throw new Error("getOrderById action is not available");
         }
-        const orderData = await actions.getOrderById(id, config?.storeId);
+        const orderData = await actions.getOrderById(id);
+        console.log({ orderData })
         setData(orderData);
       } catch (err) {
         console.error("Failed to fetch order", err);

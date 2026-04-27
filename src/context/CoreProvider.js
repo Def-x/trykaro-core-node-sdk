@@ -42,7 +42,7 @@ export const CoreProvider = ({
   orgData
 }) => {
   const [cart, setCart] = useState();
-  const [isCartLoading, setIsCartLoading] = useState(false);
+  const [isCartLoading, setIsCartLoading] = useState(true);
   const [region, setRegion] = useState(config?.region ?? null);
 
   // ─── Initial Cart Load ─────────────────────────────────────────────────

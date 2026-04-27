@@ -160,14 +160,17 @@ const OrderInfo = ({ clerkUser, hasDeletedItems }) => {
         try {
           setIsProcessingPayment(true);
           // Call updateRazorPayment action with payment response
+          console.log({ res })
+          let order
           if (actions?.updateRazorPayment) {
-            await actions.updateRazorPayment(
+            order = await actions.updateRazorPayment(
               res?.id,
               response.razorpay_payment_id,
             );
           }
-          if (res?.id) {
-            router.push(`/order/${res.id}?show=true`);
+          console.log({ order })
+          if (order?.order_id) {
+            router.push(`/order/${order?.order_id}?show=true`);
           }
         } catch (err) {
           console.error("Payment update failed:", err);
@@ -200,7 +203,9 @@ const OrderInfo = ({ clerkUser, hasDeletedItems }) => {
       setIsPlacingOrder(true);
       // Call createRazorOrder action to create Razorpay order
       if (actions?.createRazorOrder) {
+        console.log({ cart })
         const orderResponse = await actions.createRazorOrder(cart.id);
+        console.log({ orderResponse })
         onRazorPayHandler(orderResponse);
       }
     } catch (err) {

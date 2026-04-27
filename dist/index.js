@@ -19,7 +19,7 @@ var CoreProvider = ({
   orgData
 }) => {
   const [cart, setCart] = useState();
-  const [isCartLoading, setIsCartLoading] = useState(false);
+  const [isCartLoading, setIsCartLoading] = useState(true);
   const [region, setRegion] = useState(config?.region ?? null);
   useEffect(() => {
     if (!actions?.getCart) return;
@@ -1922,14 +1922,17 @@ var OrderInfo = ({ clerkUser, hasDeletedItems }) => {
       handler: async (response) => {
         try {
           setIsProcessingPayment(true);
+          console.log({ res });
+          let order;
           if (actions?.updateRazorPayment) {
-            await actions.updateRazorPayment(
+            order = await actions.updateRazorPayment(
               res?.id,
               response.razorpay_payment_id
             );
           }
-          if (res?.id) {
-            router.push(`/order/${res.id}?show=true`);
+          console.log({ order });
+          if (order?.order_id) {
+            router.push(`/order/${order?.order_id}?show=true`);
           }
         } catch (err) {
           console.error("Payment update failed:", err);
@@ -1954,7 +1957,9 @@ var OrderInfo = ({ clerkUser, hasDeletedItems }) => {
     try {
       setIsPlacingOrder(true);
       if (actions?.createRazorOrder) {
+        console.log({ cart });
         const orderResponse = await actions.createRazorOrder(cart.id);
+        console.log({ orderResponse });
         onRazorPayHandler(orderResponse);
       }
     } catch (err) {
@@ -2704,9 +2709,9 @@ var fallbackToast = {
   success: (msg) => console.log(msg)
 };
 var Order = (props) => {
-  const { orderId } = props;
   const params = useParams();
-  const id = orderId || params?.orderid;
+  const id = params?.orderid;
+  console.log({ id });
   const searchParams = useSearchParams();
   const router = useRouter();
   const { formatCurrency } = useCurrencyFormat();
@@ -2718,6 +2723,7 @@ var Order = (props) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
   const [isFetchingInvoice, setIsFetchingInvoice] = useState(false);
+  console.log({ data });
   useEffect(() => {
     if (!id) return;
     const fetchOrder = async () => {
@@ -2727,7 +2733,8 @@ var Order = (props) => {
         if (!actions?.getOrderById) {
           throw new Error("getOrderById action is not available");
         }
-        const orderData = await actions.getOrderById(id, config?.storeId);
+        const orderData = await actions.getOrderById(id);
+        console.log({ orderData });
         setData(orderData);
       } catch (err) {
         console.error("Failed to fetch order", err);
