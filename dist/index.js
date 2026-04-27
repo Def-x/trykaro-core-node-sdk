@@ -2548,68 +2548,82 @@ var OrderCard = ({ order, formatCurrency }) => {
   const router = useRouter();
   const o = order.order || order || {};
   const cart = o.cart || order.cart || {};
-  console.log({ order });
   const {
     id,
     order_number,
     order_status,
-    payment_status,
-    completed_at
+    payment_status
   } = o;
   const {
     number: cartNumber,
     display_total,
     line_items = []
   } = cart;
-  const dateStr = completed_at ? new Date(completed_at).toLocaleDateString("en-US", {
-    month: "short",
+  const dateStr = order?.created_at ? new Date(order?.created_at).toLocaleDateString("en-US", {
+    month: "long",
     day: "numeric",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit"
+    year: "numeric"
   }) : "Pending";
   return /* @__PURE__ */ jsxs(
     "div",
     {
-      className: "border border-gray-100 bg-white shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer",
+      className: "border border-gray-200 bg-white shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer rounded-lg overflow-hidden flex flex-col group/card",
       onClick: () => router.push(`/order/${id}`),
       children: [
-        /* @__PURE__ */ jsxs("div", { className: "p-4 border-b border-gray-50 flex justify-between items-center bg-gray-50/50", children: [
-          /* @__PURE__ */ jsx("span", { className: "font-[Nunito-bold] text-[15px] text-[#00214c]", children: order_number || cartNumber || id }),
-          /* @__PURE__ */ jsx("span", { className: "font-[Nunito-bold] text-[15px] text-[#00214c]", children: display_total ? formatCurrency(display_total) : "\u2014" })
+        /* @__PURE__ */ jsxs("div", { className: "flex flex-col md:flex-row justify-between items-start md:items-center bg-gray-50/80 p-5 border-b border-gray-100 gap-4", children: [
+          /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-1.5", children: [
+            /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3", children: [
+              /* @__PURE__ */ jsx("span", { className: "font-[Nunito-bold] text-[16px] text-[#00214c]", children: order_number || cartNumber || id }),
+              /* @__PURE__ */ jsx(
+                "span",
+                {
+                  className: "text-[10px] font-[Nunito-bold] uppercase tracking-wider",
+                  style: {
+                    padding: "3px 10px",
+                    borderRadius: "999px",
+                    backgroundColor: order_status?.toLowerCase() === "placed" ? "#dcfce7" : "#f3f4f6",
+                    color: order_status?.toLowerCase() === "placed" ? "#15803d" : "#374151",
+                    border: `1px solid ${order_status?.toLowerCase() === "placed" ? "#bbf7d0" : "#e5e7eb"}`
+                  },
+                  children: order_status || "Processing"
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxs("p", { className: "text-[13px] font-[Nunito-medium] text-gray-500", children: [
+              "Placed on ",
+              /* @__PURE__ */ jsx("span", { className: "text-gray-700", children: dateStr })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-start md:items-end gap-1.5 w-full md:w-auto", children: [
+            /* @__PURE__ */ jsx("span", { className: "font-[Nunito-bold] text-[18px] text-[#00214c]", children: display_total ? formatCurrency(display_total) : "\u2014" }),
+            /* @__PURE__ */ jsxs("p", { className: "text-[12px] font-[Nunito-medium] flex items-center gap-1.5", children: [
+              /* @__PURE__ */ jsx("span", { className: "text-gray-400 uppercase tracking-wider text-[10px] font-[Nunito-bold]", children: "Payment:" }),
+              /* @__PURE__ */ jsx("span", { className: `uppercase font-[Nunito-bold] tracking-tight ${payment_status === "received" || payment_status === "paid" ? "text-green-600" : "text-orange-500"}`, children: payment_status || "Pending" })
+            ] })
+          ] })
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "p-4 flex gap-4 overflow-x-auto min-h-[120px] items-center", children: [
+        /* @__PURE__ */ jsxs("div", { className: "p-5 pt-6 flex flex-wrap gap-8 items-center relative", children: [
           line_items.map((item, idx) => {
             const lineItemable = item.line_itemable || {};
             const product = lineItemable.product || {};
-            const imgUrl = lineItemable.product_images?.[0]?.styles?.[0]?.url || item.variant?.images?.[0]?.styles?.[0]?.url || product.images?.[0]?.styles?.[0]?.url;
+            const imgUrl = item?.image;
             return /* @__PURE__ */ jsxs("div", { className: "relative group shrink-0", children: [
-              /* @__PURE__ */ jsx("div", { className: "w-20 h-20 border border-gray-100 bg-white flex items-center justify-center p-1 overflow-hidden transition-transform duration-300 group-hover:scale-105", children: imgUrl ? /* @__PURE__ */ jsx(
+              /* @__PURE__ */ jsx("div", { className: "w-20 h-20 md:w-24 md:h-24 rounded-md border border-gray-200 bg-gray-50/50 flex items-center justify-center p-2 overflow-hidden transition-colors duration-300 group-hover:border-gray-300", children: imgUrl ? /* @__PURE__ */ jsx(
                 "img",
                 {
                   src: imgUrl,
                   alt: item.name || product.name || "Product",
-                  className: "w-full h-full object-contain"
+                  className: "w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-300"
                 }
-              ) : /* @__PURE__ */ jsx("div", { className: "w-full h-full bg-gray-50 flex items-center justify-center text-[10px] text-gray-300", children: "No Image" }) }),
-              /* @__PURE__ */ jsx("span", { className: "absolute -top-2 -right-2 bg-[#00214c] text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white shadow-sm", children: item.quantity })
+              ) : /* @__PURE__ */ jsxs("div", { className: "w-full h-full flex flex-col items-center justify-center text-gray-300", children: [
+                /* @__PURE__ */ jsx("span", { className: "text-[20px] mb-1", children: "\u{1F4E6}" }),
+                /* @__PURE__ */ jsx("span", { className: "text-[9px] uppercase tracking-wider font-[Nunito-medium]", children: "No Image" })
+              ] }) }),
+              /* @__PURE__ */ jsx("span", { className: "absolute top-0 right-0 -translate-y-1/3 translate-x-1/3 bg-[#00214c] text-white text-[11px] font-bold w-6 h-6 flex items-center justify-center rounded-full border-2 border-white shadow-sm z-10", children: item.quantity })
             ] }, idx);
           }),
-          line_items.length === 0 && /* @__PURE__ */ jsx("p", { className: "text-gray-300 italic text-sm", children: "No items info" })
-        ] }),
-        /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-3 border-t border-gray-50 divide-x divide-gray-50", children: [
-          /* @__PURE__ */ jsxs("div", { className: "p-3 text-center", children: [
-            /* @__PURE__ */ jsx("p", { className: "text-[10px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest mb-1", children: "Order date" }),
-            /* @__PURE__ */ jsx("p", { className: "text-[12px] font-[Nunito-medium] text-[#2d2d2d]", children: dateStr })
-          ] }),
-          /* @__PURE__ */ jsxs("div", { className: "p-3 text-center", children: [
-            /* @__PURE__ */ jsx("p", { className: "text-[10px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest mb-1", children: "Status" }),
-            /* @__PURE__ */ jsx("p", { className: `text-[12px] font-[Nunito-bold] uppercase tracking-tighter ${order_status === "placed" ? "text-green-600" : "text-[#00214c]"}`, children: order_status || "Processing" })
-          ] }),
-          /* @__PURE__ */ jsxs("div", { className: "p-3 text-center", children: [
-            /* @__PURE__ */ jsx("p", { className: "text-[10px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest mb-1", children: "Payment" }),
-            /* @__PURE__ */ jsx("p", { className: `text-[12px] font-[Nunito-bold] uppercase tracking-tighter ${payment_status === "received" || payment_status === "paid" ? "text-green-600" : "text-orange-500"}`, children: payment_status || "Pending" })
-          ] })
+          line_items.length === 0 && /* @__PURE__ */ jsx("p", { className: "text-gray-400 italic text-sm py-4", children: "No items info" }),
+          /* @__PURE__ */ jsx("div", { className: "absolute right-5 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 hidden md:flex items-center text-[#00214c] text-[13px] font-[Nunito-bold] bg-white/90 backdrop-blur-sm py-2 px-4 rounded-full shadow-sm border border-gray-200 pointer-events-none", children: "View Details \u2192" })
         ] })
       ]
     }
