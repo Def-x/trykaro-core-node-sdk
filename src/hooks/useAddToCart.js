@@ -92,7 +92,7 @@ export function useAddToCart() {
             } else {
                 updatedCart = await actions.getCartById?.(cartId, regionId);
             }
-
+            console.log("refreshCart", { updatedCart })
             setCart(updatedCart ?? null);
         } catch (err) {
             console.error("[useAddToCart] refreshCart error:", err);
@@ -101,6 +101,7 @@ export function useAddToCart() {
 
     // ─── Internal: add or update a line item ────────────────────────────────
     const addItemToCart = async (product, resolvedCartId, customizations = [], overrideQty = null) => {
+        console.log({ product, resolvedCartId, customizations, overrideQty })
         const sellingQTY = product?.selling_quantity?.values?.[0]?.label;
         const qty = overrideQty !== null ? overrideQty : (quantity ?? 1);
         const existingLineItem = getCartItem(product, customizations);
@@ -123,7 +124,7 @@ export function useAddToCart() {
 
         // Reset quantity to selling-unit default
         setQuantity(sellingQTY ? Number(sellingQTY) : 1);
-
+        console.log({ resolvedCartId })
         // Always refresh to keep context in sync
         if (resolvedCartId) {
             await refreshCart(resolvedCartId);
@@ -165,6 +166,7 @@ export function useAddToCart() {
                     if (!isSignedIn) {
                         localStorage.setItem("cartid", createdCart.id);
                     }
+                    console.log("createdCart", { createdCart })
                     setCart(createdCart);
                 }
             }

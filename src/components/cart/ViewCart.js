@@ -7,13 +7,13 @@ import Checkout from "./Checkout";
 // import { useCart } from "@/context/CartContext";
 // import { useCurrencyFormat } from "@/hooks/useCurrencyFormat";
 // import { ShoppingBagIcon, Textile } from "@/svgIcons";
-import { useUser } from "@clerk/nextjs";
 import { useCurrencyFormat } from "../../hooks/useCurrencyFormat";
 import { useAddToCart } from "../../hooks/useAddToCart";
+import { useCart } from "../../hooks/useCart";
 
 export const ViewCart = () => {
   const { cart, cartItems } = useAddToCart();
-  const { isLoaded } = useUser();
+  const { isCartLoading } = useCart();
   const { formatCurrency } = useCurrencyFormat();
 
   const {
@@ -27,7 +27,7 @@ export const ViewCart = () => {
 
   // Treat cartItems from context as single source of truth
   const items = cartItems ?? [];
-  const isLoading = !isLoaded;
+  const isLoading = isCartLoading;
 
   const deletedItems = items.filter(
     (item) => !item?.line_itemable || item?.line_itemable_deleted,

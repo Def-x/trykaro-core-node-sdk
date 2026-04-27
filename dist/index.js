@@ -135,12 +135,14 @@ function useAddToCart() {
       } else {
         updatedCart = await actions.getCartById?.(cartId, regionId);
       }
+      console.log("refreshCart", { updatedCart });
       setCart(updatedCart ?? null);
     } catch (err) {
       console.error("[useAddToCart] refreshCart error:", err);
     }
   };
   const addItemToCart = async (product, resolvedCartId, customizations = [], overrideQty = null) => {
+    console.log({ product, resolvedCartId, customizations, overrideQty });
     const sellingQTY = product?.selling_quantity?.values?.[0]?.label;
     const qty = overrideQty !== null ? overrideQty : quantity ?? 1;
     const existingLineItem = getCartItem(product, customizations);
@@ -158,6 +160,7 @@ function useAddToCart() {
       await actions.createLineItem?.(body);
     }
     setQuantity(sellingQTY ? Number(sellingQTY) : 1);
+    console.log({ resolvedCartId });
     if (resolvedCartId) {
       await refreshCart(resolvedCartId);
     }
@@ -184,6 +187,7 @@ function useAddToCart() {
           if (!isSignedIn) {
             localStorage.setItem("cartid", createdCart.id);
           }
+          console.log("createdCart", { createdCart });
           setCart(createdCart);
         }
       }
@@ -2092,7 +2096,7 @@ var OrderInfo = ({ clerkUser, hasDeletedItems }) => {
 var Checkout_default = Checkout;
 var ViewCart = () => {
   const { cart, cartItems } = useAddToCart();
-  const { isLoaded } = useUser();
+  const { isCartLoading } = useCart();
   const { formatCurrency } = useCurrencyFormat();
   const {
     line_items: cartItem = cartItems,
@@ -2103,7 +2107,7 @@ var ViewCart = () => {
     order_type
   } = cart || {};
   const items = cartItems ?? [];
-  const isLoading = !isLoaded;
+  const isLoading = isCartLoading;
   const deletedItems = items.filter(
     (item) => !item?.line_itemable || item?.line_itemable_deleted
   );
