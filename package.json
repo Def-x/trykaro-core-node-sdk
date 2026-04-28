@@ -9,6 +9,9 @@
   "exports": {
     ".": {
       "import": "./dist/index.js"
+    },
+    "./stripe": {
+      "import": "./dist/stripe.js"
     }
   },
   "files": [
@@ -23,7 +26,15 @@
     "js-cookie": "^3.0.5",
     "lodash": ">=4",
     "react": "^18 || ^19",
-    "react-dom": "^18 || ^19"
+    "react-dom": "^18 || ^19",
+    "@stripe/stripe-js": ">=2",
+    "@stripe/react-stripe-js": ">=2",
+    "lucide-react": ">=0.300.0"
+  },
+  "peerDependenciesMeta": {
+    "@stripe/stripe-js": { "optional": true },
+    "@stripe/react-stripe-js": { "optional": true },
+    "lucide-react": { "optional": true }
   },
   "devDependencies": {
     "lodash": "^4.18.1",

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRazorpay } from "react-razorpay";
 import { useCore } from "../../context/CoreProvider";
+import { getPaymentGateway } from "../../gateways/registry";
 import {
   AddressFormInline,
   AddressSelection,
@@ -79,9 +80,24 @@ const LoginPage = () => {
 const OrderInfo = ({ clerkUser, hasDeletedItems }) => {
   const router = useRouter();
   const { Razorpay } = useRazorpay();
-  const { cart, setCart, actions, config, auth } = useCore();
+  const { cart, setCart, actions, config, auth, orgData } = useCore();
 
-  // Placeholder cart - in real implementation, would come from context
+  // Read StripeCheckout from the gateway registry.
+  // It is registered automatically when the consuming app imports
+  // "@defx/storefront-core/stripe" (a single side-effect import).
+  // If that import was never made, getPaymentGateway returns null and the
+  // Stripe UI is simply not rendered — no errors, no @stripe/* needed.
+  const StripeCheckout = getPaymentGateway("stripe");
+
+  // ── Payment gateway config derived from orgData ──────────────────────
+  const paymentConfig = orgData?.organization_setting?.payment ?? {};
+  const paymentMode = paymentConfig?.mode ?? "razorpay"; // default to razorpay
+  const razorpayKeyId = paymentConfig?.razor_pay_key_id ?? "";
+  const stripePublishableKey = paymentConfig?.stripe_publishable_key ?? "";
+
+  // Stripe: track whether the embedded Stripe form should be shown
+  const [showStripeForm, setShowStripeForm] = useState(false);
+
   const [addresses, setAddresses] = useState([]);
   const [isAddressLoading, setIsAddressLoading] = useState(true);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
@@ -147,10 +163,9 @@ const OrderInfo = ({ clerkUser, hasDeletedItems }) => {
   };
 
   const onRazorPayHandler = (res) => {
-    const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? "";
-
+    // Use key from orgData, not hardcoded env var
     const options = {
-      key: razorpayKey,
+      key: razorpayKeyId,
       amount: res?.cart?.total / 100,
       currency: "INR",
       name: "Store",
@@ -199,13 +214,21 @@ const OrderInfo = ({ clerkUser, hasDeletedItems }) => {
 
   const onPlaceOrder = async () => {
     if (hasDeletedItems || !cart?.id) return;
+
+    if (paymentMode === "stripe") {
+      // For Stripe, just reveal the embedded Stripe form — payment intent
+      // is created inside <StripeCheckout> when it mounts.
+      setShowStripeForm(true);
+      return;
+    }
+
+    // ── Razorpay flow ────────────────────────────────────────────────────
     try {
       setIsPlacingOrder(true);
-      // Call createRazorOrder action to create Razorpay order
       if (actions?.createRazorOrder) {
-        console.log({ cart })
+        console.log({ cart });
         const orderResponse = await actions.createRazorOrder(cart.id);
-        console.log({ orderResponse })
+        console.log({ orderResponse });
         onRazorPayHandler(orderResponse);
       }
     } catch (err) {
@@ -269,15 +292,51 @@ const OrderInfo = ({ clerkUser, hasDeletedItems }) => {
           All transactions are secure and encrypted.
         </p>
         <div className="mt-[16px]">
-          <AddressCard
-            addressType="Pay with Razorpay"
-            address="Once you click Checkout, you'll be redirected to a secure Razorpay payment window to complete your payment."
-            type="stripe"
-          />
+          {paymentMode === "stripe" ? (
+            // ── Stripe: show info card, then embed form after Checkout click
+            <>
+              <AddressCard
+                addressType="Pay with Stripe"
+                address="Enter your card details securely via Stripe to complete your payment."
+                type="stripe"
+              />
+              {showStripeForm && stripePublishableKey && StripeCheckout && (
+                <div className="mt-4">
+                  <StripeCheckout
+                    cartId={cart?.id}
+                    publishableKey={stripePublishableKey}
+                    createStripePaymentIntent={actions?.createStripePaymentIntent}
+                    onSuccess={() => {
+                      if (typeof window !== "undefined") {
+                        localStorage.removeItem("cartid");
+                      }
+                      setCart(null);
+                      router.push("/account/orders");
+                    }}
+                  />
+                </div>
+              )}
+              {showStripeForm && !StripeCheckout && (
+                <p className="mt-4 text-sm text-red-500 p-3 bg-red-50 rounded-lg">
+                  StripeCheckout component is not configured. Pass it via{" "}
+                  <code className="font-mono">CoreProvider components={{ StripeCheckout }}</code>.
+                </p>
+              )}
+            </>
+          ) : (
+            // ── Razorpay: info card only; payment modal opens on Checkout click
+            <AddressCard
+              addressType="Pay with Razorpay"
+              address="Once you click Checkout, you'll be redirected to a secure Razorpay payment window to complete your payment."
+              type="stripe"
+            />
+          )}
         </div>
       </div>
 
       {/* ── CHECKOUT BUTTON ── */}
+      {/* Hide the checkout button once the Stripe form is visible */}
+      {!(paymentMode === "stripe" && showStripeForm) && (
       <div className="mt-[32px]">
         <button
           onClick={onPlaceOrder}
@@ -291,7 +350,9 @@ const OrderInfo = ({ clerkUser, hasDeletedItems }) => {
             ? "Processing…"
             : hasDeletedItems
               ? "Remove Deleted Items to Checkout"
-              : "Checkout"}
+              : paymentMode === "stripe"
+                ? "Proceed to Card Payment"
+                : "Checkout"}
         </button>
 
         {/* Policy Links */}
@@ -329,6 +390,7 @@ const OrderInfo = ({ clerkUser, hasDeletedItems }) => {
           </p>
         )}
       </div>
+      )}
 
       {/* ── PAYMENT PROCESSING OVERLAY ── */}
       {isProcessingPayment && (
@@ -356,7 +418,7 @@ const OrderInfo = ({ clerkUser, hasDeletedItems }) => {
 
               <div className="space-y-2">
                 <p className="font-[Nunito-medium] text-[#2d2d2d] text-base">
-                  We're finalizing your order with Razorpay.
+                  We're finalizing your order with {paymentMode === "stripe" ? "Stripe" : "Razorpay"}.
                 </p>
                 <p className="font-[Nunito-regular] text-[#8c92a4] text-sm leading-relaxed">
                   Please do not refresh the page or close this window. <br />

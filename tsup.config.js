@@ -5,7 +5,10 @@ import { fileURLToPath } from "url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
-  entry: ["src/index.js"],
+  entry: [
+    "src/index.js",   // main bundle — zero Stripe code
+    "src/stripe.js",  // optional Stripe sub-package — only imported by Stripe projects
+  ],
   format: ["esm"],
   clean: true,
   sourcemap: true,
@@ -20,6 +23,11 @@ export default defineConfig({
     "next/link",
     "next/navigation",
     "react-razorpay",
+    // Stripe (only required when org payment mode is "stripe")
+    "@stripe/stripe-js",
+    "@stripe/react-stripe-js",
+    // Icon library used by StripeCheckout
+    "lucide-react",
   ],
   // Handle .js files as JSX
   loader: {

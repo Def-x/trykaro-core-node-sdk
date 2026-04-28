@@ -18,20 +18,27 @@ const CoreContext = createContext(null);
  * component itself has zero framework dependencies.
  *
  * Props:
- *  - config    { storeId, regionId, currency, locale, ... }
- *  - actions   {
+ *  - config      { storeId, regionId, currency, locale, ... }
+ *  - actions     {
  *      // Cart actions
  *      getCart, createCart, updateCart, getCartById,
  *      updateLineItem, createLineItem, deleteLineItem,
  *      // Razorpay actions
  *      createRazorOrder, updateRazorPayment,
+ *      // Stripe actions (only needed when payment mode is "stripe")
+ *      createStripePaymentIntent,
  *      // Address actions
  *      getUserAddress,
  *      ...
  *    }
- *  - toast     { success(msg), error(msg), info(msg) }  (optional)
- *  - auth      { isSignedIn, user, logout, ... }         (optional)
- *  - initialCart  cart object from SSR (optional, avoids first-load flash)
+ *  - components  {
+ *      // Optional: inject StripeCheckout only in projects that use Stripe.
+ *      // The core package has zero @stripe/* dependencies.
+ *      StripeCheckout: <YourStripeCheckoutComponent>,
+ *    }
+ *  - toast       { success(msg), error(msg), info(msg) }  (optional)
+ *  - auth        { isSignedIn, user, logout, ... }         (optional)
+ *  - orgData     organisation JSON from the API           (optional)
  */
 export const CoreProvider = ({
   children,
@@ -109,6 +116,7 @@ export const CoreProvider = ({
     [cart, isCartLoading, region, actions, toast, auth, config],
   );
 
+  console.log("package", { orgData })
   return <CoreContext.Provider value={value}>{children}</CoreContext.Provider>;
 };
 

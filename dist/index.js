@@ -69,6 +69,7 @@ var CoreProvider = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [cart, isCartLoading, region, actions, toast, auth, config]
   );
+  console.log("package", { orgData });
   return /* @__PURE__ */ jsx(CoreContext.Provider, { value, children });
 };
 var useCore = () => {
@@ -1173,6 +1174,12 @@ var ProductlistCard = ({ product, component, orderType }) => {
   ] });
 };
 var ProductlistCard_default = ProductlistCard;
+
+// src/gateways/registry.js
+var registry = {};
+function getPaymentGateway(name) {
+  return registry[name] ?? null;
+}
 var Popup = ({
   isOpen,
   onClose,
@@ -1857,7 +1864,13 @@ var LoginPage = () => {
 var OrderInfo = ({ clerkUser, hasDeletedItems }) => {
   const router = useRouter();
   const { Razorpay } = useRazorpay();
-  const { cart, setCart, actions, config, auth } = useCore();
+  const { cart, setCart, actions, config, auth, orgData } = useCore();
+  const StripeCheckout = getPaymentGateway("stripe");
+  const paymentConfig = orgData?.organization_setting?.payment ?? {};
+  const paymentMode = paymentConfig?.mode ?? "razorpay";
+  const razorpayKeyId = paymentConfig?.razor_pay_key_id ?? "";
+  const stripePublishableKey = paymentConfig?.stripe_publishable_key ?? "";
+  const [showStripeForm, setShowStripeForm] = useState(false);
   const [addresses, setAddresses] = useState([]);
   const [isAddressLoading, setIsAddressLoading] = useState(true);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
@@ -1915,9 +1928,8 @@ var OrderInfo = ({ clerkUser, hasDeletedItems }) => {
     }
   };
   const onRazorPayHandler = (res) => {
-    const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? "";
     const options = {
-      key: razorpayKey,
+      key: razorpayKeyId,
       amount: res?.cart?.total / 100,
       currency: "INR",
       name: "Store",
@@ -1958,6 +1970,10 @@ var OrderInfo = ({ clerkUser, hasDeletedItems }) => {
   };
   const onPlaceOrder = async () => {
     if (hasDeletedItems || !cart?.id) return;
+    if (paymentMode === "stripe") {
+      setShowStripeForm(true);
+      return;
+    }
     try {
       setIsPlacingOrder(true);
       if (actions?.createRazorOrder) {
@@ -2007,23 +2023,62 @@ var OrderInfo = ({ clerkUser, hasDeletedItems }) => {
     /* @__PURE__ */ jsxs("div", { className: "mt-[32px]", children: [
       /* @__PURE__ */ jsx("h1", { className: "font-[Nunito-medium] text-[20px] text-[var(--main)]", children: "PAYMENT" }),
       /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[14px] text-[var(--secondary)]", children: "All transactions are secure and encrypted." }),
-      /* @__PURE__ */ jsx("div", { className: "mt-[16px]", children: /* @__PURE__ */ jsx(
-        AddressCard,
-        {
-          addressType: "Pay with Razorpay",
-          address: "Once you click Checkout, you'll be redirected to a secure Razorpay payment window to complete your payment.",
-          type: "stripe"
-        }
+      /* @__PURE__ */ jsx("div", { className: "mt-[16px]", children: paymentMode === "stripe" ? (
+        // ── Stripe: show info card, then embed form after Checkout click
+        /* @__PURE__ */ jsxs(Fragment, { children: [
+          /* @__PURE__ */ jsx(
+            AddressCard,
+            {
+              addressType: "Pay with Stripe",
+              address: "Enter your card details securely via Stripe to complete your payment.",
+              type: "stripe"
+            }
+          ),
+          showStripeForm && stripePublishableKey && StripeCheckout && /* @__PURE__ */ jsx("div", { className: "mt-4", children: /* @__PURE__ */ jsx(
+            StripeCheckout,
+            {
+              cartId: cart?.id,
+              publishableKey: stripePublishableKey,
+              createStripePaymentIntent: actions?.createStripePaymentIntent,
+              onSuccess: () => {
+                if (typeof window !== "undefined") {
+                  localStorage.removeItem("cartid");
+                }
+                setCart(null);
+                router.push("/account/orders");
+              }
+            }
+          ) }),
+          showStripeForm && !StripeCheckout && /* @__PURE__ */ jsxs("p", { className: "mt-4 text-sm text-red-500 p-3 bg-red-50 rounded-lg", children: [
+            "StripeCheckout component is not configured. Pass it via",
+            " ",
+            /* @__PURE__ */ jsxs("code", { className: "font-mono", children: [
+              "CoreProvider components=",
+              { StripeCheckout }
+            ] }),
+            "."
+          ] })
+        ] })
+      ) : (
+        // ── Razorpay: info card only; payment modal opens on Checkout click
+        /* @__PURE__ */ jsx(
+          AddressCard,
+          {
+            addressType: "Pay with Razorpay",
+            address: "Once you click Checkout, you'll be redirected to a secure Razorpay payment window to complete your payment.",
+            type: "stripe"
+          }
+        )
       ) })
     ] }),
-    /* @__PURE__ */ jsxs("div", { className: "mt-[32px]", children: [
+    !(paymentMode === "stripe" && showStripeForm) && /* @__PURE__ */ jsxs("div", { className: "mt-[32px]", children: [
       /* @__PURE__ */ jsx(
         "button",
         {
           onClick: onPlaceOrder,
           disabled: hasDeletedItems || isPlacingOrder || isAddressLoading,
           className: `px-5 py-3 w-full rounded-lg cursor-pointer font-[Nunito-medium] text-[15px] transition-all duration-300 ${hasDeletedItems || isPlacingOrder || isAddressLoading ? "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none" : "bg-[#00214c] text-white hover:bg-[#000] hover:shadow-lg transform active:scale-[0.98]"}`,
-          children: isPlacingOrder ? "Processing\u2026" : hasDeletedItems ? "Remove Deleted Items to Checkout" : "Checkout"
+          children: isPlacingOrder ? "Processing\u2026" : hasDeletedItems ? "Remove Deleted Items to Checkout" : paymentMode === "stripe" ? "Proceed to Card Payment" : "Checkout"
         }
       ),
       /* @__PURE__ */ jsxs("div", { className: "mt-4 text-center", children: [
@@ -2074,7 +2129,11 @@ var OrderInfo = ({ clerkUser, hasDeletedItems }) => {
           /* @__PURE__ */ jsx("div", { className: "w-12 h-[1px] bg-[#c8a95a] mx-auto opacity-50" })
         ] }),
         /* @__PURE__ */ jsxs("div", { className: "space-y-2", children: [
-          /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-[#2d2d2d] text-base", children: "We're finalizing your order with Razorpay." }),
+          /* @__PURE__ */ jsxs("p", { className: "font-[Nunito-medium] text-[#2d2d2d] text-base", children: [
+            "We're finalizing your order with ",
+            paymentMode === "stripe" ? "Stripe" : "Razorpay",
+            "."
+          ] }),
           /* @__PURE__ */ jsxs("p", { className: "font-[Nunito-regular] text-[#8c92a4] text-sm leading-relaxed", children: [
             "Please do not refresh the page or close this window. ",
             /* @__PURE__ */ jsx("br", {}),
