@@ -78,7 +78,7 @@ export const UserInfo = ({ user, isLoading, refetch }) => {
                 First name
               </label>
               <p className="border-b border-gray-100 pb-2 text-[15px] font-[Nunito-medium] text-[#00214c]">
-                {userData.first_name || "—"}
+                {userData.first_name || userData.firstName || "—"}
               </p>
             </div>
             <div className="flex flex-col gap-1">
@@ -86,7 +86,7 @@ export const UserInfo = ({ user, isLoading, refetch }) => {
                 Last name
               </label>
               <p className="border-b border-gray-100 pb-2 text-[15px] font-[Nunito-medium] text-[#00214c]">
-                {userData.last_name || "—"}
+                {userData.last_name || userData.lastName || "—"}
               </p>
             </div>
             <div className="flex flex-col gap-1 md:col-span-2">
@@ -94,7 +94,7 @@ export const UserInfo = ({ user, isLoading, refetch }) => {
                 Email address
               </label>
               <p className="border-b border-gray-100 pb-2 text-[15px] font-[Nunito-medium] text-[#00214c]">
-                {userData.email || "—"}
+                {userData.email || userData.primaryEmailAddress?.emailAddress || "—"}
               </p>
             </div>
           </div>

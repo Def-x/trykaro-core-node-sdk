@@ -19,9 +19,9 @@ import { useCore } from "../context/CoreProvider";
 export function useCurrencyFormat() {
     const { orgData } = useCore();
 
-    const currency = orgData?.organization_setting?.currency ?? "₹";
+    const currency = orgData?.organization_setting?.currency ?? "INR";
     const locale = orgData?.organization_setting?.locale ?? "en-IN";
-
+    console.log({ orgData })
     const formatCurrency = (amount) => {
         if (amount == null) return "";
         return new Intl.NumberFormat(locale, {

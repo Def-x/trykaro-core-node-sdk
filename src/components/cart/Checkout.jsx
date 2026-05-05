@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState, useCallback, useEffect } from "react";
-import { useUser, useClerk } from "@clerk/nextjs";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRazorpay } from "react-razorpay";
 import { useCore } from "../../context/CoreProvider";
 import { getPaymentGateway } from "../../gateways/registry";
+import { AuthManager } from "../auth/AuthManager";
 import {
   AddressFormInline,
   AddressSelection,
@@ -16,20 +16,23 @@ import {
 
 // ─── Top-level Checkout ────────────────────────────────────────────────────────
 const Checkout = ({ hasDeletedItems }) => {
-  const { user, isSignedIn, isLoaded } = useUser();
+  const { auth, config } = useCore();
+  const { isSignedIn, isLoading } = auth || {};
 
-  if (!isLoaded) return null;
+  if (isLoading) return (
+    <div className="w-full h-[400px] flex items-center justify-center">
+      <div className="w-8 h-8 border-4 border-[#00214c] border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
 
   return !isSignedIn ? (
     <LoginPage />
   ) : (
-    <OrderInfo clerkUser={user} hasDeletedItems={hasDeletedItems} />
+    <OrderInfo user={auth.user} hasDeletedItems={hasDeletedItems} />
   );
 };
 
 const LoginPage = () => {
-  const { openSignIn, openSignUp } = useClerk();
-
   return (
     <div className="w-full h-full flex flex-col items-center justify-center gap-6">
       <div className="flex flex-col items-center">
@@ -48,56 +51,30 @@ const LoginPage = () => {
             />
           </svg>
         </div>
-        <div className="text-center">
-          <p className="font-[Nunito-medium] text-[20px] text-[var(--main)]">
-            Sign in to continue
-          </p>
-          <p className="font-[Nunito-regular] text-[14px] text-[var(--secondary)] mt-1">
-            Please sign in or create an account to checkout.
-          </p>
-        </div>
       </div>
 
-      <div className="w-full space-y-3">
-        <button
-          className="w-full font-[Nunito-medium] bg-[var(--main)] text-[var(--secondaryBg)] py-[10px] rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-          onClick={() => openSignIn()}
-        >
-          Sign in
-        </button>
-        <button
-          className="w-full font-[Nunito-regular] border border-[var(--main)] py-[10px] text-[var(--main)] rounded-lg cursor-pointer hover:bg-[var(--secondaryBg)] transition-colors"
-          onClick={() => openSignUp()}
-        >
-          New here?{" "}
-          <span className="font-[Nunito-medium]">Register your account</span>
-        </button>
+      <div className="w-full">
+        <AuthManager />
       </div>
     </div>
   );
 };
 
-const OrderInfo = ({ clerkUser, hasDeletedItems }) => {
+const OrderInfo = ({ user, hasDeletedItems }) => {
   const router = useRouter();
   const { Razorpay } = useRazorpay();
   const { cart, setCart, actions, config, auth, orgData } = useCore();
 
   // Read StripeCheckout from the gateway registry.
-  // It is registered automatically when the consuming app imports
-  // "@defx/storefront-core/stripe" (a single side-effect import).
-  // If that import was never made, getPaymentGateway returns null and the
-  // Stripe UI is simply not rendered — no errors, no @stripe/* needed.
   const StripeCheckout = getPaymentGateway("stripe");
 
   // ── Payment gateway config derived from orgData ──────────────────────
   const paymentConfig = orgData?.organization_setting?.payment ?? {};
-  const paymentMode = paymentConfig?.mode ?? "razorpay"; // default to razorpay
+  const paymentMode = paymentConfig?.mode ?? "razorpay";
   const razorpayKeyId = paymentConfig?.razor_pay_key_id ?? "";
   const stripePublishableKey = paymentConfig?.stripe_publishable_key ?? "";
 
-  // Stripe: track whether the embedded Stripe form should be shown
   const [showStripeForm, setShowStripeForm] = useState(false);
-
   const [addresses, setAddresses] = useState([]);
   const [isAddressLoading, setIsAddressLoading] = useState(true);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
@@ -163,7 +140,18 @@ const OrderInfo = ({ clerkUser, hasDeletedItems }) => {
   };
 
   const onRazorPayHandler = (res) => {
-    // Use key from orgData, not hardcoded env var
+    // Normalize user info for Razorpay prefill
+    const isClerk = config?.authType === "clerk";
+    const name = isClerk 
+      ? `${user?.firstName ?? ""} ${user?.lastName ?? ""}`.trim()
+      : (user?.name || user?.first_name || "");
+    const email = isClerk
+      ? user?.primaryEmailAddress?.emailAddress
+      : user?.email;
+    const contact = isClerk
+      ? user?.primaryPhoneNumber?.phoneNumber
+      : user?.phone || user?.mobile;
+
     const options = {
       key: razorpayKeyId,
       amount: res?.cart?.total / 100,
@@ -174,16 +162,13 @@ const OrderInfo = ({ clerkUser, hasDeletedItems }) => {
       handler: async (response) => {
         try {
           setIsProcessingPayment(true);
-          // Call updateRazorPayment action with payment response
-          console.log({ res })
-          let order
+          let order;
           if (actions?.updateRazorPayment) {
             order = await actions.updateRazorPayment(
               res?.id,
               response.razorpay_payment_id,
             );
           }
-          console.log({ order })
           if (order?.order_id) {
             router.push(`/order/${order?.order_id}?show=true`);
           }
@@ -192,15 +177,10 @@ const OrderInfo = ({ clerkUser, hasDeletedItems }) => {
           setIsProcessingPayment(false);
         }
       },
-
       prefill: {
-        name: clerkUser
-          ? `${clerkUser.firstName ?? ""} ${clerkUser.lastName ?? ""}`.trim()
-          : "",
-        email: clerkUser?.primaryEmailAddress?.emailAddress ?? "",
-        contact: clerkUser?.primaryPhoneNumber
-          ? `${clerkUser.primaryPhoneNumber.phoneNumber}`
-          : "",
+        name,
+        email,
+        contact,
       },
       theme: { color: "#1e1e1e" },
     };
@@ -216,19 +196,14 @@ const OrderInfo = ({ clerkUser, hasDeletedItems }) => {
     if (hasDeletedItems || !cart?.id) return;
 
     if (paymentMode === "stripe") {
-      // For Stripe, just reveal the embedded Stripe form — payment intent
-      // is created inside <StripeCheckout> when it mounts.
       setShowStripeForm(true);
       return;
     }
 
-    // ── Razorpay flow ────────────────────────────────────────────────────
     try {
       setIsPlacingOrder(true);
       if (actions?.createRazorOrder) {
-        console.log({ cart });
         const orderResponse = await actions.createRazorOrder(cart.id);
-        console.log({ orderResponse });
         onRazorPayHandler(orderResponse);
       }
     } catch (err) {
@@ -267,7 +242,7 @@ const OrderInfo = ({ clerkUser, hasDeletedItems }) => {
               address={addresses}
               cart={cart}
               setCart={setCart}
-              clerkUser={clerkUser}
+              user={user}
               refetch={fetchAddresses}
               sameAsShipping={sameAsShipping}
               setSameAsShipping={setSameAsShipping}
@@ -293,7 +268,6 @@ const OrderInfo = ({ clerkUser, hasDeletedItems }) => {
         </p>
         <div className="mt-[16px]">
           {paymentMode === "stripe" ? (
-            // ── Stripe: show info card, then embed form after Checkout click
             <>
               <AddressCard
                 addressType="Pay with Stripe"
@@ -324,7 +298,6 @@ const OrderInfo = ({ clerkUser, hasDeletedItems }) => {
               )}
             </>
           ) : (
-            // ── Razorpay: info card only; payment modal opens on Checkout click
             <AddressCard
               addressType="Pay with Razorpay"
               address="Once you click Checkout, you'll be redirected to a secure Razorpay payment window to complete your payment."
@@ -335,7 +308,6 @@ const OrderInfo = ({ clerkUser, hasDeletedItems }) => {
       </div>
 
       {/* ── CHECKOUT BUTTON ── */}
-      {/* Hide the checkout button once the Stripe form is visible */}
       {!(paymentMode === "stripe" && showStripeForm) && (
       <div className="mt-[32px]">
         <button
@@ -397,11 +369,8 @@ const OrderInfo = ({ clerkUser, hasDeletedItems }) => {
         <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-white/95 backdrop-blur-md animate-fadeIn">
           <div className="flex flex-col items-center gap-8 max-w-md w-full px-6">
             <div className="relative">
-              {/* Premium Spinner */}
               <div className="w-24 h-24 border-[3px] border-[#00214c]/5 rounded-full"></div>
               <div className="absolute top-0 left-0 w-24 h-24 border-[3px] border-[#c8a95a] border-t-transparent rounded-full animate-spin"></div>
-
-              {/* Pulsing center icon or dot */}
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
                 <div className="w-3 h-3 bg-[#00214c] rounded-full animate-pulse shadow-[0_0_15px_rgba(0,33,76,0.3)]"></div>
               </div>
@@ -412,7 +381,6 @@ const OrderInfo = ({ clerkUser, hasDeletedItems }) => {
                 <h2 className="font-serif italic text-3xl text-[#00214c] tracking-tight">
                   Processing your payment
                 </h2>
-
                 <div className="w-12 h-[1px] bg-[#c8a95a] mx-auto opacity-50"></div>
               </div>
 
@@ -427,7 +395,6 @@ const OrderInfo = ({ clerkUser, hasDeletedItems }) => {
               </div>
             </div>
 
-            {/* Subtle progress indicator */}
             <div className="flex gap-1.5 mt-2">
               {[0, 1, 2].map((i) => (
                 <div

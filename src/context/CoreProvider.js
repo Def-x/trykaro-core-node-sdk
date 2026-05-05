@@ -18,11 +18,13 @@ const CoreContext = createContext(null);
  * component itself has zero framework dependencies.
  *
  * Props:
- *  - config      { storeId, regionId, currency, locale, ... }
+ *  - config      { storeId, regionId, currency, locale, authType: 'clerk' | 'own', ... }
  *  - actions     {
  *      // Cart actions
  *      getCart, createCart, updateCart, getCartById,
  *      updateLineItem, createLineItem, deleteLineItem,
+ *      // Auth actions (for authType: 'own')
+ *      login, verifyOtp,
  *      // Razorpay actions
  *      createRazorOrder, updateRazorPayment,
  *      // Stripe actions (only needed when payment mode is "stripe")
@@ -37,7 +39,7 @@ const CoreContext = createContext(null);
  *      StripeCheckout: <YourStripeCheckoutComponent>,
  *    }
  *  - toast       { success(msg), error(msg), info(msg) }  (optional)
- *  - auth        { isSignedIn, user, logout, ... }         (optional)
+ *  - auth        { isSignedIn, user, logout, ... }         (optional for 'clerk')
  *  - orgData     organisation JSON from the API           (optional)
  */
 export const CoreProvider = ({
@@ -45,12 +47,31 @@ export const CoreProvider = ({
   config = {},
   actions = {},
   toast = null,
-  auth = null,
+  auth: injectedAuth = null,
   orgData
 }) => {
   const [cart, setCart] = useState();
   const [isCartLoading, setIsCartLoading] = useState(true);
   const [region, setRegion] = useState(config?.region ?? null);
+
+  console.log({ injectedAuth })
+  // ─── Custom Auth State (for authType: 'own') ───────────────────────────
+  const authType = config?.authType ?? "clerk";
+  console.log({ config, authType })
+
+  // Derived auth object
+  const auth = useMemo(() => {
+    if (authType === "clerk") return injectedAuth;
+
+    return {
+      ...injectedAuth,
+      isSignedIn: !!injectedAuth?.access_token,
+      token: injectedAuth?.access_token,
+    };
+  }, [authType, injectedAuth]);
+
+
+  console.log({ auth })
 
   // ─── Initial Cart Load ─────────────────────────────────────────────────
   useEffect(() => {

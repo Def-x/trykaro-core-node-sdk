@@ -1,8 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useClerk } from "@clerk/nextjs";
-import Cookies from "js-cookie";
+import { useCore } from "../context/CoreProvider";
 
 /**
  * useLogout()
@@ -21,15 +20,17 @@ import Cookies from "js-cookie";
  *  <button onClick={logout}>Sign out</button>
  */
 export const useLogout = () => {
-    const { signOut } = useClerk();
+    const { auth } = useCore();
     const router = useRouter();
 
     const logout = async () => {
-        localStorage.removeItem("cartid");
-        localStorage.removeItem("access_token");
-        Cookies.remove("access_token", { path: "/" });
-        await signOut();
-        router.push("/");
+        if (auth?.logout) {
+            await auth.logout();
+        } else {
+            localStorage.removeItem("cartid");
+            localStorage.removeItem("access_token");
+            router.push("/");
+        }
         router.refresh();
     };
 

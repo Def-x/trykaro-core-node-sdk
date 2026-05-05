@@ -53,7 +53,7 @@ export const AddressSelection = ({
   setCart,
   address,
   sameAsShipping,
-  clerkUser,
+  user,
   setSameAsShipping,
   shippingAddressId,
   billingAddressId,
@@ -114,7 +114,7 @@ export const AddressSelection = ({
   };
 
   useEffect(() => {
-    if (!clerkUser) return;
+    if (!user) return;
     const apiData = { id: cart?.id };
     if (!isCartHaveBillingAddress && billingAddressId)
       apiData.billing_address_id = billingAddressId;

@@ -6,12 +6,14 @@ import { DeleteIcon, EditIcon } from "@/public/SvgImage";
 import CustomizationModal from "@/components/common/CustomizationModal";
 import { useState } from "react";
 import ViewCustomizationModal from "@/components/common/ViewCustomizationModal";
+import noProductImage from "@/assets/noProduct.svg";
 
 const ProductlistCard = ({ product, component, orderType }) => {
   const { name, price, shipping_charge } = product?.line_itemable ?? {};
   const productImage = product?.image;
   const quantity = product?.quantity;
   const displayPrice = (price ?? 0) / 100;
+  const isSellingQty = !!product?.line_itemable?.selling_quantity_id;
 
   const { formatCurrency } = useCurrencyFormat();
   const {
@@ -23,6 +25,11 @@ const ProductlistCard = ({ product, component, orderType }) => {
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+
+  const handleImageError = (event) => {
+    event.currentTarget.onerror = null;
+    event.currentTarget.src = noProductImage;
+  };
 
   const handleDeleteItem = async () => {
     await handleDeleteLineItem(product);
@@ -65,9 +72,10 @@ const ProductlistCard = ({ product, component, orderType }) => {
           {/* Product Image */}
           <div className="w-[112px] h-[124px] flex-shrink-0 overflow-hidden relative">
             <img
-              src={productImage || "/noProduct.svg"}
+              src={productImage || noProductImage}
               alt={name || "Product"}
               className="w-[112px] h-[124px] object-cover rounded-lg"
+              onError={handleImageError}
             />
             <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-lg">
               <span className="text-white text-xs font-[Nunito-bold] text-center">
@@ -114,7 +122,6 @@ const ProductlistCard = ({ product, component, orderType }) => {
       </div>
     );
   }
-
   return (
     <div className="flex justify-between gap-4">
       {/* Left section */}
@@ -122,9 +129,10 @@ const ProductlistCard = ({ product, component, orderType }) => {
         {/* Product Image */}
         <div className="w-[112px] h-[124px] flex-shrink-0 overflow-hidden">
           <img
-            src={productImage || "/noImage.webp"}
+            src={productImage || noProductImage}
             alt={name || "Product"}
             className="w-[112px] h-[124px] object-cover rounded-lg"
+            onError={handleImageError}
           />
         </div>
 
@@ -181,36 +189,44 @@ const ProductlistCard = ({ product, component, orderType }) => {
 
         {component !== "order" && (
           <div className="flex items-center gap-3">
-            <div className="flex items-center border border-[#e8e5df] rounded-md h-[28px] bg-[#f9f9f9]">
-              <button
-                onClick={() =>
-                  handleDecreaseQty(
-                    product?.line_itemable,
-                    product?.line_items_customizations,
-                  )
-                }
-                disabled={isAddToCartLoading}
-                className="w-7 h-full flex items-center justify-center text-lg text-gray-500 hover:text-[#00214c] transition-colors disabled:opacity-50 pb-0.5"
-              >
-                -
-              </button>
-              <span className="w-6 text-center text-sm font-semibold text-[#00214c] bg-white h-full flex items-center justify-center border-x border-[#e8e5df]">
-                {quantity}
-              </span>
-              <button
-                onClick={() =>
-                  handleAddToCart(
-                    product?.line_itemable,
-                    product?.line_items_customizations,
-                    1,
-                  )
-                }
-                disabled={isAddToCartLoading}
-                className="w-7 h-full flex items-center justify-center text-base text-gray-500 hover:text-[#00214c] transition-colors disabled:opacity-50 pb-0.5"
-              >
-                +
-              </button>
-            </div>
+            {!isSellingQty ? (
+              <div className="flex items-center border border-[#e8e5df] rounded-md h-[28px] bg-[#f9f9f9]">
+                <button
+                  onClick={() =>
+                    handleDecreaseQty(
+                      product?.line_itemable,
+                      product?.line_items_customizations,
+                    )
+                  }
+                  disabled={isAddToCartLoading}
+                  className="w-7 h-full flex items-center justify-center text-lg text-gray-500 hover:text-[#00214c] transition-colors disabled:opacity-50 pb-0.5"
+                >
+                  -
+                </button>
+                <span className="w-6 text-center text-sm font-semibold text-[#00214c] bg-white h-full flex items-center justify-center border-x border-[#e8e5df]">
+                  {quantity}
+                </span>
+                <button
+                  onClick={() =>
+                    handleAddToCart(
+                      product?.line_itemable,
+                      product?.line_items_customizations,
+                      1,
+                    )
+                  }
+                  disabled={isAddToCartLoading}
+                  className="w-7 h-full flex items-center justify-center text-base text-gray-500 hover:text-[#00214c] transition-colors disabled:opacity-50 pb-0.5"
+                >
+                  +
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center border border-[#e8e5df] rounded-md h-[28px] bg-[#f9f9f9] px-3">
+                <span className="text-sm font-semibold text-[#00214c]">
+                  {quantity}
+                </span>
+              </div>
+            )}
             {/* {hasCustomizations && (
               <button 
                 onClick={() => setIsEditModalOpen(true)}

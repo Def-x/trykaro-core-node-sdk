@@ -1,26 +1,36 @@
-import React6, { createContext, useState, useEffect, useMemo, useContext, useCallback } from 'react';
+import { getPaymentGateway } from './chunk-ICFWQ2RM.js';
+import React8, { createContext, useState, useMemo, useEffect, useContext, useRef, useCallback } from 'react';
 import { jsx, jsxs, Fragment } from 'react/jsx-runtime';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
-import { useClerk, useUser } from '@clerk/nextjs';
-import Cookies from 'js-cookie';
 import { flatten, map, compact, filter, uniqBy } from 'lodash';
 import Link from 'next/link';
 import { useRazorpay } from 'react-razorpay';
 import { createPortal } from 'react-dom';
 
-// src/context/CoreProvider.js
 var CoreContext = createContext(null);
 var CoreProvider = ({
   children,
   config = {},
   actions = {},
   toast = null,
-  auth = null,
+  auth: injectedAuth = null,
   orgData
 }) => {
   const [cart, setCart] = useState();
   const [isCartLoading, setIsCartLoading] = useState(true);
   const [region, setRegion] = useState(config?.region ?? null);
+  console.log({ injectedAuth });
+  const authType = config?.authType ?? "clerk";
+  console.log({ config, authType });
+  const auth = useMemo(() => {
+    if (authType === "clerk") return injectedAuth;
+    return {
+      ...injectedAuth,
+      isSignedIn: !!injectedAuth?.access_token,
+      token: injectedAuth?.access_token
+    };
+  }, [authType, injectedAuth]);
+  console.log({ auth });
   useEffect(() => {
     if (!actions?.getCart) return;
     const loadCart = async () => {
@@ -94,7 +104,6 @@ function useAddToCart() {
   const isSignedIn = auth?.isSignedIn ?? false;
   const regionId = config?.regionId ?? null;
   const cartItems = cart?.line_items ?? [];
-  console.log({ cartItems });
   const normalizeCustomizations = (c) => {
     if (!c) return [];
     if (Array.isArray(c)) {
@@ -254,8 +263,9 @@ function useAddToCart() {
 // src/hooks/useCurrencyFormat.js
 function useCurrencyFormat() {
   const { orgData } = useCore();
-  const currency = orgData?.organization_setting?.currency ?? "\u20B9";
+  const currency = orgData?.organization_setting?.currency ?? "INR";
   const locale = orgData?.organization_setting?.locale ?? "en-IN";
+  console.log({ orgData });
   const formatCurrency = (amount) => {
     if (amount == null) return "";
     return new Intl.NumberFormat(locale, {
@@ -272,14 +282,16 @@ var useAuth = () => {
   return auth ?? {};
 };
 var useLogout = () => {
-  const { signOut } = useClerk();
+  const { auth } = useCore();
   const router = useRouter();
   const logout = async () => {
-    localStorage.removeItem("cartid");
-    localStorage.removeItem("access_token");
-    Cookies.remove("access_token", { path: "/" });
-    await signOut();
-    router.push("/");
+    if (auth?.logout) {
+      await auth.logout();
+    } else {
+      localStorage.removeItem("cartid");
+      localStorage.removeItem("access_token");
+      router.push("/");
+    }
     router.refresh();
   };
   return logout;
@@ -454,6 +466,203 @@ var useCartInfo = () => {
   return { initialCartInfo };
 };
 var userCartInfo_default = useCartInfo;
+var CustomOTPAuth = ({ onLoginSuccess }) => {
+  const { actions, auth, toast } = useCore();
+  const [step, setStep] = useState("phone");
+  const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [timer, setTimer] = useState(0);
+  const otpRefs = useRef([]);
+  useEffect(() => {
+    let interval;
+    if (timer > 0) {
+      interval = setInterval(() => {
+        setTimer((prev) => prev - 1);
+      }, 1e3);
+    }
+    return () => clearInterval(interval);
+  }, [timer]);
+  const handleSendOtp = async (e) => {
+    e?.preventDefault();
+    if (phone.length < 10) {
+      toast?.error("Please enter a valid phone number");
+      return;
+    }
+    setIsLoading(true);
+    try {
+      if (actions?.login) {
+        await actions.login(phone);
+        setStep("otp");
+        setTimer(60);
+        toast?.success("OTP sent successfully");
+      } else {
+        toast?.error("Login action not configured");
+      }
+    } catch (err) {
+      toast?.error(err.message || "Failed to send OTP");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  const handleVerifyOtp = async (e) => {
+    e?.preventDefault();
+    const otpValue = otp.join("");
+    if (otpValue.length < 6) {
+      toast?.error("Please enter the full 6-digit OTP");
+      return;
+    }
+    setIsLoading(true);
+    try {
+      if (actions?.verifyOtp) {
+        const response = await actions.verifyOtp(phone, otpValue);
+        if (response?.token) {
+          auth?.setAuth({
+            token: response.token,
+            user: response.user
+          });
+          toast?.success("Logged in successfully");
+          if (onLoginSuccess) onLoginSuccess();
+        } else {
+          toast?.error("Invalid response from server");
+        }
+      } else {
+        toast?.error("Verify OTP action not configured");
+      }
+    } catch (err) {
+      toast?.error(err.message || "Invalid OTP");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  const handleOtpChange = (index, value) => {
+    if (!/^\d*$/.test(value)) return;
+    const newOtp = [...otp];
+    newOtp[index] = value.substring(value.length - 1);
+    setOtp(newOtp);
+    if (value && index < 5) {
+      otpRefs.current[index + 1].focus();
+    }
+  };
+  const handleKeyDown = (index, e) => {
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
+      otpRefs.current[index - 1].focus();
+    }
+  };
+  return /* @__PURE__ */ jsxs("div", { className: "w-full max-w-[400px] mx-auto p-6 bg-white rounded-2xl shadow-xl border border-gray-100", children: [
+    /* @__PURE__ */ jsxs("div", { className: "text-center mb-8", children: [
+      /* @__PURE__ */ jsx("h2", { className: "text-2xl font-[Nunito-bold] text-[#00214c]", children: step === "phone" ? "Welcome Back" : "Verify OTP" }),
+      /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-500 mt-2 font-[Nunito-regular]", children: step === "phone" ? "Enter your mobile number to sign in" : `Enter the 6-digit code sent to +91 ${phone}` })
+    ] }),
+    step === "phone" ? /* @__PURE__ */ jsxs("form", { onSubmit: handleSendOtp, className: "space-y-6", children: [
+      /* @__PURE__ */ jsxs("div", { className: "relative", children: [
+        /* @__PURE__ */ jsx("span", { className: "absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-[Nunito-medium]", children: "+91" }),
+        /* @__PURE__ */ jsx(
+          "input",
+          {
+            type: "tel",
+            value: phone,
+            onChange: (e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10)),
+            placeholder: "Mobile Number",
+            className: "w-full pl-14 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#00214c]/20 focus:border-[#00214c] outline-none transition-all font-[Nunito-medium]",
+            required: true
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsx(
+        "button",
+        {
+          type: "submit",
+          disabled: isLoading || phone.length < 10,
+          className: `w-full py-3 rounded-xl font-[Nunito-bold] text-white transition-all ${isLoading || phone.length < 10 ? "bg-gray-300 cursor-not-allowed" : "bg-[#00214c] hover:bg-[#001a3d] active:scale-[0.98]"}`,
+          children: isLoading ? /* @__PURE__ */ jsxs("span", { className: "flex items-center justify-center gap-2", children: [
+            /* @__PURE__ */ jsx("div", { className: "w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" }),
+            "Sending..."
+          ] }) : "Get OTP"
+        }
+      )
+    ] }) : /* @__PURE__ */ jsxs("form", { onSubmit: handleVerifyOtp, className: "space-y-6", children: [
+      /* @__PURE__ */ jsx("div", { className: "flex justify-between gap-2", children: otp.map((digit, index) => /* @__PURE__ */ jsx(
+        "input",
+        {
+          ref: (el) => otpRefs.current[index] = el,
+          type: "text",
+          inputMode: "numeric",
+          value: digit,
+          onChange: (e) => handleOtpChange(index, e.target.value),
+          onKeyDown: (e) => handleKeyDown(index, e),
+          className: "w-12 h-14 text-center text-xl font-[Nunito-bold] bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#00214c]/20 focus:border-[#00214c] outline-none transition-all"
+        },
+        index
+      )) }),
+      /* @__PURE__ */ jsx("div", { className: "text-center", children: timer > 0 ? /* @__PURE__ */ jsxs("p", { className: "text-xs text-gray-500 font-[Nunito-regular]", children: [
+        "Resend OTP in ",
+        /* @__PURE__ */ jsxs("span", { className: "font-[Nunito-bold]", children: [
+          timer,
+          "s"
+        ] })
+      ] }) : /* @__PURE__ */ jsx(
+        "button",
+        {
+          type: "button",
+          onClick: handleSendOtp,
+          className: "text-xs text-[#00214c] font-[Nunito-bold] hover:underline",
+          children: "Resend OTP"
+        }
+      ) }),
+      /* @__PURE__ */ jsx(
+        "button",
+        {
+          type: "submit",
+          disabled: isLoading || otp.join("").length < 6,
+          className: `w-full py-3 rounded-xl font-[Nunito-bold] text-white transition-all ${isLoading || otp.join("").length < 6 ? "bg-gray-300 cursor-not-allowed" : "bg-[#00214c] hover:bg-[#001a3d] active:scale-[0.98]"}`,
+          children: isLoading ? /* @__PURE__ */ jsxs("span", { className: "flex items-center justify-center gap-2", children: [
+            /* @__PURE__ */ jsx("div", { className: "w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" }),
+            "Verifying..."
+          ] }) : "Verify & Sign In"
+        }
+      ),
+      /* @__PURE__ */ jsx(
+        "button",
+        {
+          type: "button",
+          onClick: () => setStep("phone"),
+          className: "w-full text-sm text-gray-500 font-[Nunito-medium] hover:text-[#00214c] transition-colors",
+          children: "Change Phone Number"
+        }
+      )
+    ] })
+  ] });
+};
+var AuthManager = ({ mode = "sign-in", onLoginSuccess }) => {
+  const { config, auth } = useCore();
+  const authType = config?.authType ?? "clerk";
+  console.log({ config, auth, authType });
+  if (authType === "clerk") {
+    return /* @__PURE__ */ jsxs("div", { className: "w-full text-center py-8", children: [
+      /* @__PURE__ */ jsx("h2", { className: "text-2xl font-[Nunito-bold] text-[#00214c] mb-6", children: "Sign in to continue" }),
+      /* @__PURE__ */ jsxs("div", { className: "space-y-4", children: [
+        /* @__PURE__ */ jsx(
+          "button",
+          {
+            onClick: () => auth?.openSignIn?.(),
+            className: "w-full py-3 bg-[#00214c] text-white rounded-xl font-[Nunito-bold] hover:bg-[#001a3d] transition-all",
+            children: "Sign In"
+          }
+        ),
+        /* @__PURE__ */ jsx(
+          "button",
+          {
+            onClick: () => auth?.openSignUp?.(),
+            className: "w-full py-3 border border-[#00214c] text-[#00214c] rounded-xl font-[Nunito-bold] hover:bg-gray-50 transition-all",
+            children: "Create Account"
+          }
+        )
+      ] })
+    ] });
+  }
+  return /* @__PURE__ */ jsx(CustomOTPAuth, { onLoginSuccess });
+};
 var Spinner = ({ size = "md", color = "currentColor", className = "" }) => {
   const sizeMap = {
     sm: { width: 16, border: 2 },
@@ -779,10 +988,10 @@ var CartPage = ({
     },
     items: {}
   };
-  const [isWide, setIsWide] = React6.useState(
+  const [isWide, setIsWide] = React8.useState(
     typeof window !== "undefined" ? window.innerWidth >= 768 : true
   );
-  React6.useEffect(() => {
+  React8.useEffect(() => {
     const handleResize = () => setIsWide(window.innerWidth >= 768);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
@@ -810,7 +1019,7 @@ var CartPage = ({
     header ?? /* @__PURE__ */ jsx("h1", { style: s.heading, children: "Your Cart" }),
     /* @__PURE__ */ jsxs("div", { style: isWide ? s.layoutDesktop : s.layout, children: [
       /* @__PURE__ */ jsx("div", { style: s.items, children: lineItems.map(
-        (item) => renderItem ? /* @__PURE__ */ jsx(React6.Fragment, { children: renderItem(item) }, item.id) : /* @__PURE__ */ jsx(CartItem, { item }, item.id)
+        (item) => renderItem ? /* @__PURE__ */ jsx(React8.Fragment, { children: renderItem(item) }, item.id) : /* @__PURE__ */ jsx(CartItem, { item }, item.id)
       ) }),
       renderSummary ? renderSummary() : /* @__PURE__ */ jsx(
         CartSummary,
@@ -991,11 +1200,15 @@ var ViewCustomizationModal = ({
   ] }) });
 };
 var ViewCustomizationModal_default = ViewCustomizationModal;
+
+// src/assets/noProduct.svg
+var noProduct_default = "./noProduct-PBPCQYKY.svg";
 var ProductlistCard = ({ product, component, orderType }) => {
   const { name, price, shipping_charge } = product?.line_itemable ?? {};
   const productImage = product?.image;
   const quantity = product?.quantity;
   const displayPrice = (price ?? 0) / 100;
+  const isSellingQty = !!product?.line_itemable?.selling_quantity_id;
   const { formatCurrency } = useCurrencyFormat();
   const {
     handleDeleteLineItem,
@@ -1005,6 +1218,10 @@ var ProductlistCard = ({ product, component, orderType }) => {
   } = useAddToCart();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const handleImageError = (event) => {
+    event.currentTarget.onerror = null;
+    event.currentTarget.src = noProduct_default;
+  };
   const handleDeleteItem = async () => {
     await handleDeleteLineItem(product);
   };
@@ -1031,9 +1248,10 @@ var ProductlistCard = ({ product, component, orderType }) => {
           /* @__PURE__ */ jsx(
             "img",
             {
-              src: productImage || "/noProduct.svg",
+              src: productImage || noProduct_default,
               alt: name || "Product",
-              className: "w-[112px] h-[124px] object-cover rounded-lg"
+              className: "w-[112px] h-[124px] object-cover rounded-lg",
+              onError: handleImageError
             }
           ),
           /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-lg", children: /* @__PURE__ */ jsx("span", { className: "text-white text-xs font-[Nunito-bold] text-center", children: "UNAVAILABLE" }) })
@@ -1068,9 +1286,10 @@ var ProductlistCard = ({ product, component, orderType }) => {
       /* @__PURE__ */ jsx("div", { className: "w-[112px] h-[124px] flex-shrink-0 overflow-hidden", children: /* @__PURE__ */ jsx(
         "img",
         {
-          src: productImage || "/noImage.webp",
+          src: productImage || noProduct_default,
           alt: name || "Product",
-          className: "w-[112px] h-[124px] object-cover rounded-lg"
+          className: "w-[112px] h-[124px] object-cover rounded-lg",
+          onError: handleImageError
         }
       ) }),
       /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between h-[124px] flex-1 min-w-0", children: [
@@ -1109,7 +1328,7 @@ var ProductlistCard = ({ product, component, orderType }) => {
     /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between items-end h-[124px] flex-shrink-0", children: [
       /* @__PURE__ */ jsx("div", { className: "flex flex-col items-end text-right", children: component !== "order" ? /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-base text-[var(--main)] line-clamp-1", children: formatCurrency(displayPrice * quantity) }) : /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-base text-[var(--main)] line-clamp-2", children: formatCurrency(displayPrice * quantity) }) }),
       component !== "order" && /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3", children: [
-        /* @__PURE__ */ jsxs("div", { className: "flex items-center border border-[#e8e5df] rounded-md h-[28px] bg-[#f9f9f9]", children: [
+        !isSellingQty ? /* @__PURE__ */ jsxs("div", { className: "flex items-center border border-[#e8e5df] rounded-md h-[28px] bg-[#f9f9f9]", children: [
           /* @__PURE__ */ jsx(
             "button",
             {
@@ -1136,7 +1355,7 @@ var ProductlistCard = ({ product, component, orderType }) => {
               children: "+"
             }
           )
-        ] }),
+        ] }) : /* @__PURE__ */ jsx("div", { className: "flex items-center border border-[#e8e5df] rounded-md h-[28px] bg-[#f9f9f9] px-3", children: /* @__PURE__ */ jsx("span", { className: "text-sm font-semibold text-[#00214c]", children: quantity }) }),
         /* @__PURE__ */ jsx(
           DeleteIcon,
           {
@@ -1174,12 +1393,6 @@ var ProductlistCard = ({ product, component, orderType }) => {
   ] });
 };
 var ProductlistCard_default = ProductlistCard;
-
-// src/gateways/registry.js
-var registry = {};
-function getPaymentGateway(name) {
-  return registry[name] ?? null;
-}
 var Popup = ({
   isOpen,
   onClose,
@@ -1554,7 +1767,7 @@ var AddressSelection = ({
   setCart,
   address,
   sameAsShipping,
-  clerkUser,
+  user,
   setSameAsShipping,
   shippingAddressId,
   billingAddressId,
@@ -1608,7 +1821,7 @@ var AddressSelection = ({
     updateCart(apiData);
   };
   useEffect(() => {
-    if (!clerkUser) return;
+    if (!user) return;
     const apiData = { id: cart?.id };
     if (!isCartHaveBillingAddress && billingAddressId)
       apiData.billing_address_id = billingAddressId;
@@ -1806,62 +2019,35 @@ var AddressCard = ({
   );
 };
 var Checkout = ({ hasDeletedItems }) => {
-  const { user, isSignedIn, isLoaded } = useUser();
-  if (!isLoaded) return null;
-  return !isSignedIn ? /* @__PURE__ */ jsx(LoginPage, {}) : /* @__PURE__ */ jsx(OrderInfo, { clerkUser: user, hasDeletedItems });
+  const { auth, config } = useCore();
+  const { isSignedIn, isLoading } = auth || {};
+  if (isLoading) return /* @__PURE__ */ jsx("div", { className: "w-full h-[400px] flex items-center justify-center", children: /* @__PURE__ */ jsx("div", { className: "w-8 h-8 border-4 border-[#00214c] border-t-transparent rounded-full animate-spin" }) });
+  return !isSignedIn ? /* @__PURE__ */ jsx(LoginPage, {}) : /* @__PURE__ */ jsx(OrderInfo, { user: auth.user, hasDeletedItems });
 };
 var LoginPage = () => {
-  const { openSignIn, openSignUp } = useClerk();
   return /* @__PURE__ */ jsxs("div", { className: "w-full h-full flex flex-col items-center justify-center gap-6", children: [
-    /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center", children: [
-      /* @__PURE__ */ jsx("div", { className: "w-16 h-16 bg-[#00214c]/5 rounded-full flex items-center justify-center mb-4", children: /* @__PURE__ */ jsx(
-        "svg",
-        {
-          className: "w-8 h-8 text-[#00214c]",
-          fill: "none",
-          stroke: "currentColor",
-          viewBox: "0 0 24 24",
-          children: /* @__PURE__ */ jsx(
-            "path",
-            {
-              strokeLinecap: "round",
-              strokeLinejoin: "round",
-              strokeWidth: 2,
-              d: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-            }
-          )
-        }
-      ) }),
-      /* @__PURE__ */ jsxs("div", { className: "text-center", children: [
-        /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-[20px] text-[var(--main)]", children: "Sign in to continue" }),
-        /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[14px] text-[var(--secondary)] mt-1", children: "Please sign in or create an account to checkout." })
-      ] })
-    ] }),
-    /* @__PURE__ */ jsxs("div", { className: "w-full space-y-3", children: [
-      /* @__PURE__ */ jsx(
-        "button",
-        {
-          className: "w-full font-[Nunito-medium] bg-[var(--main)] text-[var(--secondaryBg)] py-[10px] rounded-lg cursor-pointer hover:opacity-90 transition-opacity",
-          onClick: () => openSignIn(),
-          children: "Sign in"
-        }
-      ),
-      /* @__PURE__ */ jsxs(
-        "button",
-        {
-          className: "w-full font-[Nunito-regular] border border-[var(--main)] py-[10px] text-[var(--main)] rounded-lg cursor-pointer hover:bg-[var(--secondaryBg)] transition-colors",
-          onClick: () => openSignUp(),
-          children: [
-            "New here?",
-            " ",
-            /* @__PURE__ */ jsx("span", { className: "font-[Nunito-medium]", children: "Register your account" })
-          ]
-        }
-      )
-    ] })
+    /* @__PURE__ */ jsx("div", { className: "flex flex-col items-center", children: /* @__PURE__ */ jsx("div", { className: "w-16 h-16 bg-[#00214c]/5 rounded-full flex items-center justify-center mb-4", children: /* @__PURE__ */ jsx(
+      "svg",
+      {
+        className: "w-8 h-8 text-[#00214c]",
+        fill: "none",
+        stroke: "currentColor",
+        viewBox: "0 0 24 24",
+        children: /* @__PURE__ */ jsx(
+          "path",
+          {
+            strokeLinecap: "round",
+            strokeLinejoin: "round",
+            strokeWidth: 2,
+            d: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+          }
+        )
+      }
+    ) }) }),
+    /* @__PURE__ */ jsx("div", { className: "w-full", children: /* @__PURE__ */ jsx(AuthManager, {}) })
   ] });
 };
-var OrderInfo = ({ clerkUser, hasDeletedItems }) => {
+var OrderInfo = ({ user, hasDeletedItems }) => {
   const router = useRouter();
   const { Razorpay } = useRazorpay();
   const { cart, setCart, actions, config, auth, orgData } = useCore();
@@ -1928,6 +2114,10 @@ var OrderInfo = ({ clerkUser, hasDeletedItems }) => {
     }
   };
   const onRazorPayHandler = (res) => {
+    const isClerk = config?.authType === "clerk";
+    const name = isClerk ? `${user?.firstName ?? ""} ${user?.lastName ?? ""}`.trim() : user?.name || user?.first_name || "";
+    const email = isClerk ? user?.primaryEmailAddress?.emailAddress : user?.email;
+    const contact = isClerk ? user?.primaryPhoneNumber?.phoneNumber : user?.phone || user?.mobile;
     const options = {
       key: razorpayKeyId,
       amount: res?.cart?.total / 100,
@@ -1938,7 +2128,6 @@ var OrderInfo = ({ clerkUser, hasDeletedItems }) => {
       handler: async (response) => {
         try {
           setIsProcessingPayment(true);
-          console.log({ res });
           let order;
           if (actions?.updateRazorPayment) {
             order = await actions.updateRazorPayment(
@@ -1946,7 +2135,6 @@ var OrderInfo = ({ clerkUser, hasDeletedItems }) => {
               response.razorpay_payment_id
             );
           }
-          console.log({ order });
           if (order?.order_id) {
             router.push(`/order/${order?.order_id}?show=true`);
           }
@@ -1956,9 +2144,9 @@ var OrderInfo = ({ clerkUser, hasDeletedItems }) => {
         }
       },
       prefill: {
-        name: clerkUser ? `${clerkUser.firstName ?? ""} ${clerkUser.lastName ?? ""}`.trim() : "",
-        email: clerkUser?.primaryEmailAddress?.emailAddress ?? "",
-        contact: clerkUser?.primaryPhoneNumber ? `${clerkUser.primaryPhoneNumber.phoneNumber}` : ""
+        name,
+        email,
+        contact
       },
       theme: { color: "#1e1e1e" }
     };
@@ -1977,9 +2165,7 @@ var OrderInfo = ({ clerkUser, hasDeletedItems }) => {
     try {
       setIsPlacingOrder(true);
       if (actions?.createRazorOrder) {
-        console.log({ cart });
         const orderResponse = await actions.createRazorOrder(cart.id);
-        console.log({ orderResponse });
         onRazorPayHandler(orderResponse);
       }
     } catch (err) {
@@ -2009,7 +2195,7 @@ var OrderInfo = ({ clerkUser, hasDeletedItems }) => {
         address: addresses,
         cart,
         setCart,
-        clerkUser,
+        user,
         refetch: fetchAddresses,
         sameAsShipping,
         setSameAsShipping,
@@ -2023,52 +2209,46 @@ var OrderInfo = ({ clerkUser, hasDeletedItems }) => {
     /* @__PURE__ */ jsxs("div", { className: "mt-[32px]", children: [
       /* @__PURE__ */ jsx("h1", { className: "font-[Nunito-medium] text-[20px] text-[var(--main)]", children: "PAYMENT" }),
       /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[14px] text-[var(--secondary)]", children: "All transactions are secure and encrypted." }),
-      /* @__PURE__ */ jsx("div", { className: "mt-[16px]", children: paymentMode === "stripe" ? (
-        // ── Stripe: show info card, then embed form after Checkout click
-        /* @__PURE__ */ jsxs(Fragment, { children: [
-          /* @__PURE__ */ jsx(
-            AddressCard,
-            {
-              addressType: "Pay with Stripe",
-              address: "Enter your card details securely via Stripe to complete your payment.",
-              type: "stripe"
-            }
-          ),
-          showStripeForm && stripePublishableKey && StripeCheckout && /* @__PURE__ */ jsx("div", { className: "mt-4", children: /* @__PURE__ */ jsx(
-            StripeCheckout,
-            {
-              cartId: cart?.id,
-              publishableKey: stripePublishableKey,
-              createStripePaymentIntent: actions?.createStripePaymentIntent,
-              onSuccess: () => {
-                if (typeof window !== "undefined") {
-                  localStorage.removeItem("cartid");
-                }
-                setCart(null);
-                router.push("/account/orders");
-              }
-            }
-          ) }),
-          showStripeForm && !StripeCheckout && /* @__PURE__ */ jsxs("p", { className: "mt-4 text-sm text-red-500 p-3 bg-red-50 rounded-lg", children: [
-            "StripeCheckout component is not configured. Pass it via",
-            " ",
-            /* @__PURE__ */ jsxs("code", { className: "font-mono", children: [
-              "CoreProvider components=",
-              { StripeCheckout }
-            ] }),
-            "."
-          ] })
-        ] })
-      ) : (
-        // ── Razorpay: info card only; payment modal opens on Checkout click
+      /* @__PURE__ */ jsx("div", { className: "mt-[16px]", children: paymentMode === "stripe" ? /* @__PURE__ */ jsxs(Fragment, { children: [
         /* @__PURE__ */ jsx(
           AddressCard,
           {
-            addressType: "Pay with Razorpay",
-            address: "Once you click Checkout, you'll be redirected to a secure Razorpay payment window to complete your payment.",
+            addressType: "Pay with Stripe",
+            address: "Enter your card details securely via Stripe to complete your payment.",
             type: "stripe"
           }
-        )
+        ),
+        showStripeForm && stripePublishableKey && StripeCheckout && /* @__PURE__ */ jsx("div", { className: "mt-4", children: /* @__PURE__ */ jsx(
+          StripeCheckout,
+          {
+            cartId: cart?.id,
+            publishableKey: stripePublishableKey,
+            createStripePaymentIntent: actions?.createStripePaymentIntent,
+            onSuccess: () => {
+              if (typeof window !== "undefined") {
+                localStorage.removeItem("cartid");
+              }
+              setCart(null);
+              router.push("/account/orders");
+            }
+          }
+        ) }),
+        showStripeForm && !StripeCheckout && /* @__PURE__ */ jsxs("p", { className: "mt-4 text-sm text-red-500 p-3 bg-red-50 rounded-lg", children: [
+          "StripeCheckout component is not configured. Pass it via",
+          " ",
+          /* @__PURE__ */ jsxs("code", { className: "font-mono", children: [
+            "CoreProvider components=",
+            { StripeCheckout }
+          ] }),
+          "."
+        ] })
+      ] }) : /* @__PURE__ */ jsx(
+        AddressCard,
+        {
+          addressType: "Pay with Razorpay",
+          address: "Once you click Checkout, you'll be redirected to a secure Razorpay payment window to complete your payment.",
+          type: "stripe"
+        }
       ) })
     ] }),
     !(paymentMode === "stripe" && showStripeForm) && /* @__PURE__ */ jsxs("div", { className: "mt-[32px]", children: [
@@ -2491,15 +2671,15 @@ var UserInfo = ({ user, isLoading, refetch }) => {
       /* @__PURE__ */ jsx("div", { className: "border border-gray-100 p-8 shadow-sm bg-white hover:shadow-md transition-shadow duration-300", children: /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6", children: [
         /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-1", children: [
           /* @__PURE__ */ jsx("label", { className: "text-[12px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest", children: "First name" }),
-          /* @__PURE__ */ jsx("p", { className: "border-b border-gray-100 pb-2 text-[15px] font-[Nunito-medium] text-[#00214c]", children: userData.first_name || "\u2014" })
+          /* @__PURE__ */ jsx("p", { className: "border-b border-gray-100 pb-2 text-[15px] font-[Nunito-medium] text-[#00214c]", children: userData.first_name || userData.firstName || "\u2014" })
         ] }),
         /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-1", children: [
           /* @__PURE__ */ jsx("label", { className: "text-[12px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest", children: "Last name" }),
-          /* @__PURE__ */ jsx("p", { className: "border-b border-gray-100 pb-2 text-[15px] font-[Nunito-medium] text-[#00214c]", children: userData.last_name || "\u2014" })
+          /* @__PURE__ */ jsx("p", { className: "border-b border-gray-100 pb-2 text-[15px] font-[Nunito-medium] text-[#00214c]", children: userData.last_name || userData.lastName || "\u2014" })
         ] }),
         /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-1 md:col-span-2", children: [
           /* @__PURE__ */ jsx("label", { className: "text-[12px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest", children: "Email address" }),
-          /* @__PURE__ */ jsx("p", { className: "border-b border-gray-100 pb-2 text-[15px] font-[Nunito-medium] text-[#00214c]", children: userData.email || "\u2014" })
+          /* @__PURE__ */ jsx("p", { className: "border-b border-gray-100 pb-2 text-[15px] font-[Nunito-medium] text-[#00214c]", children: userData.email || userData.primaryEmailAddress?.emailAddress || "\u2014" })
         ] })
       ] }) })
     ] }),
@@ -2726,10 +2906,11 @@ var AccountPage = ({ initialTab = "profile" }) => {
     { id: "profile", label: "My Profile" },
     { id: "orders", label: "My Orders" }
   ];
+  console.log({ userData });
   return /* @__PURE__ */ jsx("div", { className: "min-h-screen bg-white", children: /* @__PURE__ */ jsxs("div", { className: "px-4 md:px-8 lg:px-[32px] py-[40px] md:py-[100px] flex flex-col md:flex-row items-start justify-between gap-8 w-full", children: [
     /* @__PURE__ */ jsxs("aside", { className: "w-full md:w-[280px] lg:w-[320px] md:sticky top-[40px]", children: [
-      /* @__PURE__ */ jsx("h1", { className: "font-[Nunito-regular] text-[40px] md:text-[48px] leading-[1.05] text-[#00214c] mb-8 tracking-tight uppercase", children: "MY ACCOUNT" }),
-      /* @__PURE__ */ jsx("nav", { children: /* @__PURE__ */ jsxs("ul", { className: "space-y-1 font-[Nunito-medium]", children: [
+      /* @__PURE__ */ jsx("h1", { className: "font-[Nunito-Regular] text-[40px] md:text-[48px] leading-[1.05] text-[#00214c] mb-8 tracking-tight uppercase", children: "MY ACCOUNT" }),
+      /* @__PURE__ */ jsx("nav", { children: /* @__PURE__ */ jsxs("ul", { className: "space-y-1 font-[Nunito-Medium]", children: [
         navItems.map((item) => /* @__PURE__ */ jsx("li", { children: /* @__PURE__ */ jsx(
           "button",
           {
@@ -3013,6 +3194,6 @@ var Hello = () => {
   return /* @__PURE__ */ jsx("div", { children: isCartLoading ? "Loading..." : "Core Working \u2705" });
 };
 
-export { AccountPage, AddressCard2 as AddressCard, AddressForm, CartItem, CartPage, CartSummary, CoreProvider, EmptyState, Hello, Order, OrdersList, Popup, ProfileForm, Spinner, UserInfo, ViewCart, useAddToCart, useAuth, useCart, userCartInfo_default as useCartInfo, useCore, useCurrencyFormat, useLogout, useVariantSelection };
+export { AccountPage, AddressCard2 as AddressCard, AddressForm, AuthManager, CartItem, CartPage, CartSummary, CoreProvider, CustomOTPAuth, EmptyState, Hello, Order, OrdersList, Popup, ProfileForm, Spinner, UserInfo, ViewCart, useAddToCart, useAuth, useCart, userCartInfo_default as useCartInfo, useCore, useCurrencyFormat, useLogout, useVariantSelection };
 //# sourceMappingURL=index.js.map
 //# sourceMappingURL=index.js.map

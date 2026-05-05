@@ -32,7 +32,7 @@ export function useAddToCart() {
     const isSignedIn = auth?.isSignedIn ?? false;
     const regionId = config?.regionId ?? null;
     const cartItems = cart?.line_items ?? [];
-    console.log({ cartItems })
+
     // ─── Helpers ────────────────────────────────────────────────────────────
     /** Normalize customizations into a standard format: [{ id, value }] */
     const normalizeCustomizations = (c) => {
