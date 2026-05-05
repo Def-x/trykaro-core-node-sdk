@@ -13,7 +13,6 @@ export const AuthManager = ({ mode = "sign-in", onLoginSuccess }) => {
   const { config, auth } = useCore();
   const authType = config?.authType ?? "clerk";
 
-  console.log({ config, auth, authType })
   if (authType === "clerk") {
     // If using Clerk, we rely on the injected auth methods (openSignIn, etc.)
     // because we cannot easily render Clerk components if the dependency is missing.
@@ -41,5 +40,5 @@ export const AuthManager = ({ mode = "sign-in", onLoginSuccess }) => {
     );
   }
 
-  return <CustomOTPAuth onLoginSuccess={onLoginSuccess} />;
+  return <CustomOTPAuth mode={mode} onLoginSuccess={onLoginSuccess} />;
 };

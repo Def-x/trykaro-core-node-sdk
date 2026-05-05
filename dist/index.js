@@ -1,5 +1,5 @@
 import { getPaymentGateway } from './chunk-ICFWQ2RM.js';
-import React8, { createContext, useState, useMemo, useEffect, useContext, useRef, useCallback } from 'react';
+import React8, { createContext, useState, useEffect, useCallback, useMemo, useContext, useRef } from 'react';
 import { jsx, jsxs, Fragment } from 'react/jsx-runtime';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { flatten, map, compact, filter, uniqBy } from 'lodash';
@@ -19,18 +19,56 @@ var CoreProvider = ({
   const [cart, setCart] = useState();
   const [isCartLoading, setIsCartLoading] = useState(true);
   const [region, setRegion] = useState(config?.region ?? null);
-  console.log({ injectedAuth });
+  const [authState, setAuthState] = useState(() => injectedAuth ?? {});
   const authType = config?.authType ?? "clerk";
-  console.log({ config, authType });
+  useEffect(() => {
+    if (!injectedAuth) return;
+    setAuthState((prev) => ({
+      ...prev,
+      ...Object.fromEntries(
+        Object.entries(injectedAuth).filter(([, value2]) => value2 !== void 0)
+      )
+    }));
+  }, [injectedAuth]);
+  const setAuth = useCallback(
+    (nextAuth) => {
+      setAuthState((prev) => {
+        const resolved = typeof nextAuth === "function" ? nextAuth(prev ?? {}) : nextAuth ?? {};
+        const token = resolved?.token ?? resolved?.access_token ?? null;
+        const merged = {
+          ...prev,
+          ...resolved,
+          token,
+          access_token: resolved?.access_token ?? token
+        };
+        injectedAuth?.setAuth?.(merged);
+        return merged;
+      });
+    },
+    [injectedAuth]
+  );
+  const clearAuth = useCallback(() => {
+    setAuthState((prev) => ({
+      ...prev,
+      token: null,
+      access_token: null,
+      user: null,
+      isSignedIn: false
+    }));
+    injectedAuth?.clearAuth?.();
+  }, [injectedAuth]);
   const auth = useMemo(() => {
     if (authType === "clerk") return injectedAuth;
+    const token = authState?.token ?? authState?.access_token ?? null;
     return {
-      ...injectedAuth,
-      isSignedIn: !!injectedAuth?.access_token,
-      token: injectedAuth?.access_token
+      ...authState,
+      isSignedIn: !!token,
+      token,
+      access_token: authState?.access_token ?? token,
+      setAuth,
+      clearAuth
     };
-  }, [authType, injectedAuth]);
-  console.log({ auth });
+  }, [authType, injectedAuth, authState, setAuth, clearAuth]);
   useEffect(() => {
     if (!actions?.getCart) return;
     const loadCart = async () => {
@@ -61,25 +99,20 @@ var CoreProvider = ({
   }, [config?.regionId, auth?.isSignedIn]);
   const value = useMemo(
     () => ({
-      // Cart state
       cart,
       setCart,
       isCartLoading,
-      // Region state
       region,
       setRegion,
-      // Injected dependencies
       actions,
       toast,
       auth,
       config,
-      //organization data
       orgData
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [cart, isCartLoading, region, actions, toast, auth, config]
+    [cart, isCartLoading, region, actions, toast, auth, config, orgData]
   );
-  console.log("package", { orgData });
   return /* @__PURE__ */ jsx(CoreContext.Provider, { value, children });
 };
 var useCore = () => {
@@ -466,14 +499,29 @@ var useCartInfo = () => {
   return { initialCartInfo };
 };
 var userCartInfo_default = useCartInfo;
-var CustomOTPAuth = ({ onLoginSuccess }) => {
-  const { actions, auth, toast } = useCore();
+var normalizeMode = (value) => {
+  if (value === "sign-up" || value === "signup") return "signup";
+  return "signin";
+};
+var buildOtpArray = (length) => Array.from({ length }, () => "");
+var CustomOTPAuth = ({ mode = "sign-in", onLoginSuccess }) => {
+  const { actions, auth, config, toast } = useCore();
+  const [authMode, setAuthMode] = useState(() => normalizeMode(mode));
   const [step, setStep] = useState("phone");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [isLoading, setIsLoading] = useState(false);
   const [timer, setTimer] = useState(0);
   const otpRefs = useRef([]);
+  const countryCode = config?.countryCode ?? "+91";
+  const otpLength = Number(config?.otpLength ?? 6);
+  const [otp, setOtp] = useState(() => buildOtpArray(otpLength));
+  useEffect(() => {
+    setAuthMode(normalizeMode(mode));
+    setStep("phone");
+    setOtp(buildOtpArray(otpLength));
+  }, [mode, otpLength]);
   useEffect(() => {
     let interval;
     if (timer > 0) {
@@ -483,86 +531,169 @@ var CustomOTPAuth = ({ onLoginSuccess }) => {
     }
     return () => clearInterval(interval);
   }, [timer]);
+  const isSignup = authMode === "signup";
+  const otpValue = useMemo(() => otp.join(""), [otp]);
+  const resetOtpStep = () => {
+    setStep("phone");
+    setOtp(buildOtpArray(otpLength));
+    setTimer(0);
+  };
+  const setOtpFromResponse = (value) => {
+    if (!value) return;
+    const digits = value.toString().replace(/\D/g, "").slice(0, otpLength).split("");
+    if (!digits.length) return;
+    setOtp(
+      (prev) => prev.map((_, index) => {
+        return digits[index] ?? "";
+      })
+    );
+  };
   const handleSendOtp = async (e) => {
     e?.preventDefault();
     if (phone.length < 10) {
       toast?.error("Please enter a valid phone number");
       return;
     }
+    if (isSignup && (!firstName.trim() || !lastName.trim())) {
+      toast?.error("Please enter your first and last name");
+      return;
+    }
     setIsLoading(true);
     try {
-      if (actions?.login) {
-        await actions.login(phone);
-        setStep("otp");
-        setTimer(60);
-        toast?.success("OTP sent successfully");
+      let response;
+      if (isSignup) {
+        if (!actions?.signup) {
+          toast?.error("Signup action not configured");
+          return;
+        }
+        response = await actions.signup({
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          phone,
+          countryCode
+        });
       } else {
-        toast?.error("Login action not configured");
+        if (!actions?.login) {
+          toast?.error("Login action not configured");
+          return;
+        }
+        response = await actions.login(phone, countryCode);
       }
+      setStep("otp");
+      setTimer(60);
+      setOtp(buildOtpArray(otpLength));
+      setOtpFromResponse(response?.otp_secret_key || response?.otp);
+      toast?.success(
+        isSignup ? "Signup OTP sent successfully" : "OTP sent successfully"
+      );
     } catch (err) {
-      toast?.error(err.message || "Failed to send OTP");
+      toast?.error(err?.message || "Failed to send OTP");
     } finally {
       setIsLoading(false);
     }
   };
   const handleVerifyOtp = async (e) => {
     e?.preventDefault();
-    const otpValue = otp.join("");
-    if (otpValue.length < 6) {
-      toast?.error("Please enter the full 6-digit OTP");
+    if (otpValue.length < otpLength) {
+      toast?.error(`Please enter the full ${otpLength}-digit OTP`);
       return;
     }
     setIsLoading(true);
     try {
-      if (actions?.verifyOtp) {
-        const response = await actions.verifyOtp(phone, otpValue);
-        if (response?.token) {
-          auth?.setAuth({
-            token: response.token,
-            user: response.user
-          });
-          toast?.success("Logged in successfully");
-          if (onLoginSuccess) onLoginSuccess();
-        } else {
-          toast?.error("Invalid response from server");
-        }
-      } else {
+      if (!actions?.verifyOtp) {
         toast?.error("Verify OTP action not configured");
+        return;
       }
+      const response = await actions.verifyOtp(
+        phone,
+        otpValue,
+        countryCode,
+        authMode
+      );
+      const token = response?.token ?? response?.access_token;
+      if (!token) {
+        toast?.error("Invalid response from server");
+        return;
+      }
+      auth?.setAuth?.({
+        token,
+        access_token: response?.access_token ?? token,
+        user: response?.user ?? auth?.user ?? null
+      });
+      toast?.success(
+        isSignup ? "Account created successfully" : "Logged in successfully"
+      );
+      onLoginSuccess?.(response);
     } catch (err) {
-      toast?.error(err.message || "Invalid OTP");
+      toast?.error(err?.message || "Invalid OTP");
     } finally {
       setIsLoading(false);
     }
   };
   const handleOtpChange = (index, value) => {
     if (!/^\d*$/.test(value)) return;
-    const newOtp = [...otp];
-    newOtp[index] = value.substring(value.length - 1);
-    setOtp(newOtp);
-    if (value && index < 5) {
-      otpRefs.current[index + 1].focus();
+    const nextValue = value.substring(value.length - 1);
+    setOtp((prev) => {
+      const nextOtp = [...prev];
+      nextOtp[index] = nextValue;
+      return nextOtp;
+    });
+    if (nextValue && index < otpLength - 1) {
+      otpRefs.current[index + 1]?.focus();
     }
   };
-  const handleKeyDown = (index, e) => {
-    if (e.key === "Backspace" && !otp[index] && index > 0) {
-      otpRefs.current[index - 1].focus();
+  const handleKeyDown = (index, event) => {
+    if (event.key === "Backspace" && !otp[index] && index > 0) {
+      otpRefs.current[index - 1]?.focus();
     }
+  };
+  const switchMode = (nextMode) => {
+    setAuthMode(nextMode);
+    setFirstName("");
+    setLastName("");
+    setPhone("");
+    setOtp(buildOtpArray(otpLength));
+    setTimer(0);
+    setStep("phone");
   };
   return /* @__PURE__ */ jsxs("div", { className: "w-full max-w-[400px] mx-auto p-6 bg-white rounded-2xl shadow-xl border border-gray-100", children: [
     /* @__PURE__ */ jsxs("div", { className: "text-center mb-8", children: [
-      /* @__PURE__ */ jsx("h2", { className: "text-2xl font-[Nunito-bold] text-[#00214c]", children: step === "phone" ? "Welcome Back" : "Verify OTP" }),
-      /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-500 mt-2 font-[Nunito-regular]", children: step === "phone" ? "Enter your mobile number to sign in" : `Enter the 6-digit code sent to +91 ${phone}` })
+      /* @__PURE__ */ jsx("h2", { className: "text-2xl font-[Nunito-bold] text-[#00214c]", children: step === "phone" ? isSignup ? "Create Your Account" : "Welcome Back" : "Verify OTP" }),
+      /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-500 mt-2 font-[Nunito-regular]", children: step === "phone" ? isSignup ? "Enter your details to create an account" : "Enter your mobile number to sign in" : `Enter the ${otpLength}-digit code sent to ${countryCode} ${phone}` })
     ] }),
     step === "phone" ? /* @__PURE__ */ jsxs("form", { onSubmit: handleSendOtp, className: "space-y-6", children: [
+      isSignup && /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-1 gap-4 sm:grid-cols-2", children: [
+        /* @__PURE__ */ jsx(
+          "input",
+          {
+            type: "text",
+            value: firstName,
+            onChange: (event) => setFirstName(event.target.value),
+            placeholder: "First Name",
+            className: "w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#00214c]/20 focus:border-[#00214c] outline-none transition-all font-[Nunito-medium]",
+            required: true
+          }
+        ),
+        /* @__PURE__ */ jsx(
+          "input",
+          {
+            type: "text",
+            value: lastName,
+            onChange: (event) => setLastName(event.target.value),
+            placeholder: "Last Name",
+            className: "w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#00214c]/20 focus:border-[#00214c] outline-none transition-all font-[Nunito-medium]",
+            required: true
+          }
+        )
+      ] }),
       /* @__PURE__ */ jsxs("div", { className: "relative", children: [
-        /* @__PURE__ */ jsx("span", { className: "absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-[Nunito-medium]", children: "+91" }),
+        /* @__PURE__ */ jsx("span", { className: "absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-[Nunito-medium]", children: countryCode }),
         /* @__PURE__ */ jsx(
           "input",
           {
             type: "tel",
             value: phone,
-            onChange: (e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10)),
+            onChange: (event) => setPhone(event.target.value.replace(/\D/g, "").slice(0, 10)),
             placeholder: "Mobile Number",
             className: "w-full pl-14 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#00214c]/20 focus:border-[#00214c] outline-none transition-all font-[Nunito-medium]",
             required: true
@@ -580,17 +711,32 @@ var CustomOTPAuth = ({ onLoginSuccess }) => {
             "Sending..."
           ] }) : "Get OTP"
         }
-      )
+      ),
+      /* @__PURE__ */ jsxs("p", { className: "text-sm text-center text-gray-500 font-[Nunito-medium]", children: [
+        isSignup ? "Already have an account?" : "New here?",
+        " ",
+        /* @__PURE__ */ jsx(
+          "button",
+          {
+            type: "button",
+            onClick: () => switchMode(isSignup ? "signin" : "signup"),
+            className: "text-[#00214c] font-[Nunito-bold] hover:underline",
+            children: isSignup ? "Sign In" : "Create Account"
+          }
+        )
+      ] })
     ] }) : /* @__PURE__ */ jsxs("form", { onSubmit: handleVerifyOtp, className: "space-y-6", children: [
       /* @__PURE__ */ jsx("div", { className: "flex justify-between gap-2", children: otp.map((digit, index) => /* @__PURE__ */ jsx(
         "input",
         {
-          ref: (el) => otpRefs.current[index] = el,
+          ref: (element) => {
+            otpRefs.current[index] = element;
+          },
           type: "text",
           inputMode: "numeric",
           value: digit,
-          onChange: (e) => handleOtpChange(index, e.target.value),
-          onKeyDown: (e) => handleKeyDown(index, e),
+          onChange: (event) => handleOtpChange(index, event.target.value),
+          onKeyDown: (event) => handleKeyDown(index, event),
           className: "w-12 h-14 text-center text-xl font-[Nunito-bold] bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#00214c]/20 focus:border-[#00214c] outline-none transition-all"
         },
         index
@@ -614,21 +760,21 @@ var CustomOTPAuth = ({ onLoginSuccess }) => {
         "button",
         {
           type: "submit",
-          disabled: isLoading || otp.join("").length < 6,
-          className: `w-full py-3 rounded-xl font-[Nunito-bold] text-white transition-all ${isLoading || otp.join("").length < 6 ? "bg-gray-300 cursor-not-allowed" : "bg-[#00214c] hover:bg-[#001a3d] active:scale-[0.98]"}`,
+          disabled: isLoading || otpValue.length < otpLength,
+          className: `w-full py-3 rounded-xl font-[Nunito-bold] text-white transition-all ${isLoading || otpValue.length < otpLength ? "bg-gray-300 cursor-not-allowed" : "bg-[#00214c] hover:bg-[#001a3d] active:scale-[0.98]"}`,
           children: isLoading ? /* @__PURE__ */ jsxs("span", { className: "flex items-center justify-center gap-2", children: [
             /* @__PURE__ */ jsx("div", { className: "w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" }),
             "Verifying..."
-          ] }) : "Verify & Sign In"
+          ] }) : isSignup ? "Verify & Create Account" : "Verify & Sign In"
         }
       ),
       /* @__PURE__ */ jsx(
         "button",
         {
           type: "button",
-          onClick: () => setStep("phone"),
+          onClick: resetOtpStep,
           className: "w-full text-sm text-gray-500 font-[Nunito-medium] hover:text-[#00214c] transition-colors",
-          children: "Change Phone Number"
+          children: "Change Details"
         }
       )
     ] })
@@ -637,7 +783,6 @@ var CustomOTPAuth = ({ onLoginSuccess }) => {
 var AuthManager = ({ mode = "sign-in", onLoginSuccess }) => {
   const { config, auth } = useCore();
   const authType = config?.authType ?? "clerk";
-  console.log({ config, auth, authType });
   if (authType === "clerk") {
     return /* @__PURE__ */ jsxs("div", { className: "w-full text-center py-8", children: [
       /* @__PURE__ */ jsx("h2", { className: "text-2xl font-[Nunito-bold] text-[#00214c] mb-6", children: "Sign in to continue" }),
@@ -661,7 +806,7 @@ var AuthManager = ({ mode = "sign-in", onLoginSuccess }) => {
       ] })
     ] });
   }
-  return /* @__PURE__ */ jsx(CustomOTPAuth, { onLoginSuccess });
+  return /* @__PURE__ */ jsx(CustomOTPAuth, { mode, onLoginSuccess });
 };
 var Spinner = ({ size = "md", color = "currentColor", className = "" }) => {
   const sizeMap = {
@@ -1200,9 +1345,12 @@ var ViewCustomizationModal = ({
   ] }) });
 };
 var ViewCustomizationModal_default = ViewCustomizationModal;
-
-// src/assets/noProduct.svg
-var noProduct_default = "./noProduct-PBPCQYKY.svg";
+var noProductImage = `data:image/svg+xml;utf8,${encodeURIComponent(
+  `<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="512" height="512" fill="#E0E0E0"/>
+    <path d="M152.5 313.5L190.369 275.63C192.526 273.475 195.451 272.263 198.5 272.263C201.549 272.263 204.474 273.475 206.631 275.63L213.37 282.37C215.526 284.525 218.451 285.737 221.5 285.737C224.549 285.737 227.474 284.525 229.63 282.37L262.739 249.261C267.052 244.949 272.901 242.527 279 242.527C285.099 242.527 290.948 244.949 295.261 249.261L359.5 313.5M152.5 175.5V336.5C152.5 339.55 153.712 342.475 155.868 344.632C158.025 346.788 160.95 348 164 348H348C351.05 348 353.975 346.788 356.132 344.632C358.288 342.475 359.5 339.55 359.5 336.5V175.5C359.5 172.45 358.288 169.525 356.132 167.368C353.975 165.212 351.05 164 348 164H164C160.95 164 158.025 165.212 155.868 167.368C153.712 169.525 152.5 172.45 152.5 175.5ZM210 210C210 213.05 211.212 215.975 213.368 218.132C215.525 220.288 218.45 221.5 221.5 221.5C224.55 221.5 227.475 220.288 229.632 218.132C231.788 215.975 233 213.05 233 210C233 206.95 231.788 204.025 229.632 201.868C227.475 199.712 224.55 198.5 221.5 198.5C218.45 198.5 215.525 199.712 213.368 201.868C211.212 204.025 210 206.95 210 210Z" stroke="#7B7B7B" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`
+)}`;
 var ProductlistCard = ({ product, component, orderType }) => {
   const { name, price, shipping_charge } = product?.line_itemable ?? {};
   const productImage = product?.image;
@@ -1220,7 +1368,7 @@ var ProductlistCard = ({ product, component, orderType }) => {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const handleImageError = (event) => {
     event.currentTarget.onerror = null;
-    event.currentTarget.src = noProduct_default;
+    event.currentTarget.src = noProductImage;
   };
   const handleDeleteItem = async () => {
     await handleDeleteLineItem(product);
@@ -1248,7 +1396,7 @@ var ProductlistCard = ({ product, component, orderType }) => {
           /* @__PURE__ */ jsx(
             "img",
             {
-              src: productImage || noProduct_default,
+              src: productImage || noProductImage,
               alt: name || "Product",
               className: "w-[112px] h-[124px] object-cover rounded-lg",
               onError: handleImageError
@@ -1286,7 +1434,7 @@ var ProductlistCard = ({ product, component, orderType }) => {
       /* @__PURE__ */ jsx("div", { className: "w-[112px] h-[124px] flex-shrink-0 overflow-hidden", children: /* @__PURE__ */ jsx(
         "img",
         {
-          src: productImage || noProduct_default,
+          src: productImage || noProductImage,
           alt: name || "Product",
           className: "w-[112px] h-[124px] object-cover rounded-lg",
           onError: handleImageError

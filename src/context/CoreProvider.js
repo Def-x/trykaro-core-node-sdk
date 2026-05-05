@@ -2,6 +2,7 @@
 
 import React, {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -14,7 +15,7 @@ const CoreContext = createContext(null);
  * CoreProvider
  *
  * Root context provider for @defx/storefront-core.
- * All Next.js/Clerk/store-specific logic is injected via props — this
+ * All Next.js/Clerk/store-specific logic is injected via props and the
  * component itself has zero framework dependencies.
  *
  * Props:
@@ -24,7 +25,7 @@ const CoreContext = createContext(null);
  *      getCart, createCart, updateCart, getCartById,
  *      updateLineItem, createLineItem, deleteLineItem,
  *      // Auth actions (for authType: 'own')
- *      login, verifyOtp,
+ *      login, signup, verifyOtp,
  *      // Razorpay actions
  *      createRazorOrder, updateRazorPayment,
  *      // Stripe actions (only needed when payment mode is "stripe")
@@ -39,7 +40,7 @@ const CoreContext = createContext(null);
  *      StripeCheckout: <YourStripeCheckoutComponent>,
  *    }
  *  - toast       { success(msg), error(msg), info(msg) }  (optional)
- *  - auth        { isSignedIn, user, logout, ... }         (optional for 'clerk')
+ *  - auth        { isSignedIn, user, logout, ... }        (optional for 'clerk')
  *  - orgData     organisation JSON from the API           (optional)
  */
 export const CoreProvider = ({
@@ -48,34 +49,73 @@ export const CoreProvider = ({
   actions = {},
   toast = null,
   auth: injectedAuth = null,
-  orgData
+  orgData,
 }) => {
   const [cart, setCart] = useState();
   const [isCartLoading, setIsCartLoading] = useState(true);
   const [region, setRegion] = useState(config?.region ?? null);
+  const [authState, setAuthState] = useState(() => injectedAuth ?? {});
 
-  console.log({ injectedAuth })
-  // ─── Custom Auth State (for authType: 'own') ───────────────────────────
   const authType = config?.authType ?? "clerk";
-  console.log({ config, authType })
 
-  // Derived auth object
+  useEffect(() => {
+    if (!injectedAuth) return;
+
+    setAuthState((prev) => ({
+      ...prev,
+      ...Object.fromEntries(
+        Object.entries(injectedAuth).filter(([, value]) => value !== undefined),
+      ),
+    }));
+  }, [injectedAuth]);
+
+  const setAuth = useCallback(
+    (nextAuth) => {
+      setAuthState((prev) => {
+        const resolved =
+          typeof nextAuth === "function" ? nextAuth(prev ?? {}) : nextAuth ?? {};
+        const token = resolved?.token ?? resolved?.access_token ?? null;
+        const merged = {
+          ...prev,
+          ...resolved,
+          token,
+          access_token: resolved?.access_token ?? token,
+        };
+
+        injectedAuth?.setAuth?.(merged);
+        return merged;
+      });
+    },
+    [injectedAuth],
+  );
+
+  const clearAuth = useCallback(() => {
+    setAuthState((prev) => ({
+      ...prev,
+      token: null,
+      access_token: null,
+      user: null,
+      isSignedIn: false,
+    }));
+    injectedAuth?.clearAuth?.();
+  }, [injectedAuth]);
+
   const auth = useMemo(() => {
     if (authType === "clerk") return injectedAuth;
 
+    const token = authState?.token ?? authState?.access_token ?? null;
+
     return {
-      ...injectedAuth,
-      isSignedIn: !!injectedAuth?.access_token,
-      token: injectedAuth?.access_token,
+      ...authState,
+      isSignedIn: !!token,
+      token,
+      access_token: authState?.access_token ?? token,
+      setAuth,
+      clearAuth,
     };
-  }, [authType, injectedAuth]);
+  }, [authType, injectedAuth, authState, setAuth, clearAuth]);
 
-
-  console.log({ auth })
-
-  // ─── Initial Cart Load ─────────────────────────────────────────────────
   useEffect(() => {
-    // Skip if cart was already hydrated from SSR or no action available
     if (!actions?.getCart) return;
 
     const loadCart = async () => {
@@ -90,9 +130,8 @@ export const CoreProvider = ({
           resolvedCart = Array.isArray(data) ? data[0] : data;
         } else {
           const storedCartId =
-            typeof window !== "undefined"
-              ? localStorage.getItem("cartid")
-              : null;
+            typeof window !== "undefined" ? localStorage.getItem("cartid") : null;
+
           if (storedCartId && actions?.getCartById) {
             resolvedCart = await actions.getCartById(
               storedCartId,
@@ -100,6 +139,7 @@ export const CoreProvider = ({
             );
           }
         }
+
         setCart(resolvedCart ?? null);
       } catch (err) {
         console.error("[CoreProvider] cart load error:", err);
@@ -112,32 +152,23 @@ export const CoreProvider = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config?.regionId, auth?.isSignedIn]);
 
-  // ─── Memoised context value (avoids unnecessary re-renders) ───────────
   const value = useMemo(
     () => ({
-      // Cart state
       cart,
       setCart,
       isCartLoading,
-
-      // Region state
       region,
       setRegion,
-
-      // Injected dependencies
       actions,
       toast,
       auth,
       config,
-
-      //organization data
       orgData,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [cart, isCartLoading, region, actions, toast, auth, config],
+    [cart, isCartLoading, region, actions, toast, auth, config, orgData],
   );
 
-  console.log("package", { orgData })
   return <CoreContext.Provider value={value}>{children}</CoreContext.Provider>;
 };
 
@@ -151,7 +182,7 @@ export const useCore = () => {
   if (!context) {
     throw new Error(
       "[useCore] must be used inside <CoreProvider>. " +
-      "Wrap your app (or the relevant subtree) with <CoreProvider>.",
+        "Wrap your app (or the relevant subtree) with <CoreProvider>.",
     );
   }
 
