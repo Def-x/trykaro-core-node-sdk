@@ -53,7 +53,7 @@ export const AddressSelection = ({
   setCart,
   address,
   sameAsShipping,
-  clerkUser,
+  user,
   setSameAsShipping,
   shippingAddressId,
   billingAddressId,
@@ -114,7 +114,7 @@ export const AddressSelection = ({
   };
 
   useEffect(() => {
-    if (!clerkUser) return;
+    if (!user) return;
     const apiData = { id: cart?.id };
     if (!isCartHaveBillingAddress && billingAddressId)
       apiData.billing_address_id = billingAddressId;
@@ -182,7 +182,7 @@ export const AddressSelection = ({
             </p>
             <div className="relative w-12 h-6 flex items-center">
               <div
-                className={`w-full h-full rounded-full transition-colors duration-300 ${sameAsShipping ? "bg-[#00214c]" : "bg-gray-300"
+                className={`w-full h-full rounded-full transition-colors duration-300 ${sameAsShipping ? "bg-[var(--core-primary)]" : "bg-gray-300"
                   }`}
               />
               <div
@@ -249,7 +249,7 @@ export const AddressSelectionCard = ({
     <div
       onClick={onClick}
       className={`w-full flex flex-col border-2 cursor-pointer transition-all duration-200 rounded-lg p-[16px] gap-y-[8px] ${isSelected
-        ? "border-[#1e1e1e] bg-gray-50 shadow-sm"
+        ? "border-[var(--core-primary)] bg-gray-50 shadow-sm"
         : "border-gray-200 hover:border-gray-300"
         }`}
     >

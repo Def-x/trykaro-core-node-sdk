@@ -50,8 +50,8 @@ export const ProfileForm = ({ user, onSuccess, onCancel }) => {
     }
   };
 
-  const inputCls = "w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#00214c] font-[Nunito-regular]";
-  const labelCls = "text-sm font-[Nunito-bold] text-[#00214c] uppercase tracking-widest text-[11px]";
+  const inputCls = "w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--core-primary)] font-[Nunito-regular]";
+  const labelCls = "text-sm font-[Nunito-bold] text-[var(--core-primary)] uppercase tracking-widest text-[11px]";
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -95,12 +95,12 @@ export const ProfileForm = ({ user, onSuccess, onCancel }) => {
         />
       </div>
 
-      <div className="flex gap-4 pt-4">
+      <div className="sticky bottom-0 z-10 -mx-4 flex flex-col-reverse gap-4 border-t border-gray-100 bg-white px-4 pt-4 pb-1 sm:-mx-6 sm:flex-row sm:px-6">
         {onCancel && (
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 py-3 border border-gray-300 rounded-md text-[#00214c] font-[Nunito-bold] hover:bg-gray-50 transition-colors uppercase tracking-widest text-[12px]"
+            className="flex-1 py-3 border border-gray-300 rounded-md text-[var(--core-primary)] font-[Nunito-bold] hover:bg-gray-50 transition-colors uppercase tracking-widest text-[12px]"
           >
             Cancel
           </button>
@@ -108,7 +108,7 @@ export const ProfileForm = ({ user, onSuccess, onCancel }) => {
         <button
           type="submit"
           disabled={isSubmitting}
-          className={`flex-1 py-3 bg-[#00214c] text-white rounded-md font-[Nunito-bold] transition-colors flex items-center justify-center gap-2 uppercase tracking-widest text-[12px] shadow-lg shadow-blue-100 ${isSubmitting ? "opacity-70 cursor-not-allowed" : "hover:bg-black"
+          className={`flex-1 py-3 bg-[var(--core-primary)] text-white rounded-md font-[Nunito-bold] transition-colors flex items-center justify-center gap-2 uppercase tracking-widest text-[12px] shadow-lg shadow-blue-100 ${isSubmitting ? "opacity-70 cursor-not-allowed" : "hover:opacity-90"
             }`}
         >
           {isSubmitting ? <Spinner size="sm" color="white" /> : "Save Changes"}

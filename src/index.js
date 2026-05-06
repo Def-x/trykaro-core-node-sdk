@@ -11,6 +11,10 @@ export { useLogout } from "./hooks/useLogout";
 export { useVariantSelection } from "./hooks/useVariantSelection";
 export { default as useCartInfo } from "./hooks/userCartInfo";
 
+// ─── Auth Components ──────────────────────────────────────────────────────────
+export { AuthManager } from "./components/auth/AuthManager";
+export { CustomOTPAuth } from "./components/auth/CustomOTPAuth";
+
 // ─── Cart Components ──────────────────────────────────────────────────────────
 export { CartPage } from "./components/cart/CartPage";
 export { CartItem } from "./components/cart/CartItem";

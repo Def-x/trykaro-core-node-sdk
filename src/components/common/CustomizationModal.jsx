@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from "react";
 
 const CustomizationModal = ({
@@ -88,17 +88,17 @@ const CustomizationModal = ({
             <button
               onClick={() => setQuantity(Math.max(1, quantity - 1))}
               disabled={isAddToCartLoading}
-              className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-[#00214c] disabled:opacity-50"
+              className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-[var(--core-primary)] disabled:opacity-50"
             >
               -
             </button>
-            <span className="w-10 text-center font-semibold text-[#00214c]">
+            <span className="w-10 text-center font-semibold text-[var(--core-primary)]">
               {quantity}
             </span>
             <button
               onClick={() => setQuantity(quantity + 1)}
               disabled={isAddToCartLoading}
-              className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-[#00214c] disabled:opacity-50"
+              className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-[var(--core-primary)] disabled:opacity-50"
             >
               +
             </button>
@@ -117,7 +117,7 @@ const CustomizationModal = ({
           <button
             onClick={handleConfirm}
             disabled={isAddToCartLoading}
-            className="flex-1 px-4 py-2 bg-[#00214c] text-white rounded-md text-sm font-[Nunito-medium] hover:bg-[#0d346b] disabled:opacity-50"
+            className="flex-1 px-4 py-2 bg-[var(--core-primary)] text-white rounded-md text-sm font-[Nunito-medium] hover:bg-[var(--core-primary)] disabled:opacity-50"
           >
             {isAddToCartLoading
               ? "Loading..."

@@ -53,7 +53,7 @@ export const UserInfo = ({ user, isLoading, refetch }) => {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <h1 className="font-[Nunito-regular] text-[32px] text-[#00214c] mb-10 tracking-tight">
+      <h1 className="font-[Nunito-regular] text-[32px] text-[var(--core-primary)] mb-10 tracking-tight">
         MY PROFILE
       </h1>
 
@@ -77,24 +77,24 @@ export const UserInfo = ({ user, isLoading, refetch }) => {
               <label className="text-[12px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest">
                 First name
               </label>
-              <p className="border-b border-gray-100 pb-2 text-[15px] font-[Nunito-medium] text-[#00214c]">
-                {userData.first_name || "—"}
+              <p className="border-b border-gray-100 pb-2 text-[15px] font-[Nunito-medium] text-[var(--core-primary)]">
+                {userData.first_name || userData.firstName || "—"}
               </p>
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-[12px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest">
                 Last name
               </label>
-              <p className="border-b border-gray-100 pb-2 text-[15px] font-[Nunito-medium] text-[#00214c]">
-                {userData.last_name || "—"}
+              <p className="border-b border-gray-100 pb-2 text-[15px] font-[Nunito-medium] text-[var(--core-primary)]">
+                {userData.last_name || userData.lastName || "—"}
               </p>
             </div>
             <div className="flex flex-col gap-1 md:col-span-2">
               <label className="text-[12px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest">
                 Email address
               </label>
-              <p className="border-b border-gray-100 pb-2 text-[15px] font-[Nunito-medium] text-[#00214c]">
-                {userData.email || "—"}
+              <p className="border-b border-gray-100 pb-2 text-[15px] font-[Nunito-medium] text-[var(--core-primary)]">
+                {userData.email || userData.primaryEmailAddress?.emailAddress || "—"}
               </p>
             </div>
           </div>
@@ -138,7 +138,7 @@ export const UserInfo = ({ user, isLoading, refetch }) => {
             action={
               <button
                 onClick={() => setModalState({ type: "new_address", data: null })}
-                className="mt-4 px-8 py-3 bg-[#00214c] text-white font-[Nunito-bold] text-[13px] uppercase tracking-widest hover:bg-black transition-colors"
+                className="mt-4 px-8 py-3 bg-[var(--core-primary)] text-white font-[Nunito-bold] text-[13px] uppercase tracking-widest hover:opacity-90 transition-colors"
               >
                 Add Your First Address
               </button>

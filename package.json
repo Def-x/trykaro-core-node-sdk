@@ -32,9 +32,18 @@
     "lucide-react": ">=0.300.0"
   },
   "peerDependenciesMeta": {
-    "@stripe/stripe-js": { "optional": true },
-    "@stripe/react-stripe-js": { "optional": true },
-    "lucide-react": { "optional": true }
+    "@stripe/stripe-js": {
+      "optional": true
+    },
+    "@stripe/react-stripe-js": {
+      "optional": true
+    },
+    "lucide-react": {
+      "optional": true
+    },
+    "@clerk/nextjs": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "lodash": "^4.18.1",
