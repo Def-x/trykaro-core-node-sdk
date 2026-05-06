@@ -15,11 +15,11 @@ import { createPortal } from "react-dom";
  * - children: React.Node - Modal content
  * - maxWidth: string (optional) - Tailwind class for max-width (default: 'max-w-[600px]')
  */
-export const Popup = ({ 
-  isOpen, 
-  onClose, 
-  title, 
-  children, 
+export const Popup = ({
+  isOpen,
+  onClose,
+  title,
+  children,
   maxWidth = "max-w-[600px]",
   style = {}
 }) => {
@@ -41,21 +41,21 @@ export const Popup = ({
   if (!isOpen || !mounted) return null;
 
   const modalContent = (
-    <div 
-      className="fixed inset-0 bg-black/60 flex items-center justify-center z-[999999] p-4 backdrop-blur-[2px] transition-all duration-300"
+    <div
+      className="fixed inset-0 z-[999999] flex items-center justify-center overflow-y-auto bg-black/60 p-3 backdrop-blur-[2px] transition-all duration-300 sm:p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div 
-        className={`bg-white rounded-lg shadow-2xl w-full ${maxWidth} overflow-hidden max-h-[90vh] overflow-y-auto relative border border-gray-100 animate-in fade-in zoom-in duration-200`}
+      <div
+        className={`relative flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-lg border border-gray-100 bg-white shadow-2xl animate-in fade-in zoom-in duration-200 ${maxWidth}`}
         style={style}
       >
         {/* Header */}
         {(title || onClose) && (
           <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-white sticky top-0 z-10">
             {title && (
-              <h2 className="text-[20px] font-[Nunito-bold] text-[#00214c] uppercase tracking-wide">
+              <h2 className="text-[20px] font-[Nunito-bold] text-[var(--core-primary)] uppercase tracking-wide">
                 {title}
               </h2>
             )}
@@ -84,7 +84,7 @@ export const Popup = ({
         )}
 
         {/* Content */}
-        <div className="p-6">
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
           {children}
         </div>
       </div>

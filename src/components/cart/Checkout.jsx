@@ -21,7 +21,7 @@ const Checkout = ({ hasDeletedItems }) => {
 
   if (isLoading) return (
     <div className="w-full h-[400px] flex items-center justify-center">
-      <div className="w-8 h-8 border-4 border-[#00214c] border-t-transparent rounded-full animate-spin" />
+      <div className="w-8 h-8 border-4 border-[var(--core-primary)] border-t-transparent rounded-full animate-spin" />
     </div>
   );
 
@@ -36,9 +36,9 @@ const LoginPage = () => {
   return (
     <div className="w-full h-full flex flex-col items-center justify-center gap-6">
       <div className="flex flex-col items-center">
-        <div className="w-16 h-16 bg-[#00214c]/5 rounded-full flex items-center justify-center mb-4">
+        <div className="w-16 h-16 bg-[var(--core-primary)]/5 rounded-full flex items-center justify-center mb-4">
           <svg
-            className="w-8 h-8 text-[#00214c]"
+            className="w-8 h-8 text-[var(--core-primary)]"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -63,7 +63,7 @@ const LoginPage = () => {
 const OrderInfo = ({ user, hasDeletedItems }) => {
   const router = useRouter();
   const { Razorpay } = useRazorpay();
-  const { cart, setCart, actions, config, auth, orgData } = useCore();
+  const { cart, setCart, actions, config, auth, orgData, primaryColor } = useCore();
 
   // Read StripeCheckout from the gateway registry.
   const StripeCheckout = getPaymentGateway("stripe");
@@ -182,7 +182,7 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
         email,
         contact,
       },
-      theme: { color: "#1e1e1e" },
+      theme: { color: primaryColor },
     };
 
     const razorpay = new Razorpay(options);
@@ -234,7 +234,7 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
         <div className="mt-[32px]">
           {isAddressLoading ? (
             <div className="flex items-center gap-2 text-[var(--secondary)] text-sm font-[Nunito-regular]">
-              <div className="w-4 h-4 border-2 border-[var(--main)] border-t-transparent rounded-full animate-spin" />
+              <div className="w-4 h-4 border-2 border-[var(--core-primary)] border-t-transparent rounded-full animate-spin" />
               Loading addresses…
             </div>
           ) : addresses.length > 0 ? (
@@ -315,7 +315,7 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
           disabled={hasDeletedItems || isPlacingOrder || isAddressLoading}
           className={`px-5 py-3 w-full rounded-lg cursor-pointer font-[Nunito-medium] text-[15px] transition-all duration-300 ${hasDeletedItems || isPlacingOrder || isAddressLoading
             ? "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none"
-            : "bg-[#00214c] text-white hover:bg-[#000] hover:shadow-lg transform active:scale-[0.98]"
+            : "bg-[var(--core-primary)] text-white hover:opacity-90 hover:shadow-lg transform active:scale-[0.98]"
             }`}
         >
           {isPlacingOrder
@@ -333,14 +333,14 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
             By placing your order, you agree to our{" "}
             <Link
               href="/terms-and-conditions"
-              className="text-[#00214c] underline hover:text-[#c8a95a] transition-colors"
+              className="text-[var(--core-primary)] underline hover:text-[var(--core-secondary)] transition-colors"
             >
               Terms & Conditions
             </Link>{" "}
             and{" "}
             <Link
               href="/privacy-policy"
-              className="text-[#00214c] underline hover:text-[#c8a95a] transition-colors"
+              className="text-[var(--core-primary)] underline hover:text-[var(--core-secondary)] transition-colors"
             >
               Privacy Policy
             </Link>
@@ -349,7 +349,7 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
           <div className="mt-2 flex justify-center gap-3">
             <Link
               href="/refund-policy"
-              className="text-[10px] text-[#8c92a4] hover:text-[#00214c] transition-colors underline uppercase tracking-wider"
+              className="text-[10px] text-[#8c92a4] hover:text-[var(--core-primary)] transition-colors underline uppercase tracking-wider"
             >
               Refund Policy
             </Link>
@@ -369,19 +369,19 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
         <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-white/95 backdrop-blur-md animate-fadeIn">
           <div className="flex flex-col items-center gap-8 max-w-md w-full px-6">
             <div className="relative">
-              <div className="w-24 h-24 border-[3px] border-[#00214c]/5 rounded-full"></div>
-              <div className="absolute top-0 left-0 w-24 h-24 border-[3px] border-[#c8a95a] border-t-transparent rounded-full animate-spin"></div>
+              <div className="w-24 h-24 border-[3px] border-[var(--core-primary)]/5 rounded-full"></div>
+              <div className="absolute top-0 left-0 w-24 h-24 border-[3px] border-[var(--core-secondary)] border-t-transparent rounded-full animate-spin"></div>
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                <div className="w-3 h-3 bg-[#00214c] rounded-full animate-pulse shadow-[0_0_15px_rgba(0,33,76,0.3)]"></div>
+                <div className="w-3 h-3 bg-[var(--core-primary)] rounded-full animate-pulse shadow-[0_0_15px_rgba(0,33,76,0.3)]"></div>
               </div>
             </div>
 
             <div className="text-center space-y-4">
               <div className="space-y-1">
-                <h2 className="font-serif italic text-3xl text-[#00214c] tracking-tight">
+                <h2 className="font-serif italic text-3xl text-[var(--core-primary)] tracking-tight">
                   Processing your payment
                 </h2>
-                <div className="w-12 h-[1px] bg-[#c8a95a] mx-auto opacity-50"></div>
+                <div className="w-12 h-[1px] bg-[var(--core-secondary)] mx-auto opacity-50"></div>
               </div>
 
               <div className="space-y-2">
@@ -399,7 +399,7 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
               {[0, 1, 2].map((i) => (
                 <div
                   key={i}
-                  className="w-1.5 h-1.5 bg-[#c8a95a] rounded-full opacity-20 animate-pulse"
+                  className="w-1.5 h-1.5 bg-[var(--core-secondary)] rounded-full opacity-20 animate-pulse"
                   style={{ animationDelay: `${i * 0.2}s` }}
                 ></div>
               ))}

@@ -148,28 +148,37 @@ export const Order = (props) => {
         <div className="flex flex-col md:flex-row flex-wrap gap-[15px] max-w-[1248px] w-full">
           {/* Left Section */}
           <div className="flex-1 flex flex-col gap-8">
+
+            {/* Order Confirmation Banner */}
             {show && (
-              <div className="flex items-center gap-2 text-green-600 font-semibold">
-                <OrderConfirmationIcon />
-                <div className="flex flex-col">
-                  <p className="font-[Nunito-medium] text-[20px] text-[#00214c]">
-                    THANK YOU. YOUR ORDER HAS BEEN RECEIVED
+              <div
+                className="flex items-start gap-3 p-4 rounded-lg border-l-4"
+                style={{ borderColor: "var(--core-secondary)", background: "color-mix(in srgb, var(--core-secondary) 8%, white)" }}
+              >
+                <div className="mt-0.5 shrink-0" style={{ color: "var(--core-secondary)" }}>
+                  <OrderConfirmationIcon />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <p className="font-[Nunito-bold] text-[16px] text-[var(--core-primary)] uppercase tracking-wide">
+                    Thank you. Your order has been received
                   </p>
-                  <p className="font-[Nunito-regular] text-[16px] text-[#00214c] mt-[10px]">
-                    Order number: {order_number}
+                  <p className="font-[Nunito-regular] text-[13px] text-gray-500">
+                    Order&nbsp;<span className="font-[Nunito-bold] text-[var(--core-primary)]">#{order_number}</span> is confirmed and being processed.
                   </p>
                 </div>
               </div>
             )}
 
-            {/* Order Details */}
+            {/* Order Details Card */}
             <div>
+              {/* Card Header */}
               <div className="flex justify-between items-center mb-4">
-                <h3 className="font-[Nunito-medium] text-[20px] text-[#00214c]">
-                  ORDER DETAILS
+                <h3 className="font-[Nunito-bold] text-[18px] text-[var(--core-primary)] uppercase tracking-wider">
+                  Order Details
                 </h3>
                 <button
-                  className="font-[monrat] font-bold bg-[#00214c] text-[#ffffff] flex items-center gap-1 p-2 rounded cursor-pointer"
+                  className="flex items-center gap-1.5 px-3 py-2 rounded font-[Nunito-bold] text-[13px] text-white transition-opacity hover:opacity-85 disabled:opacity-60 cursor-pointer"
+                  style={{ background: "var(--core-primary)" }}
                   onClick={onDownloadReceipt}
                   disabled={isFetchingInvoice}
                 >
@@ -183,118 +192,130 @@ export const Order = (props) => {
                 </button>
               </div>
 
-              <div className=" border border-[#00214c] p-[16px] grid grid-cols-1 gap-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-[14px] text-[#00214c] font-[Nunito-regular]">
-                      Order number
-                    </p>
-                    <p className="font-[Nunito-medium] text-[14px] text-[#00214c]">
-                      {order_number}
-                    </p>
+              {/* Detail Grid */}
+              <div className="border rounded-lg overflow-hidden" style={{ borderColor: "color-mix(in srgb, var(--core-primary) 20%, #e8e5df)" }}>
+                {/* Row 1 */}
+                <div className="grid grid-cols-2 divide-x" style={{ divideColor: "color-mix(in srgb, var(--core-primary) 15%, #e8e5df)" }}>
+                  <div className="p-4 flex flex-col gap-1">
+                    <p className="text-[11px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest">Order Number</p>
+                    <p className="font-[Nunito-bold] text-[14px] text-[var(--core-primary)]">{order_number || "—"}</p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-[14px] text-[#00214c] font-[Nunito-regular]">
-                      Order status
-                    </p>
-                    <p className="font-[Nunito-medium] text-[14px] text-[#00214c] uppercase">
-                      {order_status}
+                  <div className="p-4 flex flex-col gap-1">
+                    <p className="text-[11px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest">Order Status</p>
+                    <span
+                      className="inline-flex self-start font-[Nunito-bold] text-[12px] px-2.5 py-0.5 rounded-full uppercase tracking-wide"
+                      style={{
+                        background: "color-mix(in srgb, var(--core-secondary) 15%, white)",
+                        color: "var(--core-primary)",
+                        border: "1px solid color-mix(in srgb, var(--core-secondary) 40%, white)"
+                      }}
+                    >
+                      {order_status || "Processing"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="border-t" style={{ borderColor: "color-mix(in srgb, var(--core-primary) 12%, #e8e5df)" }} />
+
+                {/* Row 2 */}
+                <div className="grid grid-cols-2 divide-x" style={{ divideColor: "color-mix(in srgb, var(--core-primary) 15%, #e8e5df)" }}>
+                  <div className="p-4 flex flex-col gap-1">
+                    <p className="text-[11px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest">Order Date</p>
+                    <p className="font-[Nunito-medium] text-[14px] text-[var(--core-primary)]">{orderDate || "—"}</p>
+                  </div>
+                  <div className="p-4 flex flex-col gap-1">
+                    <p className="text-[11px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest">Payment Status</p>
+                    <p
+                      className="font-[Nunito-bold] text-[13px] uppercase"
+                      style={{ color: payment_status === "paid" || payment_status === "received" ? "#16a34a" : "var(--core-secondary)" }}
+                    >
+                      {payment_status || "Pending"}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-[14px] text-[#00214c] font-[Nunito-regular]">
-                      Order date
-                    </p>
-                    <p className="font-[Nunito-medium] text-[14px] text-[#00214c]">
-                      {orderDate}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[14px] text-[#00214c] font-[Nunito-regular]">
-                      Payment status
-                    </p>
-                    <p className="font-[Nunito-medium] text-[14px] text-[#00214c] uppercase">
-                      {payment_status}
-                    </p>
-                  </div>
-                </div>
+                <div className="border-t" style={{ borderColor: "color-mix(in srgb, var(--core-primary) 12%, #e8e5df)" }} />
 
+                {/* Address Row */}
                 {order_type === "pickup" ? (
-                  <div>
-                    <p className="text-[14px] text-[#00214c] font-[Nunito-regular]">
-                      Pickup address
-                    </p>
-                    <p className="text-[14px] text-[#00214c] font-[Nunito-regular]">
-                      {storePickUpAddress}
-                    </p>
+                  <div className="p-4 flex flex-col gap-1">
+                    <p className="text-[11px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest">Pickup Address</p>
+                    <p className="font-[Nunito-medium] text-[14px] text-[var(--core-primary)]">{storePickUpAddress || "—"}</p>
                   </div>
                 ) : (
-                  <>
-                    <div className="flex flex-col gap-4 mt-2">
-                      {/* Delivery Address */}
-                      <div>
-                        <p className="text-[14px] text-[#00214c] font-[Nunito-regular]">
-                          Delivery address
+                  <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x" style={{ borderColor: "color-mix(in srgb, var(--core-primary) 12%, #e8e5df)" }}>
+                    {/* Delivery Address */}
+                    <div className="p-4 flex flex-col gap-2">
+                      <p className="text-[11px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest">Delivery Address</p>
+                      {shipping_address?.label && (
+                        <span
+                          className="self-start text-[10px] font-[Nunito-bold] px-2 py-0.5 rounded-full uppercase tracking-widest"
+                          style={{
+                            background: "color-mix(in srgb, var(--core-primary) 10%, white)",
+                            color: "var(--core-primary)",
+                          }}
+                        >
+                          {shipping_address.label}
+                        </span>
+                      )}
+                      <div className="flex flex-col gap-0.5">
+                        <p className="font-[Nunito-bold] text-[13px] text-[var(--core-primary)]">
+                          {`${shipping_address?.firstname ?? ""} ${shipping_address?.lastname ?? ""}`.trim()}
+                          {shipping_address?.phone && (
+                            <span className="font-[Nunito-regular] text-gray-500"> · {shipping_address.phone}</span>
+                          )}
                         </p>
-                        <p className="text-[14px] text-[#00214c] font-[Nunito-regular]">
-                          {shipping_address?.label}
-                        </p>
-                        <div className="border border-[#e8e5df] my-1" />
-                        <p className="font-[Nunito-medium] text-[14px] text-[#00214c]">
-                          {shipping_address?.firstname ??
-                            ""} {shipping_address?.lastname ??
-                              ""}{shipping_address?.phone && ` | ${shipping_address?.phone}`}
-                        </p>
-                        <div className="border border-[#e8e5df] my-1" />
-                        <p className="font-[Nunito-medium] text-[14px] text-[#00214c]">
-                          {fullShippingAddress}
-                        </p>
-                      </div>
-                      {/* Billing Address */}
-                      <div>
-                        <p className="text-[14px] text-[#00214c] font-[Nunito-regular]">
-                          Billing address
-                        </p>
-                        <p className="text-[14px] text-[#00214c] font-[Nunito-regular]">
-                          {billing_address?.label}
-                        </p>
-                        <div className="border border-[#e8e5df] my-1" />
-                        <p className="font-[Nunito-medium] text-[14px] text-[#00214c]">
-                          {billing_address?.firstname ??
-                            ""} {billing_address?.lastname ??
-                              ""}{billing_address?.phone && ` | ${billing_address?.phone}`}
-                        </p>
-                        <div className="border border-[#e8e5df] my-1" />
-                        <p className="font-[Nunito-medium] text-[14px] text-[#00214c]">
-                          {fullBillingAddress}
-                        </p>
+                        <p className="font-[Nunito-regular] text-[13px] text-gray-500 leading-relaxed">{fullShippingAddress}</p>
                       </div>
                     </div>
-                  </>
+                    {/* Billing Address */}
+                    <div className="p-4 flex flex-col gap-2">
+                      <p className="text-[11px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest">Billing Address</p>
+                      {billing_address?.label && (
+                        <span
+                          className="self-start text-[10px] font-[Nunito-bold] px-2 py-0.5 rounded-full uppercase tracking-widest"
+                          style={{
+                            background: "color-mix(in srgb, var(--core-primary) 10%, white)",
+                            color: "var(--core-primary)",
+                          }}
+                        >
+                          {billing_address.label}
+                        </span>
+                      )}
+                      <div className="flex flex-col gap-0.5">
+                        <p className="font-[Nunito-bold] text-[13px] text-[var(--core-primary)]">
+                          {`${billing_address?.firstname ?? ""} ${billing_address?.lastname ?? ""}`.trim()}
+                          {billing_address?.phone && (
+                            <span className="font-[Nunito-regular] text-gray-500"> · {billing_address.phone}</span>
+                          )}
+                        </p>
+                        <p className="font-[Nunito-regular] text-[13px] text-gray-500 leading-relaxed">{fullBillingAddress}</p>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
 
             <button
-              className="text-white py-3 hidden md:block transition cursor-pointer bg-[#00214c] font-[Nunito-medium] text-4 hover:opacity-90"
+              className="text-white py-3 hidden md:block transition cursor-pointer font-[Nunito-bold] text-[14px] uppercase tracking-widest hover:opacity-85"
+              style={{ background: "var(--core-primary)" }}
               onClick={() => router.push("/")}
             >
-              Shop More
+              Continue Shopping
             </button>
           </div>
+
           <div className="border border-[#e8e5df] hidden md:block" />
 
           {/* Right Section */}
           <div className="flex-1 flex flex-col gap-8 mt-[32px] md:mt-0">
             {/* Ordered Items */}
             <div>
-              <h3 className="font-[Nunito-medium] text-[20px] text-[#00214c]">
-                ORDERED ITEMS({line_items?.length || 0})
+              <h3 className="font-[Nunito-bold] text-[18px] text-[var(--core-primary)] uppercase tracking-wider mb-6">
+                Ordered Items ({line_items?.length || 0})
               </h3>
-              <div className="flex flex-col gap-4 mt-8">
+              <div className="flex flex-col gap-4">
                 {line_items?.map((item, idx) => {
                   const orgRaffleId =
                     item?.line_itemable?.organization_raffle_id;
@@ -316,55 +337,53 @@ export const Order = (props) => {
             </div>
 
             {/* Bill Summary */}
-            <div>
-              <h3 className="font-[Nunito-medium] text-[20px] text-[#00214c] mb-4">
-                BILL SUMMARY
-              </h3>
-              <div className="flex flex-col gap-2 text-gray-700">
-                <div className="flex justify-between">
-                  <span className="font-[Nunito-regular] text-[14px] text-[#00214c]">
-                    Item Total
-                  </span>
-                  <span className="font-[Nunito-regular] text-[12px] text-[#00214c]">
+            <div className="border rounded-lg overflow-hidden" style={{ borderColor: "color-mix(in srgb, var(--core-primary) 20%, #e8e5df)" }}>
+              <div className="px-4 py-3" style={{ background: "color-mix(in srgb, var(--core-primary) 6%, white)" }}>
+                <h3 className="font-[Nunito-bold] text-[15px] text-[var(--core-primary)] uppercase tracking-wider">
+                  Bill Summary
+                </h3>
+              </div>
+              <div className="p-4 flex flex-col gap-3">
+                <div className="flex justify-between items-center">
+                  <span className="font-[Nunito-regular] text-[14px] text-gray-500">Item Total</span>
+                  <span className="font-[Nunito-medium] text-[14px] text-[var(--core-primary)]">
                     {formatCurrency(display_item_total)}
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="font-[Nunito-regular] text-[14px] text-[#00214c]">
-                    Tax
-                  </span>
-                  <span className="font-[Nunito-regular] text-[12px] text-[#00214c]">
+                <div className="flex justify-between items-center">
+                  <span className="font-[Nunito-regular] text-[14px] text-gray-500">Tax</span>
+                  <span className="font-[Nunito-medium] text-[14px] text-[var(--core-primary)]">
                     {formatCurrency(display_tax_total)}
                   </span>
                 </div>
                 {order_type !== "pickup" && (
-                  <div className="flex justify-between">
-                    <span className="font-[Nunito-regular] text-[14px] text-[#00214c]">
-                      Total Shipping
-                    </span>
-                    <span className="font-[Nunito-regular] text-[12px] text-[#00214c]">
+                  <div className="flex justify-between items-center">
+                    <span className="font-[Nunito-regular] text-[14px] text-gray-500">Shipping</span>
+                    <span className="font-[Nunito-medium] text-[14px] text-[var(--core-primary)]">
                       {display_ship_total === "0.00" || display_ship_total === 0 || display_ship_total === "0"
-                        ? "Free"
-                        : `${formatCurrency(display_ship_total)}`}
+                        ? <span style={{ color: "#16a34a" }} className="font-[Nunito-bold]">Free</span>
+                        : formatCurrency(display_ship_total)}
                     </span>
                   </div>
                 )}
-                <div className="flex justify-between font-semibold text-lg">
-                  <span className="font-[Nunito-medium] text-[16px] text-[#00214c]">
-                    Total Payment
-                  </span>
-                  <span className="font-[Nunito-bold] text-[16px] text-[#00214c]">
+                {/* Divider */}
+                <div className="h-px my-1" style={{ background: "color-mix(in srgb, var(--core-secondary) 35%, #e8e5df)" }} />
+                <div className="flex justify-between items-center">
+                  <span className="font-[Nunito-bold] text-[15px] text-[var(--core-primary)]">Total</span>
+                  <span className="font-[Nunito-bold] text-[17px] text-[var(--core-primary)]">
                     {formatCurrency(display_total)}
                   </span>
                 </div>
               </div>
             </div>
           </div>
+
           <button
-            className="text-white py-3 mt-8 block md:hidden transition cursor-pointer bg-[#00214c] font-[Nunito-medium] text-4 hover:opacity-90"
+            className="text-white py-3 mt-8 block md:hidden transition cursor-pointer font-[Nunito-bold] text-[14px] uppercase tracking-widest hover:opacity-85"
+            style={{ background: "var(--core-primary)" }}
             onClick={() => router.push("/")}
           >
-            Shop More
+            Continue Shopping
           </button>
         </div>
       </div>

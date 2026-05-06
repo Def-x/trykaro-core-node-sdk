@@ -206,7 +206,7 @@ export const CustomOTPAuth = ({ mode = "sign-in", onLoginSuccess }) => {
   return (
     <div className="w-full max-w-[400px] mx-auto p-6 bg-white rounded-2xl shadow-xl border border-gray-100">
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-[Nunito-bold] text-[#00214c]">
+        <h2 className="text-2xl font-[Nunito-bold] text-[var(--core-primary)]">
           {step === "phone"
             ? isSignup
               ? "Create Your Account"
@@ -231,7 +231,7 @@ export const CustomOTPAuth = ({ mode = "sign-in", onLoginSuccess }) => {
                 value={firstName}
                 onChange={(event) => setFirstName(event.target.value)}
                 placeholder="First Name"
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#00214c]/20 focus:border-[#00214c] outline-none transition-all font-[Nunito-medium]"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[var(--core-primary)]/20 focus:border-[var(--core-primary)] outline-none transition-all font-[Nunito-medium]"
                 required
               />
               <input
@@ -239,7 +239,7 @@ export const CustomOTPAuth = ({ mode = "sign-in", onLoginSuccess }) => {
                 value={lastName}
                 onChange={(event) => setLastName(event.target.value)}
                 placeholder="Last Name"
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#00214c]/20 focus:border-[#00214c] outline-none transition-all font-[Nunito-medium]"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[var(--core-primary)]/20 focus:border-[var(--core-primary)] outline-none transition-all font-[Nunito-medium]"
                 required
               />
             </div>
@@ -256,7 +256,7 @@ export const CustomOTPAuth = ({ mode = "sign-in", onLoginSuccess }) => {
                 setPhone(event.target.value.replace(/\D/g, "").slice(0, 10))
               }
               placeholder="Mobile Number"
-              className="w-full pl-14 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#00214c]/20 focus:border-[#00214c] outline-none transition-all font-[Nunito-medium]"
+              className="w-full pl-14 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[var(--core-primary)]/20 focus:border-[var(--core-primary)] outline-none transition-all font-[Nunito-medium]"
               required
             />
           </div>
@@ -267,7 +267,7 @@ export const CustomOTPAuth = ({ mode = "sign-in", onLoginSuccess }) => {
             className={`w-full py-3 rounded-xl font-[Nunito-bold] text-white transition-all ${
               isLoading || phone.length < 10
                 ? "bg-gray-300 cursor-not-allowed"
-                : "bg-[#00214c] hover:bg-[#001a3d] active:scale-[0.98]"
+                : "bg-[var(--core-primary)] hover:bg-[var(--core-primary)] active:scale-[0.98]"
             }`}
           >
             {isLoading ? (
@@ -285,7 +285,7 @@ export const CustomOTPAuth = ({ mode = "sign-in", onLoginSuccess }) => {
             <button
               type="button"
               onClick={() => switchMode(isSignup ? "signin" : "signup")}
-              className="text-[#00214c] font-[Nunito-bold] hover:underline"
+              className="text-[var(--core-primary)] font-[Nunito-bold] hover:underline"
             >
               {isSignup ? "Sign In" : "Create Account"}
             </button>
@@ -305,7 +305,7 @@ export const CustomOTPAuth = ({ mode = "sign-in", onLoginSuccess }) => {
                 value={digit}
                 onChange={(event) => handleOtpChange(index, event.target.value)}
                 onKeyDown={(event) => handleKeyDown(index, event)}
-                className="w-12 h-14 text-center text-xl font-[Nunito-bold] bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#00214c]/20 focus:border-[#00214c] outline-none transition-all"
+                className="w-12 h-14 text-center text-xl font-[Nunito-bold] bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[var(--core-primary)]/20 focus:border-[var(--core-primary)] outline-none transition-all"
               />
             ))}
           </div>
@@ -319,7 +319,7 @@ export const CustomOTPAuth = ({ mode = "sign-in", onLoginSuccess }) => {
               <button
                 type="button"
                 onClick={handleSendOtp}
-                className="text-xs text-[#00214c] font-[Nunito-bold] hover:underline"
+                className="text-xs text-[var(--core-primary)] font-[Nunito-bold] hover:underline"
               >
                 Resend OTP
               </button>
@@ -332,7 +332,7 @@ export const CustomOTPAuth = ({ mode = "sign-in", onLoginSuccess }) => {
             className={`w-full py-3 rounded-xl font-[Nunito-bold] text-white transition-all ${
               isLoading || otpValue.length < otpLength
                 ? "bg-gray-300 cursor-not-allowed"
-                : "bg-[#00214c] hover:bg-[#001a3d] active:scale-[0.98]"
+                : "bg-[var(--core-primary)] hover:bg-[var(--core-primary)] active:scale-[0.98]"
             }`}
           >
             {isLoading ? (
@@ -350,7 +350,7 @@ export const CustomOTPAuth = ({ mode = "sign-in", onLoginSuccess }) => {
           <button
             type="button"
             onClick={resetOtpStep}
-            className="w-full text-sm text-gray-500 font-[Nunito-medium] hover:text-[#00214c] transition-colors"
+            className="w-full text-sm text-gray-500 font-[Nunito-medium] hover:text-[var(--core-primary)] transition-colors"
           >
             Change Details
           </button>

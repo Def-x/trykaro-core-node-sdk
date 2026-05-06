@@ -53,10 +53,10 @@ export const AddressCard = ({ address, onEdit, onDelete }) => {
 
   return (
     <>
-      <div className="border border-gray-100 p-6 flex flex-col gap-y-4 hover:border-[#00214c] transition-all duration-300 bg-white shadow-sm hover:shadow-md group">
+      <div className="border border-gray-100 p-6 flex flex-col gap-y-4 hover:border-[var(--core-primary)] transition-all duration-300 bg-white shadow-sm hover:shadow-md group">
         {/* Label + actions */}
         <div className="flex justify-between items-center">
-          <h3 className="font-[Nunito-bold] text-[13px] text-[#00214c] uppercase tracking-widest bg-gray-50 px-2 py-1">
+          <h3 className="font-[Nunito-bold] text-[13px] text-[var(--core-primary)] uppercase tracking-widest bg-gray-50 px-2 py-1">
             {label || "Address"}
           </h3>
           <div className="flex items-center gap-3">
@@ -110,7 +110,7 @@ export const AddressCard = ({ address, onEdit, onDelete }) => {
       >
         <div className="text-center py-4">
           <p className="font-[Nunito-regular] text-[15px] text-gray-600 mb-8">
-            Are you sure you want to delete <span className="font-[Nunito-bold] text-[#00214c]">&quot;{label || "this address"}&quot;</span>? This action cannot be undone.
+            Are you sure you want to delete <span className="font-[Nunito-bold] text-[var(--core-primary)]">&quot;{label || "this address"}&quot;</span>? This action cannot be undone.
           </p>
           <div className="flex gap-4">
             <button

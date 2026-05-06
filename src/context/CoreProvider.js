@@ -51,6 +51,9 @@ export const CoreProvider = ({
   auth: injectedAuth = null,
   orgData,
 }) => {
+  // ── Theme colors ────────────────────────────────────────────────────────────
+  const primaryColor = config?.primaryColor ?? "#00214c";
+  const secondaryColor = config?.secondaryColor ?? "#c8a95a";
   const [cart, setCart] = useState();
   const [isCartLoading, setIsCartLoading] = useState(true);
   const [region, setRegion] = useState(config?.region ?? null);
@@ -152,6 +155,31 @@ export const CoreProvider = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config?.regionId, auth?.isSignedIn]);
 
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    const root = document.documentElement;
+    const prevPrimary = root.style.getPropertyValue("--core-primary");
+    const prevSecondary = root.style.getPropertyValue("--core-secondary");
+
+    root.style.setProperty("--core-primary", primaryColor);
+    root.style.setProperty("--core-secondary", secondaryColor);
+
+    return () => {
+      if (prevPrimary) {
+        root.style.setProperty("--core-primary", prevPrimary);
+      } else {
+        root.style.removeProperty("--core-primary");
+      }
+
+      if (prevSecondary) {
+        root.style.setProperty("--core-secondary", prevSecondary);
+      } else {
+        root.style.removeProperty("--core-secondary");
+      }
+    };
+  }, [primaryColor, secondaryColor]);
+
   const value = useMemo(
     () => ({
       cart,
@@ -164,12 +192,25 @@ export const CoreProvider = ({
       auth,
       config,
       orgData,
+      primaryColor,
+      secondaryColor,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [cart, isCartLoading, region, actions, toast, auth, config, orgData],
+    [cart, isCartLoading, region, actions, toast, auth, config, orgData, primaryColor, secondaryColor],
   );
 
-  return <CoreContext.Provider value={value}>{children}</CoreContext.Provider>;
+  return (
+    <CoreContext.Provider value={value}>
+      <div
+        style={{
+          "--core-primary": primaryColor,
+          "--core-secondary": secondaryColor,
+        }}
+      >
+        {children}
+      </div>
+    </CoreContext.Provider>
+  );
 };
 
 /**

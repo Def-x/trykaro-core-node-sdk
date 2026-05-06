@@ -55,7 +55,7 @@ export const AccountPage = ({ initialTab = "profile" }) => {
       <div className="px-4 md:px-8 lg:px-[32px] py-[40px] md:py-[100px] flex flex-col md:flex-row items-start justify-between gap-8 w-full">
         {/* ── Sidebar ── */}
         <aside className="w-full md:w-[280px] lg:w-[320px] md:sticky top-[40px]">
-          <h1 className="font-[Nunito-Regular] text-[40px] md:text-[48px] leading-[1.05] text-[#00214c] mb-8 tracking-tight uppercase">
+          <h1 className="font-[Nunito-Regular] text-[40px] md:text-[48px] leading-[1.05] text-[var(--core-primary)] mb-8 tracking-tight uppercase">
             MY ACCOUNT
           </h1>
 
@@ -66,7 +66,7 @@ export const AccountPage = ({ initialTab = "profile" }) => {
                   <button
                     onClick={() => setActiveTab(item.id)}
                     className={`w-full text-left px-4 py-3 text-[14px] uppercase tracking-wider transition-all duration-200 ${activeTab === item.id
-                        ? "bg-[#00214c] text-white"
+                        ? "bg-[var(--core-primary)] text-white"
                         : "text-[#2d2d2d] hover:bg-[#f5f2ec]"
                       }`}
                   >

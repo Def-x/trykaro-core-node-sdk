@@ -49,7 +49,7 @@ export const OrdersList = ({ initialOrders }) => {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <h1 className="font-[Nunito-regular] text-[32px] text-[#00214c] mb-10 tracking-tight uppercase">
+      <h1 className="font-[Nunito-regular] text-[32px] text-[var(--core-primary)] mb-10 tracking-tight uppercase">
         MY ORDERS
       </h1>
 
@@ -65,7 +65,7 @@ export const OrdersList = ({ initialOrders }) => {
           title="No Orders Found"
           description="It looks like you haven't placed any orders yet. Once you do, they will appear here."
           action={
-            <button className="mt-4 px-8 py-3 bg-[#00214c] text-white font-[Nunito-bold] text-[13px] uppercase tracking-widest hover:bg-black transition-colors rounded-none">
+            <button className="mt-4 px-8 py-3 bg-[var(--core-primary)] text-white font-[Nunito-bold] text-[13px] uppercase tracking-widest hover:opacity-90 transition-colors rounded-none">
               Start Shopping
             </button>
           }
@@ -116,7 +116,7 @@ const OrderCard = ({ order, formatCurrency }) => {
         {/* Left side */}
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-3">
-            <span className="font-[Nunito-bold] text-[16px] text-[#00214c]">
+            <span className="font-[Nunito-bold] text-[16px] text-[var(--core-primary)]">
               {order_number || cartNumber || id}
             </span>
             <span
@@ -139,7 +139,7 @@ const OrderCard = ({ order, formatCurrency }) => {
 
         {/* Right side */}
         <div className="flex flex-col items-start md:items-end gap-1.5 w-full md:w-auto">
-          <span className="font-[Nunito-bold] text-[18px] text-[#00214c]">
+          <span className="font-[Nunito-bold] text-[18px] text-[var(--core-primary)]">
             {display_total ? formatCurrency(display_total) : "—"}
           </span>
           <p className="text-[12px] font-[Nunito-medium] flex items-center gap-1.5">
@@ -176,7 +176,7 @@ const OrderCard = ({ order, formatCurrency }) => {
                   </div>
                 )}
               </div>
-              <span className="absolute top-0 right-0 -translate-y-1/3 translate-x-1/3 bg-[#00214c] text-white text-[11px] font-bold w-6 h-6 flex items-center justify-center rounded-full border-2 border-white shadow-sm z-10">
+              <span className="absolute top-0 right-0 -translate-y-1/3 translate-x-1/3 bg-[var(--core-primary)] text-white text-[11px] font-bold w-6 h-6 flex items-center justify-center rounded-full border-2 border-white shadow-sm z-10">
                 {item.quantity}
               </span>
             </div>
@@ -185,7 +185,7 @@ const OrderCard = ({ order, formatCurrency }) => {
         {line_items.length === 0 && <p className="text-gray-400 italic text-sm py-4">No items info</p>}
 
         {/* Subtle view details indicator */}
-        <div className="absolute right-5 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 hidden md:flex items-center text-[#00214c] text-[13px] font-[Nunito-bold] bg-white/90 backdrop-blur-sm py-2 px-4 rounded-full shadow-sm border border-gray-200 pointer-events-none">
+        <div className="absolute right-5 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 hidden md:flex items-center text-[var(--core-primary)] text-[13px] font-[Nunito-bold] bg-white/90 backdrop-blur-sm py-2 px-4 rounded-full shadow-sm border border-gray-200 pointer-events-none">
           View Details &rarr;
         </div>
       </div>

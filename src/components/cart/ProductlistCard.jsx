@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import React from "react";
 import { useCurrencyFormat } from "@/hooks/useCurrencyFormat";
 import { useAddToCart } from "@/hooks/useAddToCart";
@@ -153,7 +153,7 @@ const ProductlistCard = ({ product, component, orderType }) => {
                 {product.line_items_customizations.length > 3 ? (
                   <button
                     onClick={() => setIsViewModalOpen(true)}
-                    className="text-xs text-[#00214c] underline hover:text-[#0d346b] transition-colors text-left font-medium"
+                    className="text-xs text-[var(--core-primary)] underline hover:text-[var(--core-primary)] transition-colors text-left font-medium"
                   >
                     customizations: view
                   </button>
@@ -205,11 +205,11 @@ const ProductlistCard = ({ product, component, orderType }) => {
                     )
                   }
                   disabled={isAddToCartLoading}
-                  className="w-7 h-full flex items-center justify-center text-lg text-gray-500 hover:text-[#00214c] transition-colors disabled:opacity-50 pb-0.5"
+                  className="w-7 h-full flex items-center justify-center text-lg text-gray-500 hover:text-[var(--core-primary)] transition-colors disabled:opacity-50 pb-0.5"
                 >
                   -
                 </button>
-                <span className="w-6 text-center text-sm font-semibold text-[#00214c] bg-white h-full flex items-center justify-center border-x border-[#e8e5df]">
+                <span className="w-6 text-center text-sm font-semibold text-[var(--core-primary)] bg-white h-full flex items-center justify-center border-x border-[#e8e5df]">
                   {quantity}
                 </span>
                 <button
@@ -221,14 +221,14 @@ const ProductlistCard = ({ product, component, orderType }) => {
                     )
                   }
                   disabled={isAddToCartLoading}
-                  className="w-7 h-full flex items-center justify-center text-base text-gray-500 hover:text-[#00214c] transition-colors disabled:opacity-50 pb-0.5"
+                  className="w-7 h-full flex items-center justify-center text-base text-gray-500 hover:text-[var(--core-primary)] transition-colors disabled:opacity-50 pb-0.5"
                 >
                   +
                 </button>
               </div>
             ) : (
               <div className="flex items-center border border-[#e8e5df] rounded-md h-[28px] bg-[#f9f9f9] px-3">
-                <span className="text-sm font-semibold text-[#00214c]">
+                <span className="text-sm font-semibold text-[var(--core-primary)]">
                   {quantity}
                 </span>
               </div>
@@ -237,7 +237,7 @@ const ProductlistCard = ({ product, component, orderType }) => {
               <button 
                 onClick={() => setIsEditModalOpen(true)}
                 disabled={isAddToCartLoading}
-                className="text-xs text-[#00214c] font-medium border border-[#e8e5df] hover:bg-gray-50 px-2 py-1 rounded transition-colors disabled:opacity-50"
+                className="text-xs text-[var(--core-primary)] font-medium border border-[#e8e5df] hover:bg-gray-50 px-2 py-1 rounded transition-colors disabled:opacity-50"
               >
                 Edit
               </button>

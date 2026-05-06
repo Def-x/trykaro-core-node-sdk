@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import React from "react";
 
 const ViewCustomizationModal = ({
@@ -42,7 +42,7 @@ const ViewCustomizationModal = ({
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="w-full px-4 py-2 bg-[#00214c] text-white rounded-md text-sm font-[Nunito-medium] hover:bg-[#0d346b]"
+          className="w-full px-4 py-2 bg-[var(--core-primary)] text-white rounded-md text-sm font-[Nunito-medium] hover:bg-[var(--core-primary)]"
         >
           Close
         </button>
