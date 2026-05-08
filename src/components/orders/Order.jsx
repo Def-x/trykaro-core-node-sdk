@@ -85,6 +85,10 @@ export const Order = (props) => {
     cart_detail_json,
   } = cart || {};
 
+  const appliedDiscounts = (cart?.cart_detail_json?.discounts || cart?.cart_discounts || []).filter(
+    (coupon) => coupon.code
+  );
+
   const fullShippingAddress = [
     shipping_address?.address1,
     shipping_address?.address2,
@@ -353,19 +357,27 @@ export const Order = (props) => {
                     {formatCurrency(display_item_total)}
                   </span>
                 </div>
-                {discount_id && (
+                {appliedDiscounts?.length > 0 ? (
+                  appliedDiscounts?.map((coupon) => (
+                    <div key={coupon.code || coupon.id} className="flex justify-between items-center">
+                      <span className="font-[Nunito-medium] text-[14px] text-[#FF6500]">
+                        Discount {coupon.code ? `(${coupon.code})` : ""}
+                      </span>
+                      <span className="font-[Nunito-medium] text-[14px] text-[#FF6500]">
+                        -{formatCurrency(coupon.display_discount_amount || (coupon.discount_amount / 100))}
+                      </span>
+                    </div>
+                  ))
+                ) : (display_promo_total && display_promo_total !== "0.00" && display_promo_total !== 0 && display_promo_total !== "0") ? (
                   <div className="flex justify-between items-center">
                     <span className="font-[Nunito-medium] text-[14px] text-[#FF6500]">
                       Discount
-                      {cart_detail_json?.discount?.code
-                        ? ` (${cart_detail_json.discount.code})`
-                        : ""}
                     </span>
                     <span className="font-[Nunito-medium] text-[14px] text-[#FF6500]">
                       -{formatCurrency(display_promo_total)}
                     </span>
                   </div>
-                )}
+                ) : null}
                 <div className="flex justify-between items-center">
                   <span className="font-[Nunito-regular] text-[14px] text-gray-500">Tax</span>
                   <span className="font-[Nunito-medium] text-[14px] text-[var(--core-primary)]">
@@ -390,9 +402,9 @@ export const Order = (props) => {
                     {formatCurrency(display_total)}
                   </span>
                 </div>
-                {discount_id && (
+                {(appliedDiscounts?.length > 0 || (display_promo_total && display_promo_total !== "0.00" && display_promo_total !== 0 && display_promo_total !== "0")) && (
                   <p className="text-[13px] font-[Nunito-bold] text-[#16a34a] mt-[6px] text-right">
-                    You save {display_promo_total} on this order 🎉
+                    You save {formatCurrency(display_promo_total)} on this order 🎉
                   </p>
                 )}
               </div>

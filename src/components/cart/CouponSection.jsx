@@ -2,16 +2,18 @@
 
 import React, { useState, useEffect } from "react";
 import { useCore } from "../../context/CoreProvider";
+import { useCurrencyFormat } from "../../hooks/useCurrencyFormat";
 
 const CouponSection = () => {
   const { cart, setCart, actions, auth, config, toast } = useCore();
   const token = auth?.token ?? auth?.access_token ?? null;
+  const { formatCurrency } = useCurrencyFormat();
 
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const [errorMessage, setErrorMessage] = useState(null);
   const [isApplying, setIsApplying] = useState(false);
-  const [isRemoving, setIsRemoving] = useState(false);
+  const [removingCode, setRemovingCode] = useState(null);
   const [availableDiscounts, setAvailableDiscounts] = useState([]);
   const [discountsLoading, setDiscountsLoading] = useState(false);
 
@@ -56,6 +58,15 @@ const CouponSection = () => {
     };
   }, [actions, cart?.id, token, config?.regionId]);
 
+  const availableDiscountsWithCode = availableDiscounts?.filter((coupon) => coupon.code) || [];
+
+  const appliedDiscounts = (cart?.cart_detail_json?.discounts || cart?.cart_discounts || []).filter(
+    (coupon) => coupon.code
+  );
+
+  const firstAppliedDiscount = appliedDiscounts?.[0];
+  const showInput = !firstAppliedDiscount || firstAppliedDiscount.stackable;
+
   const handleApply = async () => {
     if (!inputValue.trim()) return;
     if (!token) {
@@ -82,7 +93,7 @@ const CouponSection = () => {
     } catch (error) {
       const msg = error?.data?.error || error?.message || "Failed to apply coupon";
       setErrorMessage(msg);
-      
+
       if (
         msg.toLowerCase().includes("already applied") ||
         msg.toLowerCase().includes("discount is already")
@@ -101,23 +112,25 @@ const CouponSection = () => {
     }
   };
 
-  const handleRemove = async () => {
-    setIsRemoving(true);
+  const handleRemove = async (code) => {
+    setRemovingCode(code);
+    console.log({ code })
     try {
       if (!actions?.removeDiscount) {
         throw new Error("removeDiscount action is not configured");
       }
       const result = await actions.removeDiscount({
         token,
+        code,
         region_id: config?.regionId,
       });
       const updatedCart = result?.cart ?? result;
       setCart(updatedCart);
       setIsOpen(true);
     } catch (error) {
-      triggerToast.error("Failed to remove coupon");
+      triggerToast.error(`Failed to remove coupon ${code}`);
     } finally {
-      setIsRemoving(false);
+      setRemovingCode(null);
     }
   };
 
@@ -136,36 +149,6 @@ const CouponSection = () => {
     });
   };
 
-  // State 2 — Discount applied
-  if (cart?.discount_id) {
-    return (
-      <div className="flex items-center justify-between bg-[#f0faf0] border border-[#00b300] rounded-lg px-4 py-3 my-3 gap-2">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
-          <span className="text-base">✅</span>
-          <span className="font-[Nunito-bold] text-[#0f0f0f] text-[13px] tracking-wide">
-            {cart.discount_code}
-          </span>
-          <span className="font-[Nunito-regular] text-[#0f0f0f] text-[12px]">
-            applied
-          </span>
-          <span className="text-[#0f0f0f] text-[12px] hidden sm:inline">·</span>
-          <span className="text-[#00b300] text-[12px] font-[Nunito-bold]">
-            You save {cart.display_promo_total}
-          </span>
-        </div>
-        <button
-          type="button"
-          onClick={handleRemove}
-          disabled={isRemoving}
-          className="text-[#8e9194] text-lg bg-transparent border-0 cursor-pointer disabled:opacity-50"
-          aria-label="Remove coupon"
-        >
-          {isRemoving ? "…" : "✕"}
-        </button>
-      </div>
-    );
-  }
-
   // State 0 — Not signed in
   if (!token) {
     return (
@@ -183,96 +166,134 @@ const CouponSection = () => {
     );
   }
 
-  // State 1 — No discount applied
+  // State 1 — Token exists (render applied discounts and accordion input)
   return (
     <div className="my-4">
-      {/* Accordion header */}
-      <button
-        type="button"
-        onClick={() => setIsOpen((prev) => !prev)}
-        aria-expanded={isOpen}
-        className="w-full flex items-center justify-between border-t border-b border-[var(--borders)] px-1 py-3 cursor-pointer"
-      >
-        <span className="font-[Nunito-medium] text-[14px] text-[var(--main)]">
-          🏷 Have a coupon code?
-        </span>
-        <span className="text-[var(--main)] text-[16px]">
-          {isOpen ? "▴" : "▾"}
-        </span>
-      </button>
-
-      {isOpen && (
-        <div className="mt-3 flex flex-col gap-3">
-          {/* Input + Apply button */}
-          <div className="flex gap-2">
-            <input
-              type="text"
-              aria-label="Coupon code"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleApply()}
-              placeholder="ENTER CODE"
-              className="border border-[var(--borders)] rounded-lg px-3 py-2 text-[13px] text-[var(--main)] font-[Nunito-regular] uppercase tracking-widest outline-none flex-1"
-            />
-            <button
-              onClick={handleApply}
-              disabled={isApplying || !inputValue.trim()}
-              className="bg-[#FF6500] text-white text-[12px] font-[Nunito-bold] px-4 py-2 rounded-lg border-none cursor-pointer tracking-wide disabled:opacity-60 shrink-0"
+      {/* Applied Coupons List */}
+      {appliedDiscounts?.length > 0 && (
+        <div className="flex flex-col gap-2 mb-3">
+          {appliedDiscounts?.map((coupon) => (
+            <div
+              key={coupon.code || coupon.id}
+              className="flex items-center justify-between bg-[#f0faf0] border border-[#00b300] rounded-lg px-4 py-3 gap-2"
             >
-              {isApplying ? "APPLYING..." : "APPLY"}
-            </button>
-          </div>
-
-          {/* Error message */}
-          {errorMessage && (
-            <p className="text-red-600 text-[12px] font-[Nunito-regular]">
-              {errorMessage}
-            </p>
-          )}
-
-          {/* Available coupons */}
-          {!discountsLoading &&
-            availableDiscounts &&
-            availableDiscounts.length > 0 && (
-              <div className="flex flex-col gap-2 mt-1">
-                <p className="font-[Nunito-medium] text-[12px] text-[var(--secondary)]">
-                  Available coupons
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {availableDiscounts.map((coupon) => {
-                    const endDate = formatEndDate(coupon.end_at);
-                    const { eligible, reason } = getEligibility(coupon);
-                    const conditionParts = [];
-                    if (endDate) conditionParts.push(`Ends ${endDate}`);
-                    const conditionText = conditionParts.join(" · ");
-
-                    return (
-                      <div key={coupon.code} className="flex flex-col gap-[2px]">
-                        <button
-                          type="button"
-                          onClick={() => eligible && setInputValue(coupon.code)}
-                          disabled={!eligible}
-                          className={`bg-[#fff5ee] border border-dashed border-[#FF6500] text-[#FF6500] text-[11px] font-[Nunito-bold] px-3 py-1 rounded ${!eligible ? "opacity-40 cursor-not-allowed" : ""}`}
-                        >
-                          {coupon.code} — {coupon.display_action_value}
-                        </button>
-                        {reason && (
-                          <span className="text-[11px] text-[#8e9194]">
-                            {reason}
-                          </span>
-                        )}
-                        {!reason && conditionText && (
-                          <span className="text-[11px] text-[#8e9194]">
-                            {conditionText}
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
+                <span className="text-base">✅</span>
+                <span className="font-[Nunito-bold] text-[#0f0f0f] text-[13px] tracking-wide">
+                  {coupon.code}
+                </span>
+                <span className="font-[Nunito-regular] text-[#0f0f0f] text-[12px]">
+                  applied
+                </span>
+                <span className="text-[#0f0f0f] text-[12px] hidden sm:inline">·</span>
+                <span className="text-[#00b300] text-[12px] font-[Nunito-bold]">
+                  You save {formatCurrency(coupon.display_discount_amount || (coupon.discount_amount / 100))}
+                </span>
               </div>
-            )}
+              <button
+                type="button"
+                onClick={() => handleRemove(coupon.code)}
+                disabled={removingCode === coupon.code}
+                className="text-[#8e9194] text-lg bg-transparent border-0 cursor-pointer disabled:opacity-50"
+                aria-label={`Remove coupon ${coupon.code}`}
+              >
+                {removingCode === coupon.code ? "…" : "✕"}
+              </button>
+            </div>
+          ))}
         </div>
+      )}
+
+      {showInput && (
+        <>
+          {/* Accordion header */}
+          <button
+            type="button"
+            onClick={() => setIsOpen((prev) => !prev)}
+            aria-expanded={isOpen}
+            className="w-full flex items-center justify-between border-t border-b border-[var(--borders)] px-1 py-3 cursor-pointer"
+          >
+            <span className="font-[Nunito-medium] text-[14px] text-[var(--main)]">
+              🏷 Have a coupon code?
+            </span>
+            <span className="text-[var(--main)] text-[16px]">
+              {isOpen ? "▴" : "▾"}
+            </span>
+          </button>
+
+          {isOpen && (
+            <div className="mt-3 flex flex-col gap-3">
+              {/* Input + Apply button */}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  aria-label="Coupon code"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleApply()}
+                  placeholder="ENTER CODE"
+                  className="border border-[var(--borders)] rounded-lg px-3 py-2 text-[13px] text-[var(--main)] font-[Nunito-regular] uppercase tracking-widest outline-none flex-1"
+                />
+                <button
+                  onClick={handleApply}
+                  disabled={isApplying || !inputValue.trim()}
+                  className="bg-[#FF6500] text-white text-[12px] font-[Nunito-bold] px-4 py-2 rounded-lg border-none cursor-pointer tracking-wide disabled:opacity-60 shrink-0"
+                >
+                  {isApplying ? "APPLYING..." : "APPLY"}
+                </button>
+              </div>
+
+              {/* Error message */}
+              {errorMessage && (
+                <p className="text-red-600 text-[12px] font-[Nunito-regular]">
+                  {errorMessage}
+                </p>
+              )}
+
+              {/* Available coupons */}
+              {!discountsLoading &&
+                availableDiscountsWithCode.length > 0 && (
+                  <div className="flex flex-col gap-2 mt-1">
+                    <p className="font-[Nunito-medium] text-[12px] text-[var(--secondary)]">
+                      Available coupons
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {availableDiscountsWithCode.map((coupon) => {
+                        const endDate = formatEndDate(coupon.end_at);
+                        const { eligible, reason } = getEligibility(coupon);
+                        const conditionParts = [];
+                        if (endDate) conditionParts.push(`Ends ${endDate}`);
+                        const conditionText = conditionParts.join(" · ");
+
+                        return (
+                          <div key={coupon.code} className="flex flex-col gap-[2px]">
+                            <button
+                              type="button"
+                              onClick={() => eligible && setInputValue(coupon.code)}
+                              disabled={!eligible}
+                              className={`bg-[#fff5ee] border border-dashed border-[#FF6500] text-[#FF6500] text-[11px] font-[Nunito-bold] px-3 py-1 rounded ${!eligible ? "opacity-40 cursor-not-allowed" : ""}`}
+                            >
+                              {coupon.code} — {coupon.display_action_value}
+                            </button>
+                            {reason && (
+                              <span className="text-[11px] text-[#8e9194]">
+                                {reason}
+                              </span>
+                            )}
+                            {!reason && conditionText && (
+                              <span className="text-[11px] text-[#8e9194]">
+                                {conditionText}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
