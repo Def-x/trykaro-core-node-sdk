@@ -20,6 +20,7 @@ export { CartPage } from "./components/cart/CartPage";
 export { CartItem } from "./components/cart/CartItem";
 export { CartSummary } from "./components/cart/CartSummary";
 export { ViewCart } from "./components/cart/ViewCart";
+export { default as CouponSection } from "./components/cart/CouponSection";
 
 // ─── Account Components ───────────────────────────────────────────────────────
 export { AccountPage } from "./components/account/AccountPage";

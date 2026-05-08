@@ -80,6 +80,9 @@ export const Order = (props) => {
     display_item_total,
     display_ship_total,
     display_tax_total,
+    discount_id,
+    display_promo_total,
+    cart_detail_json,
   } = cart || {};
 
   const fullShippingAddress = [
@@ -350,6 +353,19 @@ export const Order = (props) => {
                     {formatCurrency(display_item_total)}
                   </span>
                 </div>
+                {discount_id && (
+                  <div className="flex justify-between items-center">
+                    <span className="font-[Nunito-medium] text-[14px] text-[#FF6500]">
+                      Discount
+                      {cart_detail_json?.discount?.code
+                        ? ` (${cart_detail_json.discount.code})`
+                        : ""}
+                    </span>
+                    <span className="font-[Nunito-medium] text-[14px] text-[#FF6500]">
+                      -{formatCurrency(display_promo_total)}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center">
                   <span className="font-[Nunito-regular] text-[14px] text-gray-500">Tax</span>
                   <span className="font-[Nunito-medium] text-[14px] text-[var(--core-primary)]">
@@ -374,6 +390,11 @@ export const Order = (props) => {
                     {formatCurrency(display_total)}
                   </span>
                 </div>
+                {discount_id && (
+                  <p className="text-[13px] font-[Nunito-bold] text-[#16a34a] mt-[6px] text-right">
+                    You save {display_promo_total} on this order 🎉
+                  </p>
+                )}
               </div>
             </div>
           </div>
