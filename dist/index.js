@@ -2514,10 +2514,252 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
   ] });
 };
 var Checkout_default = Checkout;
+var CouponSection = () => {
+  const { cart, setCart, actions, auth, config, toast } = useCore();
+  const token = auth?.token ?? auth?.access_token ?? null;
+  const { formatCurrency } = useCurrencyFormat();
+  const [isOpen, setIsOpen] = useState(false);
+  const [inputValue, setInputValue] = useState("");
+  const [errorMessage, setErrorMessage] = useState(null);
+  const [isApplying, setIsApplying] = useState(false);
+  const [removingCode, setRemovingCode] = useState(null);
+  const [availableDiscounts, setAvailableDiscounts] = useState([]);
+  const [discountsLoading, setDiscountsLoading] = useState(false);
+  const triggerToast = {
+    success: (msg) => {
+      if (toast?.success) toast.success(msg);
+      else console.log("Success:", msg);
+    },
+    error: (msg) => {
+      if (toast?.error) toast.error(msg);
+      else console.error("Error:", msg);
+    }
+  };
+  useEffect(() => {
+    if (!actions?.getAvailableDiscounts || !cart?.id || !token) return;
+    let isMounted = true;
+    const fetchDiscounts = async () => {
+      try {
+        setDiscountsLoading(true);
+        const data = await actions.getAvailableDiscounts({
+          token,
+          cart_id: cart?.id,
+          region_id: config?.regionId
+        });
+        if (isMounted) {
+          setAvailableDiscounts(Array.isArray(data) ? data : []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch available discounts:", err);
+      } finally {
+        if (isMounted) {
+          setDiscountsLoading(false);
+        }
+      }
+    };
+    fetchDiscounts();
+    return () => {
+      isMounted = false;
+    };
+  }, [actions, cart?.id, token, config?.regionId]);
+  const availableDiscountsWithCode = availableDiscounts?.filter((coupon) => coupon.code) || [];
+  const appliedDiscounts = (cart?.cart_detail_json?.discounts || cart?.cart_discounts || []).filter(
+    (coupon) => coupon.code
+  );
+  const firstAppliedDiscount = appliedDiscounts?.[0];
+  const showInput = !firstAppliedDiscount || firstAppliedDiscount.stackable;
+  const handleApply = async () => {
+    if (!inputValue.trim()) return;
+    if (!token) {
+      setErrorMessage("Please sign in to apply a coupon");
+      return;
+    }
+    setIsApplying(true);
+    setErrorMessage(null);
+    try {
+      if (!actions?.applyDiscount) {
+        throw new Error("applyDiscount action is not configured");
+      }
+      const result = await actions.applyDiscount({
+        token,
+        code: inputValue.trim(),
+        source: "web",
+        region_id: config?.regionId
+      });
+      const updatedCart = result?.cart ?? result;
+      setCart(updatedCart);
+      setIsOpen(false);
+      setInputValue("");
+      setErrorMessage(null);
+    } catch (error) {
+      const msg = error?.data?.error || error?.message || "Failed to apply coupon";
+      setErrorMessage(msg);
+      if (msg.toLowerCase().includes("already applied") || msg.toLowerCase().includes("discount is already")) {
+        if (actions?.getCart && auth?.isSignedIn) {
+          const res = await actions.getCart(config?.regionId);
+          setCart(Array.isArray(res) ? res[0] : res);
+        } else if (actions?.getCartById && cart?.id) {
+          const res = await actions.getCartById(cart.id, config?.regionId);
+          setCart(res);
+        }
+      }
+    } finally {
+      setIsApplying(false);
+    }
+  };
+  const handleRemove = async (code) => {
+    setRemovingCode(code);
+    console.log({ code });
+    try {
+      if (!actions?.removeDiscount) {
+        throw new Error("removeDiscount action is not configured");
+      }
+      const result = await actions.removeDiscount({
+        token,
+        code,
+        region_id: config?.regionId
+      });
+      const updatedCart = result?.cart ?? result;
+      setCart(updatedCart);
+      setIsOpen(true);
+    } catch (error) {
+      triggerToast.error(`Failed to remove coupon ${code}`);
+    } finally {
+      setRemovingCode(null);
+    }
+  };
+  const getEligibility = (coupon) => {
+    if (coupon.min_order_value > 0 && (cart?.item_total ?? 0) < coupon.min_order_value) {
+      return { eligible: false, reason: `Add ${coupon.display_min_order_value} more to apply` };
+    }
+    return { eligible: true, reason: null };
+  };
+  const formatEndDate = (end_at) => {
+    if (!end_at) return null;
+    return new Date(end_at).toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short"
+    });
+  };
+  if (!token) {
+    return /* @__PURE__ */ jsx("div", { className: "my-4", children: /* @__PURE__ */ jsxs("div", { className: "w-full flex items-center justify-between border-t border-b border-[var(--borders)] px-1 py-3", children: [
+      /* @__PURE__ */ jsxs("span", { className: "font-[Nunito-medium] text-[14px] text-[var(--secondary)]", children: [
+        "\u{1F3F7} Have a coupon code?",
+        " ",
+        /* @__PURE__ */ jsx("span", { className: "text-[#FF6500] text-[12px] font-[Nunito-regular]", children: "Sign in to apply" })
+      ] }),
+      /* @__PURE__ */ jsx("span", { className: "text-[var(--secondary)] text-[16px]", children: "\u25BE" })
+    ] }) });
+  }
+  return /* @__PURE__ */ jsxs("div", { className: "my-4", children: [
+    appliedDiscounts?.length > 0 && /* @__PURE__ */ jsx("div", { className: "flex flex-col gap-2 mb-3", children: appliedDiscounts?.map((coupon) => /* @__PURE__ */ jsxs(
+      "div",
+      {
+        className: "flex items-center justify-between bg-[#f0faf0] border border-[#00b300] rounded-lg px-4 py-3 gap-2",
+        children: [
+          /* @__PURE__ */ jsxs("div", { className: "flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0", children: [
+            /* @__PURE__ */ jsx("span", { className: "text-base", children: "\u2705" }),
+            /* @__PURE__ */ jsx("span", { className: "font-[Nunito-bold] text-[#0f0f0f] text-[13px] tracking-wide", children: coupon.code }),
+            /* @__PURE__ */ jsx("span", { className: "font-[Nunito-regular] text-[#0f0f0f] text-[12px]", children: "applied" }),
+            /* @__PURE__ */ jsx("span", { className: "text-[#0f0f0f] text-[12px] hidden sm:inline", children: "\xB7" }),
+            /* @__PURE__ */ jsxs("span", { className: "text-[#00b300] text-[12px] font-[Nunito-bold]", children: [
+              "You save ",
+              formatCurrency(coupon.display_discount_amount || coupon.discount_amount / 100)
+            ] })
+          ] }),
+          /* @__PURE__ */ jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => handleRemove(coupon.code),
+              disabled: removingCode === coupon.code,
+              className: "text-[#8e9194] text-lg bg-transparent border-0 cursor-pointer disabled:opacity-50",
+              "aria-label": `Remove coupon ${coupon.code}`,
+              children: removingCode === coupon.code ? "\u2026" : "\u2715"
+            }
+          )
+        ]
+      },
+      coupon.code || coupon.id
+    )) }),
+    showInput && /* @__PURE__ */ jsxs(Fragment, { children: [
+      /* @__PURE__ */ jsxs(
+        "button",
+        {
+          type: "button",
+          onClick: () => setIsOpen((prev) => !prev),
+          "aria-expanded": isOpen,
+          className: "w-full flex items-center justify-between border-t border-b border-[var(--borders)] px-1 py-3 cursor-pointer",
+          children: [
+            /* @__PURE__ */ jsx("span", { className: "font-[Nunito-medium] text-[14px] text-[var(--main)]", children: "\u{1F3F7} Have a coupon code?" }),
+            /* @__PURE__ */ jsx("span", { className: "text-[var(--main)] text-[16px]", children: isOpen ? "\u25B4" : "\u25BE" })
+          ]
+        }
+      ),
+      isOpen && /* @__PURE__ */ jsxs("div", { className: "mt-3 flex flex-col gap-3", children: [
+        /* @__PURE__ */ jsxs("div", { className: "flex gap-2", children: [
+          /* @__PURE__ */ jsx(
+            "input",
+            {
+              type: "text",
+              "aria-label": "Coupon code",
+              value: inputValue,
+              onChange: (e) => setInputValue(e.target.value),
+              onKeyDown: (e) => e.key === "Enter" && handleApply(),
+              placeholder: "ENTER CODE",
+              className: "border border-[var(--borders)] rounded-lg px-3 py-2 text-[13px] text-[var(--main)] font-[Nunito-regular] uppercase tracking-widest outline-none flex-1"
+            }
+          ),
+          /* @__PURE__ */ jsx(
+            "button",
+            {
+              onClick: handleApply,
+              disabled: isApplying || !inputValue.trim(),
+              className: "bg-[#FF6500] text-white text-[12px] font-[Nunito-bold] px-4 py-2 rounded-lg border-none cursor-pointer tracking-wide disabled:opacity-60 shrink-0",
+              children: isApplying ? "APPLYING..." : "APPLY"
+            }
+          )
+        ] }),
+        errorMessage && /* @__PURE__ */ jsx("p", { className: "text-red-600 text-[12px] font-[Nunito-regular]", children: errorMessage }),
+        !discountsLoading && availableDiscountsWithCode.length > 0 && /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-2 mt-1", children: [
+          /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-[12px] text-[var(--secondary)]", children: "Available coupons" }),
+          /* @__PURE__ */ jsx("div", { className: "flex flex-wrap gap-2", children: availableDiscountsWithCode.map((coupon) => {
+            const endDate = formatEndDate(coupon.end_at);
+            const { eligible, reason } = getEligibility(coupon);
+            const conditionParts = [];
+            if (endDate) conditionParts.push(`Ends ${endDate}`);
+            const conditionText = conditionParts.join(" \xB7 ");
+            return /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-[2px]", children: [
+              /* @__PURE__ */ jsxs(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => eligible && setInputValue(coupon.code),
+                  disabled: !eligible,
+                  className: `bg-[#fff5ee] border border-dashed border-[#FF6500] text-[#FF6500] text-[11px] font-[Nunito-bold] px-3 py-1 rounded ${!eligible ? "opacity-40 cursor-not-allowed" : ""}`,
+                  children: [
+                    coupon.code,
+                    " \u2014 ",
+                    coupon.display_action_value
+                  ]
+                }
+              ),
+              reason && /* @__PURE__ */ jsx("span", { className: "text-[11px] text-[#8e9194]", children: reason }),
+              !reason && conditionText && /* @__PURE__ */ jsx("span", { className: "text-[11px] text-[#8e9194]", children: conditionText })
+            ] }, coupon.code);
+          }) })
+        ] })
+      ] })
+    ] })
+  ] });
+};
+var CouponSection_default = CouponSection;
 var ViewCart = () => {
   const { cart, cartItems } = useAddToCart();
   const { isCartLoading } = useCart();
   const { formatCurrency } = useCurrencyFormat();
+  const { actions, auth, config, toast } = useCore();
+  const token = auth?.token ?? auth?.access_token ?? null;
   const {
     line_items: cartItem = cartItems,
     display_total,
@@ -2532,6 +2774,39 @@ var ViewCart = () => {
     (item) => !item?.line_itemable || item?.line_itemable_deleted
   );
   const hasDeletedItems = deletedItems.length > 0;
+  const appliedDiscounts = (cart?.cart_detail_json?.discounts || cart?.cart_discounts || []).filter(
+    (coupon) => coupon.code
+  );
+  const activeDiscountId = appliedDiscounts?.[0]?.id || cart?.discount_id;
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (activeDiscountId && actions?.trackDiscountEvent) {
+        actions.trackDiscountEvent({
+          token,
+          discount_id: activeDiscountId,
+          event_type: "abandoned",
+          source: "web",
+          region_id: config?.regionId
+        });
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [activeDiscountId, actions, token, config?.regionId]);
+  const prevDiscountIdRef = useRef(void 0);
+  useEffect(() => {
+    const prev = prevDiscountIdRef.current;
+    if (prev !== void 0 && prev && !activeDiscountId && items?.length > 0) {
+      if (toast?.info) {
+        toast.info("Coupon removed \u2014 conditions no longer met");
+      } else {
+        console.log("Coupon removed \u2014 conditions no longer met");
+      }
+    }
+    prevDiscountIdRef.current = activeDiscountId;
+  }, [activeDiscountId, items?.length, toast]);
   return /* @__PURE__ */ jsx("div", { className: "mx-4 md:mx-[24px] my-[100px] flex justify-center", children: isLoading ? (
     // <ScreenLoading />
     /* @__PURE__ */ jsx(Fragment, { children: "Loading" })
@@ -2561,6 +2836,7 @@ var ViewCart = () => {
           },
           item?.id
         )) }) }),
+        /* @__PURE__ */ jsx("div", { className: "mt-4", children: /* @__PURE__ */ jsx(CouponSection_default, {}) }),
         /* @__PURE__ */ jsxs("div", { className: "mt-8", children: [
           /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-[20px] text-[var(--main)]", children: "Bill summary" }),
           /* @__PURE__ */ jsxs("div", { className: "mt-[24px] space-y-[8px]", children: [
@@ -2568,6 +2844,22 @@ var ViewCart = () => {
               /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[14px] text-[var(--main)]", children: "Item total" }),
               /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[14px] text-[var(--main)]", children: display_item_total ? formatCurrency(display_item_total) : "\u2014" })
             ] }),
+            appliedDiscounts?.length > 0 ? appliedDiscounts?.map((coupon) => /* @__PURE__ */ jsxs("div", { className: "flex justify-between", children: [
+              /* @__PURE__ */ jsxs("p", { className: "font-[Nunito-regular] text-[14px] text-[#FF6500]", children: [
+                "Discount ",
+                coupon.code ? `(${coupon.code})` : ""
+              ] }),
+              /* @__PURE__ */ jsxs("p", { className: "font-[Nunito-regular] text-[14px] text-[#FF6500]", children: [
+                "-",
+                formatCurrency(coupon.display_discount_amount || coupon.discount_amount / 100)
+              ] })
+            ] }, coupon.code || coupon.id)) : cart?.promo_total > 0 || parseFloat(cart?.display_promo_total) > 0 ? /* @__PURE__ */ jsxs("div", { className: "flex justify-between", children: [
+              /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[14px] text-[#FF6500]", children: "Discount" }),
+              /* @__PURE__ */ jsxs("p", { className: "font-[Nunito-regular] text-[14px] text-[#FF6500]", children: [
+                "-",
+                formatCurrency(cart?.display_promo_total)
+              ] })
+            ] }) : null,
             /* @__PURE__ */ jsxs("div", { className: "flex justify-between", children: [
               /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[14px] text-[var(--main)]", children: "Tax" }),
               /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[14px] text-[var(--main)]", children: display_tax_total ? formatCurrency(display_tax_total) : "\u2014" })
@@ -2576,10 +2868,17 @@ var ViewCart = () => {
               /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[14px] text-[var(--main)]", children: "Shipping" }),
               /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[14px] text-[var(--main)]", children: display_ship_total === "0.00" || display_ship_total === 0 ? "Free" : display_ship_total ? formatCurrency(display_ship_total) : "\u2014" })
             ] }),
-            /* @__PURE__ */ jsx("div", { className: "pt-[16px] border-t border-[var(--borders)]", children: /* @__PURE__ */ jsxs("div", { className: "flex justify-between", children: [
-              /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-[16px] text-[var(--main)]", children: "Total payment" }),
-              /* @__PURE__ */ jsx("p", { className: "font-[Nunito-bold] text-[16px] text-[var(--main)]", children: display_total ? formatCurrency(display_total) : "\u2014" })
-            ] }) })
+            /* @__PURE__ */ jsxs("div", { className: "pt-[16px] border-t border-[var(--borders)]", children: [
+              /* @__PURE__ */ jsxs("div", { className: "flex justify-between", children: [
+                /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-[16px] text-[var(--main)]", children: "Total payment" }),
+                /* @__PURE__ */ jsx("p", { className: "font-[Nunito-bold] text-[16px] text-[var(--main)]", children: display_total ? formatCurrency(display_total) : "\u2014" })
+              ] }),
+              (cart?.promo_total > 0 || parseFloat(cart?.display_promo_total) > 0) && /* @__PURE__ */ jsxs("p", { className: "text-[13px] font-[Nunito-bold] text-[#00b300] mt-[6px] text-right", children: [
+                "You save ",
+                formatCurrency(cart?.display_promo_total),
+                " on this order \u{1F389}"
+              ] })
+            ] })
           ] })
         ] })
       ] })
@@ -3178,8 +3477,14 @@ var Order = (props) => {
     display_total,
     display_item_total,
     display_ship_total,
-    display_tax_total
+    display_tax_total,
+    discount_id,
+    display_promo_total,
+    cart_detail_json
   } = cart || {};
+  const appliedDiscounts = (cart?.cart_detail_json?.discounts || cart?.cart_discounts || []).filter(
+    (coupon) => coupon.code
+  );
   const fullShippingAddress = [
     shipping_address?.address1,
     shipping_address?.address2,
@@ -3399,6 +3704,22 @@ var Order = (props) => {
             /* @__PURE__ */ jsx("span", { className: "font-[Nunito-regular] text-[14px] text-gray-500", children: "Item Total" }),
             /* @__PURE__ */ jsx("span", { className: "font-[Nunito-medium] text-[14px] text-[var(--core-primary)]", children: formatCurrency(display_item_total) })
           ] }),
+          appliedDiscounts?.length > 0 ? appliedDiscounts?.map((coupon) => /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
+            /* @__PURE__ */ jsxs("span", { className: "font-[Nunito-medium] text-[14px] text-[#FF6500]", children: [
+              "Discount ",
+              coupon.code ? `(${coupon.code})` : ""
+            ] }),
+            /* @__PURE__ */ jsxs("span", { className: "font-[Nunito-medium] text-[14px] text-[#FF6500]", children: [
+              "-",
+              formatCurrency(coupon.display_discount_amount || coupon.discount_amount / 100)
+            ] })
+          ] }, coupon.code || coupon.id)) : display_promo_total && display_promo_total !== "0.00" && display_promo_total !== 0 && display_promo_total !== "0" ? /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
+            /* @__PURE__ */ jsx("span", { className: "font-[Nunito-medium] text-[14px] text-[#FF6500]", children: "Discount" }),
+            /* @__PURE__ */ jsxs("span", { className: "font-[Nunito-medium] text-[14px] text-[#FF6500]", children: [
+              "-",
+              formatCurrency(display_promo_total)
+            ] })
+          ] }) : null,
           /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
             /* @__PURE__ */ jsx("span", { className: "font-[Nunito-regular] text-[14px] text-gray-500", children: "Tax" }),
             /* @__PURE__ */ jsx("span", { className: "font-[Nunito-medium] text-[14px] text-[var(--core-primary)]", children: formatCurrency(display_tax_total) })
@@ -3411,6 +3732,11 @@ var Order = (props) => {
           /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
             /* @__PURE__ */ jsx("span", { className: "font-[Nunito-bold] text-[15px] text-[var(--core-primary)]", children: "Total" }),
             /* @__PURE__ */ jsx("span", { className: "font-[Nunito-bold] text-[17px] text-[var(--core-primary)]", children: formatCurrency(display_total) })
+          ] }),
+          (appliedDiscounts?.length > 0 || display_promo_total && display_promo_total !== "0.00" && display_promo_total !== 0 && display_promo_total !== "0") && /* @__PURE__ */ jsxs("p", { className: "text-[13px] font-[Nunito-bold] text-[#16a34a] mt-[6px] text-right", children: [
+            "You save ",
+            formatCurrency(display_promo_total),
+            " on this order \u{1F389}"
           ] })
         ] })
       ] })
@@ -3432,6 +3758,6 @@ var Hello = () => {
   return /* @__PURE__ */ jsx("div", { children: isCartLoading ? "Loading..." : "Core Working \u2705" });
 };
 
-export { AccountPage, AddressCard2 as AddressCard, AddressForm, AuthManager, CartItem, CartPage, CartSummary, CoreProvider, CustomOTPAuth, EmptyState, Hello, Order, OrdersList, Popup, ProfileForm, Spinner, UserInfo, ViewCart, useAddToCart, useAuth, useCart, userCartInfo_default as useCartInfo, useCore, useCurrencyFormat, useLogout, useVariantSelection };
+export { AccountPage, AddressCard2 as AddressCard, AddressForm, AuthManager, CartItem, CartPage, CartSummary, CoreProvider, CouponSection_default as CouponSection, CustomOTPAuth, EmptyState, Hello, Order, OrdersList, Popup, ProfileForm, Spinner, UserInfo, ViewCart, useAddToCart, useAuth, useCart, userCartInfo_default as useCartInfo, useCore, useCurrencyFormat, useLogout, useVariantSelection };
 //# sourceMappingURL=index.js.map
 //# sourceMappingURL=index.js.map

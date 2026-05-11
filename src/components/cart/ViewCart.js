@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import ProductlistCard from "./ProductlistCard";
 import Checkout from "./Checkout";
 // import { EmptyScreen, ScreenLoading } from "@/components/custom";
@@ -10,11 +10,16 @@ import Checkout from "./Checkout";
 import { useCurrencyFormat } from "../../hooks/useCurrencyFormat";
 import { useAddToCart } from "../../hooks/useAddToCart";
 import { useCart } from "../../hooks/useCart";
+import { useCore } from "../../context/CoreProvider";
+import CouponSection from "./CouponSection";
 
 export const ViewCart = () => {
   const { cart, cartItems } = useAddToCart();
   const { isCartLoading } = useCart();
   const { formatCurrency } = useCurrencyFormat();
+  const { actions, auth, config, toast } = useCore();
+
+  const token = auth?.token ?? auth?.access_token ?? null;
 
   const {
     line_items: cartItem = cartItems,
@@ -33,6 +38,45 @@ export const ViewCart = () => {
     (item) => !item?.line_itemable || item?.line_itemable_deleted,
   );
   const hasDeletedItems = deletedItems.length > 0;
+
+  const appliedDiscounts = (cart?.cart_detail_json?.discounts || cart?.cart_discounts || []).filter(
+    (coupon) => coupon.code
+  );
+  const activeDiscountId = appliedDiscounts?.[0]?.id || cart?.discount_id;
+
+  // Abandonment tracking
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (activeDiscountId && actions?.trackDiscountEvent) {
+        actions.trackDiscountEvent({
+          token,
+          discount_id: activeDiscountId,
+          event_type: "abandoned",
+          source: "web",
+          region_id: config?.regionId,
+        });
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [activeDiscountId, actions, token, config?.regionId]);
+
+  // Watch for discount being silently removed
+  const prevDiscountIdRef = useRef(undefined);
+  useEffect(() => {
+    const prev = prevDiscountIdRef.current;
+    if (prev !== undefined && prev && !activeDiscountId && items?.length > 0) {
+      if (toast?.info) {
+        toast.info("Coupon removed — conditions no longer met");
+      } else {
+        console.log("Coupon removed — conditions no longer met");
+      }
+    }
+    prevDiscountIdRef.current = activeDiscountId;
+  }, [activeDiscountId, items?.length, toast]);
 
   return (
     <div className="mx-4 md:mx-[24px] my-[100px] flex justify-center">
@@ -85,6 +129,10 @@ export const ViewCart = () => {
                 </div>
               </div>
 
+              <div className="mt-4">
+                <CouponSection />
+              </div>
+
               {/* Bill Summary */}
               <div className="mt-8">
                 <p className="font-[Nunito-medium] text-[20px] text-[var(--main)]">
@@ -102,6 +150,28 @@ export const ViewCart = () => {
                         : "—"}
                     </p>
                   </div>
+
+                  {appliedDiscounts?.length > 0 ? (
+                    appliedDiscounts?.map((coupon) => (
+                      <div key={coupon.code || coupon.id} className="flex justify-between">
+                        <p className="font-[Nunito-regular] text-[14px] text-[#FF6500]">
+                          Discount {coupon.code ? `(${coupon.code})` : ""}
+                        </p>
+                        <p className="font-[Nunito-regular] text-[14px] text-[#FF6500]">
+                          -{formatCurrency(coupon.display_discount_amount || (coupon.discount_amount / 100))}
+                        </p>
+                      </div>
+                    ))
+                  ) : (cart?.promo_total > 0 || parseFloat(cart?.display_promo_total) > 0) ? (
+                    <div className="flex justify-between">
+                      <p className="font-[Nunito-regular] text-[14px] text-[#FF6500]">
+                        Discount
+                      </p>
+                      <p className="font-[Nunito-regular] text-[14px] text-[#FF6500]">
+                        -{formatCurrency(cart?.display_promo_total)}
+                      </p>
+                    </div>
+                  ) : null}
 
                   <div className="flex justify-between">
                     <p className="font-[Nunito-regular] text-[14px] text-[var(--main)]">
@@ -139,6 +209,11 @@ export const ViewCart = () => {
                         {display_total ? formatCurrency(display_total) : "—"}
                       </p>
                     </div>
+                    {(cart?.promo_total > 0 || parseFloat(cart?.display_promo_total) > 0) && (
+                      <p className="text-[13px] font-[Nunito-bold] text-[#00b300] mt-[6px] text-right">
+                        You save {formatCurrency(cart?.display_promo_total)} on this order 🎉
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
