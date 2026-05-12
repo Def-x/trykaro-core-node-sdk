@@ -1,25 +1,19 @@
 {
   "name": "@defx/storefront-core",
-  "version": "1.0.2-beta.2",
+  "version": "1.0.2-beta.3",
   "description": "Shared UI and logic for Defx multi-store ecommerce storefronts",
   "type": "module",
   "packageManager": "yarn@4.12.0",
-  "main": "./src/index.js",
-  "module": "./src/index.js",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
   "exports": {
     ".": {
-      "import": "./src/index.js"
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     },
     "./stripe": {
-      "import": "./src/stripe.js"
-    }
-  },
-  "exports:prod": {
-    ".": {
-      "import": "./dist/index.js"
-    },
-    "./stripe": {
-      "import": "./dist/stripe.js"
+      "import": "./dist/stripe.js",
+      "default": "./dist/stripe.js"
     }
   },
   "files": [
