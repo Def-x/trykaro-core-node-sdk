@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import ProductlistCard from "./ProductlistCard";
 import Checkout from "./Checkout";
 // import { EmptyScreen, ScreenLoading } from "@/components/custom";
@@ -14,6 +14,7 @@ import { useCore } from "../../context/CoreProvider";
 import CouponSection from "./CouponSection";
 
 export const ViewCart = () => {
+  const [discountOpen, setDiscountOpen] = useState(false);
   const { cart, cartItems } = useAddToCart();
   const { isCartLoading } = useCart();
   const { formatCurrency } = useCurrencyFormat();
@@ -39,8 +40,8 @@ export const ViewCart = () => {
   );
   const hasDeletedItems = deletedItems.length > 0;
 
-  const appliedDiscounts = (cart?.cart_detail_json?.discounts || cart?.cart_discounts || []).filter(
-    (coupon) => coupon.code
+  const appliedDiscounts = (cart?.cart_discounts || []).filter(
+    (coupon) => coupon.code,
   );
   const activeDiscountId = appliedDiscounts?.[0]?.id || cart?.discount_id;
 
@@ -78,6 +79,7 @@ export const ViewCart = () => {
     prevDiscountIdRef.current = activeDiscountId;
   }, [activeDiscountId, items?.length, toast]);
 
+  console.log({ cart, appliedDiscounts });
   return (
     <div className="mx-4 md:mx-[24px] my-[100px] flex justify-center">
       {isLoading ? (
@@ -151,27 +153,141 @@ export const ViewCart = () => {
                     </p>
                   </div>
 
-                  {appliedDiscounts?.length > 0 ? (
-                    appliedDiscounts?.map((coupon) => (
-                      <div key={coupon.code || coupon.id} className="flex justify-between">
-                        <p className="font-[Nunito-regular] text-[14px] text-[#FF6500]">
-                          Discount {coupon.code ? `(${coupon.code})` : ""}
-                        </p>
-                        <p className="font-[Nunito-regular] text-[14px] text-[#FF6500]">
-                          -{formatCurrency(coupon.display_discount_amount || (coupon.discount_amount / 100))}
-                        </p>
-                      </div>
-                    ))
-                  ) : (cart?.promo_total > 0 || parseFloat(cart?.display_promo_total) > 0) ? (
-                    <div className="flex justify-between">
-                      <p className="font-[Nunito-regular] text-[14px] text-[#FF6500]">
-                        Discount
-                      </p>
-                      <p className="font-[Nunito-regular] text-[14px] text-[#FF6500]">
-                        -{formatCurrency(cart?.display_promo_total)}
-                      </p>
-                    </div>
-                  ) : null}
+                  {/* ── Discount dropdown row ── */}
+                  {(appliedDiscounts?.length > 0 ||
+                    cart?.promo_total > 0 ||
+                    parseFloat(cart?.display_promo_total) > 0) && (() => {
+                      // Compute total discount to show in the label
+                      const totalDiscount =
+                        appliedDiscounts?.length > 0
+                          ? appliedDiscounts.reduce((sum, c) => {
+                            const amt =
+                              c.display_discount_amount ??
+                              (c.discount_amount != null
+                                ? c.discount_amount / 100
+                                : 0);
+                            return sum + parseFloat(amt || 0);
+                          }, 0)
+                          : parseFloat(cart?.display_promo_total || 0);
+
+                      return (
+                        <div>
+                          {/* Top-level clickable row */}
+                          <button
+                            type="button"
+                            onClick={() => setDiscountOpen((o) => !o)}
+                            style={{
+                              display: "flex",
+                              width: "100%",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              background: "none",
+                              border: "none",
+                              padding: 0,
+                              cursor: appliedDiscounts?.length > 1 ? "pointer" : "default",
+                            }}
+                          >
+                            <span
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "4px",
+                                fontFamily: "Nunito-regular",
+                                fontSize: "14px",
+                                color: "#FF6500",
+                              }}
+                            >
+                              {appliedDiscounts?.length === 1 
+                                ? `Discount (${appliedDiscounts[0].code || appliedDiscounts[0].display_action_value || "Coupon"})`
+                                : "Discount"}
+                              {appliedDiscounts?.length > 1 && (
+                                <svg
+                                  width="12"
+                                  height="12"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="#FF6500"
+                                  strokeWidth="2.5"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  style={{
+                                    transition: "transform 0.25s",
+                                    transform: discountOpen
+                                      ? "rotate(180deg)"
+                                      : "rotate(0deg)",
+                                  }}
+                                >
+                                  <polyline points="6 9 12 15 18 9" />
+                                </svg>
+                              )}
+                            </span>
+                            <span
+                              style={{
+                                fontFamily: "Nunito-regular",
+                                fontSize: "14px",
+                                color: "#FF6500",
+                              }}
+                            >
+                              -{formatCurrency(totalDiscount)}
+                            </span>
+                          </button>
+
+                          {/* Expandable breakdown (only when multiple discounts) */}
+                          {appliedDiscounts?.length > 1 && discountOpen && (
+                            <div
+                              style={{
+                                marginTop: "6px",
+                                paddingLeft: "8px",
+                                borderLeft: "2px solid #FF650033",
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: "4px",
+                              }}
+                            >
+                              {appliedDiscounts.map((coupon) => {
+                                const amt =
+                                  coupon.display_discount_amount ??
+                                  (coupon.discount_amount != null
+                                    ? coupon.discount_amount / 100
+                                    : 0);
+                                return (
+                                  <div
+                                    key={coupon.code || coupon.id}
+                                    style={{
+                                      display: "flex",
+                                      justifyContent: "space-between",
+                                    }}
+                                  >
+                                    <span
+                                      style={{
+                                        fontFamily: "Nunito-regular",
+                                        fontSize: "13px",
+                                        color: "#FF6500",
+                                        opacity: 0.85,
+                                      }}
+                                    >
+                                      {coupon.code ? `${coupon.code}` : "Coupon"}
+                                    </span>
+                                    <span
+                                      style={{
+                                        fontFamily: "Nunito-regular",
+                                        fontSize: "13px",
+                                        color: "#FF6500",
+                                        opacity: 0.85,
+                                      }}
+                                    >
+                                      -{formatCurrency(amt)}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+
+
+                        </div>
+                      );
+                    })()}
 
                   <div className="flex justify-between">
                     <p className="font-[Nunito-regular] text-[14px] text-[var(--main)]">
@@ -209,11 +325,13 @@ export const ViewCart = () => {
                         {display_total ? formatCurrency(display_total) : "—"}
                       </p>
                     </div>
-                    {(cart?.promo_total > 0 || parseFloat(cart?.display_promo_total) > 0) && (
-                      <p className="text-[13px] font-[Nunito-bold] text-[#00b300] mt-[6px] text-right">
-                        You save {formatCurrency(cart?.display_promo_total)} on this order 🎉
-                      </p>
-                    )}
+                    {(cart?.promo_total > 0 ||
+                      parseFloat(cart?.display_promo_total) > 0) && (
+                        <p className="text-[13px] font-[Nunito-bold] text-[#00b300] mt-[6px] text-right">
+                          You save {formatCurrency(cart?.display_promo_total)} on
+                          this order 🎉
+                        </p>
+                      )}
                   </div>
                 </div>
               </div>

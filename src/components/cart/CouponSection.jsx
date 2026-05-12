@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useCore } from "../../context/CoreProvider";
 import { useCurrencyFormat } from "../../hooks/useCurrencyFormat";
+import { removeDiscountById, applyDiscount } from "../../actions/discountActions";
 
 const CouponSection = () => {
   const { cart, setCart, actions, auth, config, toast } = useCore();
@@ -58,14 +59,25 @@ const CouponSection = () => {
     };
   }, [actions, cart?.id, token, config?.regionId]);
 
-  const availableDiscountsWithCode = availableDiscounts?.filter((coupon) => coupon.code) || [];
+  // const availableDiscountsWithCode = availableDiscounts?.filter((coupon) => coupon.code) || [];
+  const availableDiscountsWithCode = availableDiscounts || [];
 
-  const appliedDiscounts = (cart?.cart_detail_json?.discounts || cart?.cart_discounts || []).filter(
-    (coupon) => coupon.code
+  // Applied discounts: try both known field paths
+  const rawDiscounts =
+    cart?.cart_discounts ||
+    [];
+
+  const appliedDiscounts = rawDiscounts.filter(
+    (coupon) => coupon.code || coupon.id
   );
+
+  if (cart && rawDiscounts.length === 0) {
+    console.warn("[CouponSection] No discounts found on cart. Cart keys:", Object.keys(cart));
+  }
 
   const firstAppliedDiscount = appliedDiscounts?.[0];
   const showInput = !firstAppliedDiscount || firstAppliedDiscount.stackable;
+
 
   const handleApply = async () => {
     if (!inputValue.trim()) return;
@@ -76,10 +88,7 @@ const CouponSection = () => {
     setIsApplying(true);
     setErrorMessage(null);
     try {
-      if (!actions?.applyDiscount) {
-        throw new Error("applyDiscount action is not configured");
-      }
-      const result = await actions.applyDiscount({
+      const result = await applyDiscount({
         token,
         code: inputValue.trim(),
         source: "web",
@@ -112,16 +121,54 @@ const CouponSection = () => {
     }
   };
 
-  const handleRemove = async (code) => {
-    setRemovingCode(code);
-    console.log({ code })
+  const applyById = async (discountId) => {
+    if (!discountId) return;
+    if (!token) {
+      setErrorMessage("Please sign in to apply a coupon");
+      return;
+    }
+    setIsApplying(true);
+    setErrorMessage(null);
     try {
-      if (!actions?.removeDiscount) {
-        throw new Error("removeDiscount action is not configured");
-      }
-      const result = await actions.removeDiscount({
+      const result = await applyDiscount({
         token,
-        code,
+        discount_id: discountId,
+        source: "web",
+        region_id: config?.regionId,
+      });
+      const updatedCart = result?.cart ?? result;
+      setCart(updatedCart);
+      setIsOpen(false);
+      setInputValue("");
+      setErrorMessage(null);
+    } catch (error) {
+      const msg = error?.data?.error || error?.message || "Failed to apply coupon";
+      setErrorMessage(msg);
+
+      if (
+        msg.toLowerCase().includes("already applied") ||
+        msg.toLowerCase().includes("discount is already")
+      ) {
+        // Force refresh cart to sync UI
+        if (actions?.getCart && auth?.isSignedIn) {
+          const res = await actions.getCart(config?.regionId);
+          setCart(Array.isArray(res) ? res[0] : res);
+        } else if (actions?.getCartById && cart?.id) {
+          const res = await actions.getCartById(cart.id, config?.regionId);
+          setCart(res);
+        }
+      }
+    } finally {
+      setIsApplying(false);
+    }
+  };
+
+  const handleRemove = async ({ code, discount_id }) => {
+    setRemovingCode(code);
+    try {
+      const result = await removeDiscountById({
+        token,
+        discount_id,
         region_id: config?.regionId,
       });
       const updatedCart = result?.cart ?? result;
@@ -166,6 +213,7 @@ const CouponSection = () => {
     );
   }
 
+  console.log({ availableDiscountsWithCode })
   // State 1 — Token exists (render applied discounts and accordion input)
   return (
     <div className="my-4">
@@ -192,7 +240,7 @@ const CouponSection = () => {
               </div>
               <button
                 type="button"
-                onClick={() => handleRemove(coupon.code)}
+                onClick={() => handleRemove({ code: coupon.code, discount_id: coupon.discount_id ?? coupon.id })}
                 disabled={removingCode === coupon.code}
                 className="text-[#8e9194] text-lg bg-transparent border-0 cursor-pointer disabled:opacity-50"
                 aria-label={`Remove coupon ${coupon.code}`}
@@ -266,14 +314,21 @@ const CouponSection = () => {
                         const conditionText = conditionParts.join(" · ");
 
                         return (
-                          <div key={coupon.code} className="flex flex-col gap-[2px]">
+                          <div key={coupon?.code || coupon?.id} className="flex flex-col gap-[2px]">
                             <button
                               type="button"
-                              onClick={() => eligible && setInputValue(coupon.code)}
-                              disabled={!eligible}
-                              className={`bg-[#fff5ee] border border-dashed border-[#FF6500] text-[#FF6500] text-[11px] font-[Nunito-bold] px-3 py-1 rounded ${!eligible ? "opacity-40 cursor-not-allowed" : ""}`}
+                              onClick={() => {
+                                if (!eligible) return;
+                                if (!coupon.code) {
+                                  applyById(coupon.id);
+                                } else {
+                                  setInputValue(coupon.code);
+                                }
+                              }}
+                              disabled={!eligible || isApplying}
+                              className={`bg-[#fff5ee] border border-dashed border-[#FF6500] text-[#FF6500] text-[11px] font-[Nunito-bold] px-3 py-1 rounded ${!eligible || isApplying ? "opacity-40 cursor-not-allowed" : ""}`}
                             >
-                              {coupon.code} — {coupon.display_action_value}
+                              {coupon.code ? `${coupon.code} — ` : ''}{coupon.display_action_value || "Discount"}
                             </button>
                             {reason && (
                               <span className="text-[11px] text-[#8e9194]">

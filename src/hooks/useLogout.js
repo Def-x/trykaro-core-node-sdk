@@ -20,19 +20,26 @@ import { useCore } from "../context/CoreProvider";
  *  <button onClick={logout}>Sign out</button>
  */
 export const useLogout = () => {
-    const { auth } = useCore();
-    const router = useRouter();
+  const { auth } = useCore();
+  const router = useRouter();
 
-    const logout = async () => {
-        if (auth?.logout) {
-            await auth.logout();
-        } else {
-            localStorage.removeItem("cartid");
-            localStorage.removeItem("access_token");
-            router.push("/");
-        }
-        router.refresh();
-    };
+  const logout = async () => {
+    if (auth?.logout) {
+      await auth.logout();
+    } else {
+      // Remove localStorage items
+      localStorage.removeItem("cartid");
+      localStorage.removeItem("access_token");
 
-    return logout;
+      // Remove browser cookie
+      document.cookie =
+        "access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/";
+
+      router.push("/");
+    }
+
+    router.refresh();
+  };
+
+  return logout;
 };

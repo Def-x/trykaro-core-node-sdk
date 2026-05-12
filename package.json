@@ -4,9 +4,17 @@
   "description": "Shared UI and logic for Defx multi-store ecommerce storefronts",
   "type": "module",
   "packageManager": "yarn@4.12.0",
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
+  "main": "./src/index.js",
+  "module": "./src/index.js",
   "exports": {
+    ".": {
+      "import": "./src/index.js"
+    },
+    "./stripe": {
+      "import": "./src/stripe.js"
+    }
+  },
+  "exports:prod": {
     ".": {
       "import": "./dist/index.js"
     },
@@ -23,25 +31,25 @@
   },
   "peerDependencies": {
     "@clerk/nextjs": "^7.2.0",
+    "@stripe/react-stripe-js": ">=2",
+    "@stripe/stripe-js": ">=2",
     "js-cookie": "^3.0.5",
     "lodash": ">=4",
+    "lucide-react": ">=0.300.0",
     "react": "^18 || ^19",
-    "react-dom": "^18 || ^19",
-    "@stripe/stripe-js": ">=2",
-    "@stripe/react-stripe-js": ">=2",
-    "lucide-react": ">=0.300.0"
+    "react-dom": "^18 || ^19"
   },
   "peerDependenciesMeta": {
-    "@stripe/stripe-js": {
+    "@clerk/nextjs": {
       "optional": true
     },
     "@stripe/react-stripe-js": {
       "optional": true
     },
-    "lucide-react": {
+    "@stripe/stripe-js": {
       "optional": true
     },
-    "@clerk/nextjs": {
+    "lucide-react": {
       "optional": true
     }
   },
