@@ -223,7 +223,7 @@ export const useCore = () => {
   if (!context) {
     throw new Error(
       "[useCore] must be used inside <CoreProvider>. " +
-        "Wrap your app (or the relevant subtree) with <CoreProvider>.",
+      "Wrap your app (or the relevant subtree) with <CoreProvider>.",
     );
   }
 
