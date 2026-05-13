@@ -264,11 +264,10 @@ export const CustomOTPAuth = ({ mode = "sign-in", onLoginSuccess }) => {
           <button
             type="submit"
             disabled={isLoading || phone.length < 10}
-            className={`w-full py-3 rounded-xl font-[Nunito-bold] text-white transition-all ${
-              isLoading || phone.length < 10
-                ? "bg-gray-300 cursor-not-allowed"
-                : "bg-[var(--core-primary)] hover:bg-[var(--core-primary)] active:scale-[0.98]"
-            }`}
+            className={`w-full py-3 rounded-xl font-[Nunito-bold] text-white transition-all ${isLoading || phone.length < 10
+              ? "bg-gray-300 cursor-not-allowed"
+              : "bg-[var(--core-primary)] hover:bg-[var(--core-primary)] active:scale-[0.98]"
+              }`}
           >
             {isLoading ? (
               <span className="flex items-center justify-center gap-2">
@@ -329,11 +328,10 @@ export const CustomOTPAuth = ({ mode = "sign-in", onLoginSuccess }) => {
           <button
             type="submit"
             disabled={isLoading || otpValue.length < otpLength}
-            className={`w-full py-3 rounded-xl font-[Nunito-bold] text-white transition-all ${
-              isLoading || otpValue.length < otpLength
-                ? "bg-gray-300 cursor-not-allowed"
-                : "bg-[var(--core-primary)] hover:bg-[var(--core-primary)] active:scale-[0.98]"
-            }`}
+            className={`w-full py-3 rounded-xl font-[Nunito-bold] text-white transition-all ${isLoading || otpValue.length < otpLength
+              ? "bg-gray-300 cursor-not-allowed"
+              : "bg-[var(--core-primary)] hover:bg-[var(--core-primary)] active:scale-[0.98]"
+              }`}
           >
             {isLoading ? (
               <span className="flex items-center justify-center gap-2">
