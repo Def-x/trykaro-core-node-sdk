@@ -11,12 +11,25 @@
  * from the host Next.js project's environment at server runtime.
  */
 
-const buildHeaders = (token) => ({
-  "Content-Type": "application/json",
-  accept: "application/vnd.defx-store.v2",
-  "Set-Organization": process.env.ORG_ID,
-  ...(token ? { Authorization: `Bearer ${token}` } : {}),
-});
+const buildHeaders = (token, orgId) => {
+  const headers = {
+    "Content-Type": "application/json",
+    accept: "application/vnd.defx-store.v2",
+  };
+
+  if (orgId) {
+    headers["Set-Organization"] = orgId;
+  } else if (process.env.ORG_ID) {
+    headers["Set-Organization"] = process.env.ORG_ID;
+  }
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  return headers;
+};
+
 
 const wrapResponse = async (res, fallbackMessage) => {
   const data = await res.json().catch(() => null);
@@ -38,14 +51,17 @@ const wrapResponse = async (res, fallbackMessage) => {
  *
  * @param {{ token: string, discount_id: string|number, region_id?: string }} params
  */
-export const removeDiscountById = async ({ token, discount_id, region_id } = {}) => {
-  const url = new URL(`${process.env.API_BASE_URL}/api/discounts/remove`);
+export const removeDiscountById = async ({ token, discount_id, region_id, apiBaseUrl, orgId } = {}) => {
+  const baseUrl = apiBaseUrl || process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL;
+  if (!baseUrl) throw new Error("API base URL is not configured");
+
+  const url = new URL(`${baseUrl}/api/discounts/remove`);
   if (discount_id) url.searchParams.set("discount_id", discount_id);
   if (region_id) url.searchParams.set("region_id", region_id);
 
   const res = await fetch(url.toString(), {
     method: "DELETE",
-    headers: buildHeaders(token),
+    headers: buildHeaders(token, orgId),
     cache: "no-store",
   });
 
@@ -59,8 +75,11 @@ export const removeDiscountById = async ({ token, discount_id, region_id } = {})
  *
  * @param {{ token: string, code?: string, discount_id?: string|number, source?: string, region_id?: string }} params
  */
-export const applyDiscount = async ({ token, code, discount_id, source, region_id } = {}) => {
-  const url = new URL(`${process.env.API_BASE_URL}/api/discounts/apply`);
+export const applyDiscount = async ({ token, code, discount_id, source, region_id, apiBaseUrl, orgId } = {}) => {
+  const baseUrl = apiBaseUrl || process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL;
+  if (!baseUrl) throw new Error("API base URL is not configured");
+
+  const url = new URL(`${baseUrl}/api/discounts/apply`);
 
   const payload = {
     source: source || "web",
@@ -72,7 +91,7 @@ export const applyDiscount = async ({ token, code, discount_id, source, region_i
 
   const res = await fetch(url.toString(), {
     method: "POST",
-    headers: buildHeaders(token),
+    headers: buildHeaders(token, orgId),
     body: JSON.stringify(payload),
     cache: "no-store",
   });

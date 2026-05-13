@@ -222,7 +222,7 @@ function useAddToCart() {
     const sellingQTY = product?.selling_quantity?.values?.[0]?.label;
     const qty = overrideQty !== null ? overrideQty : quantity ?? 1;
     const existingLineItem = getCartItem(product, customizations);
-    if (existingLineItem) {
+    if (existingLineItem && !sellingQTY) {
       const newQty = existingLineItem.quantity + qty;
       await actions.updateLineItem?.(existingLineItem.id, { quantity: newQty });
     } else {
@@ -268,10 +268,15 @@ function useAddToCart() {
         }
       }
       await addItemToCart(product, resolvedCartId, customizations, overrideQty);
-      toast?.success?.("Item added to cart");
+      toast?.success?.(`${product?.name || "Item"} added to cart`);
     } catch (err) {
       console.error("[useAddToCart] handleAddToCart error:", err);
-      toast?.error?.("Failed to add item to cart");
+      const errorMsg = err?.data?.error || err?.message;
+      if (errorMsg && typeof errorMsg === "string") {
+        toast?.error?.(errorMsg);
+      } else {
+        toast?.error?.(`Failed to add ${product?.name || "item"} to cart`);
+      }
     } finally {
       setIsAddToCartLoading(false);
     }
@@ -294,6 +299,12 @@ function useAddToCart() {
       }
     } catch (err) {
       console.error("[useAddToCart] handleDecreaseQty error:", err);
+      const errorMsg = err?.data?.error || err?.message;
+      if (errorMsg && typeof errorMsg === "string") {
+        toast?.error?.(errorMsg);
+      } else {
+        toast?.error?.("Failed to update item quantity");
+      }
     } finally {
       setIsAddToCartLoading(false);
     }
@@ -305,10 +316,15 @@ function useAddToCart() {
       if (activeCartId) {
         await refreshCart(activeCartId);
       }
-      toast?.success?.("Item removed from cart");
+      toast?.success?.(`${product?.line_itemable?.name || "Item"} removed from cart`);
     } catch (err) {
       console.error("[useAddToCart] handleDeleteLineItem error:", err);
-      toast?.error?.("Failed to remove item");
+      const errorMsg = err?.data?.error || err?.message;
+      if (errorMsg && typeof errorMsg === "string") {
+        toast?.error?.(errorMsg);
+      } else {
+        toast?.error?.(`Failed to remove ${product?.line_itemable?.name || "item"}`);
+      }
     } finally {
       setIsAddToCartLoading(false);
     }
@@ -1990,17 +2006,6 @@ var AddressSelection = ({
     }
     updateCart(apiData);
   };
-  useEffect(() => {
-    if (!user) return;
-    const apiData = { id: cart?.id };
-    if (!isCartHaveBillingAddress && billingAddressId)
-      apiData.billing_address_id = billingAddressId;
-    if (!isCarthaveShippingAddress && shippingAddressId)
-      apiData.shipping_address_id = sameAsShipping ? billingAddressId : shippingAddressId;
-    if (apiData.billing_address_id || apiData.shipping_address_id) {
-      updateCart(apiData);
-    }
-  }, [address, shippingAddressId, billingAddressId]);
   return /* @__PURE__ */ jsxs("div", { className: "w-full flex justify-center", children: [
     /* @__PURE__ */ jsxs("div", { className: "w-full space-y-8", children: [
       /* @__PURE__ */ jsxs("div", { children: [
@@ -2220,7 +2225,7 @@ var LoginPage = () => {
 var OrderInfo = ({ user, hasDeletedItems }) => {
   const router = useRouter();
   const { Razorpay } = useRazorpay();
-  const { cart, setCart, actions, config, auth, orgData, primaryColor } = useCore();
+  const { cart, setCart, actions, config, auth, orgData, primaryColor, toast } = useCore();
   const StripeCheckout = getPaymentGateway("stripe");
   const paymentConfig = orgData?.organization_setting?.payment ?? {};
   const paymentMode = paymentConfig?.mode ?? "razorpay";
@@ -2261,19 +2266,30 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
   }, [fetchAddresses]);
   useEffect(() => {
     setOrderType(cart?.order_type ?? "delivery");
-    const shippingId = cart?.shipping_address?.id ?? addresses?.[0]?.id;
-    const billingId = cart?.billing_address?.id ?? addresses?.[0]?.id;
+    const hasShipping = !!cart?.shipping_address?.id;
+    const hasBilling = !!cart?.billing_address?.id;
+    const defaultAddressId = addresses?.[0]?.id;
+    const shippingId = cart?.shipping_address?.id ?? defaultAddressId;
+    const billingId = cart?.billing_address?.id ?? defaultAddressId;
     setSelectedAddress({
       shippingAddressId: shippingId,
       billingAddressId: billingId
     });
     setSameAsShipping(billingId === shippingId);
-  }, [cart, addresses]);
+    if ((!hasShipping || !hasBilling) && defaultAddressId && cart?.id && actions?.updateCart) {
+      const apiData = { id: cart.id };
+      if (!hasShipping) apiData.shipping_address_id = defaultAddressId;
+      if (!hasBilling) apiData.billing_address_id = defaultAddressId;
+      actions.updateCart(cart.id, apiData).then((updatedCart) => {
+        if (updatedCart) setCart(updatedCart);
+      }).catch((err) => console.error("Failed to auto-set cart addresses:", err));
+    }
+  }, [cart?.shipping_address?.id, cart?.billing_address?.id, addresses?.length]);
   const onUpdateOrderType = async (type) => {
     try {
       setOrderType(type);
       if (actions?.updateCart && cart?.id) {
-        await actions.updateCart({
+        await actions.updateCart(cart.id, {
           id: cart.id,
           order_type: type
         });
@@ -2281,6 +2297,12 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
       }
     } catch (err) {
       console.error("Failed to update order type:", err);
+      const errorMsg = err?.data?.error || err?.message;
+      if (errorMsg && typeof errorMsg === "string") {
+        toast?.error?.(errorMsg);
+      } else {
+        toast?.error?.("Failed to update order type");
+      }
     }
   };
   const onRazorPayHandler = (res) => {
@@ -2306,11 +2328,21 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
             );
           }
           if (order?.order_id) {
+            if (typeof window !== "undefined") {
+              localStorage.removeItem("cartid");
+            }
+            setCart(null);
             router.push(`/order/${order?.order_id}?show=true`);
           }
         } catch (err) {
           console.error("Payment update failed:", err);
           setIsProcessingPayment(false);
+          const errorMsg = err?.data?.error || err?.message;
+          if (errorMsg && typeof errorMsg === "string") {
+            toast?.error?.(errorMsg);
+          } else {
+            toast?.error?.("Payment update failed");
+          }
         }
       },
       prefill: {
@@ -2323,6 +2355,7 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
     const razorpay = new Razorpay(options);
     razorpay.on("payment.failed", (response) => {
       console.error("Razorpay payment failed:", response);
+      toast?.error?.(response?.error?.description || "Payment failed");
     });
     razorpay.open();
   };
@@ -2340,6 +2373,12 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
       }
     } catch (err) {
       console.error("Failed to create order:", err);
+      const errorMsg = err?.data?.error || err?.message;
+      if (errorMsg && typeof errorMsg === "string") {
+        toast?.error?.(errorMsg);
+      } else {
+        toast?.error?.("Failed to process payment");
+      }
     } finally {
       setIsPlacingOrder(false);
     }
@@ -2503,54 +2542,6 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
   ] });
 };
 var Checkout_default = Checkout;
-
-// src/actions/discountActions.js
-var buildHeaders = (token) => ({
-  "Content-Type": "application/json",
-  accept: "application/vnd.defx-store.v2",
-  "Set-Organization": process.env.ORG_ID,
-  ...token ? { Authorization: `Bearer ${token}` } : {}
-});
-var wrapResponse = async (res, fallbackMessage) => {
-  const data = await res.json().catch(() => null);
-  if (!res.ok) {
-    const err = new Error(
-      data?.error || data?.message || fallbackMessage || "Discount action failed"
-    );
-    err.data = data;
-    err.status = res.status;
-    throw err;
-  }
-  return data;
-};
-var removeDiscountById = async ({ token, discount_id, region_id } = {}) => {
-  const url = new URL(`${process.env.API_BASE_URL}/api/discounts/remove`);
-  if (discount_id) url.searchParams.set("discount_id", discount_id);
-  if (region_id) url.searchParams.set("region_id", region_id);
-  const res = await fetch(url.toString(), {
-    method: "DELETE",
-    headers: buildHeaders(token),
-    cache: "no-store"
-  });
-  return wrapResponse(res, "Failed to remove discount");
-};
-var applyDiscount = async ({ token, code, discount_id, source, region_id } = {}) => {
-  const url = new URL(`${process.env.API_BASE_URL}/api/discounts/apply`);
-  const payload = {
-    source: source || "web"
-  };
-  if (code) payload.code = code;
-  if (discount_id) payload.discount_id = discount_id;
-  if (region_id) payload.region_id = region_id;
-  const res = await fetch(url.toString(), {
-    method: "POST",
-    headers: buildHeaders(token),
-    body: JSON.stringify(payload),
-    cache: "no-store"
-  });
-  console.log({ res });
-  return wrapResponse(res, "Failed to apply discount");
-};
 var CouponSection = () => {
   const { cart, setCart, actions, auth, config, toast } = useCore();
   const token = auth?.token ?? auth?.access_token ?? null;
@@ -2559,7 +2550,7 @@ var CouponSection = () => {
   const [inputValue, setInputValue] = useState("");
   const [errorMessage, setErrorMessage] = useState(null);
   const [isApplying, setIsApplying] = useState(false);
-  const [removingCode, setRemovingCode] = useState(null);
+  const [removingId, setRemovingId] = useState(null);
   const [availableDiscounts, setAvailableDiscounts] = useState([]);
   const [discountsLoading, setDiscountsLoading] = useState(false);
   const triggerToast = {
@@ -2618,7 +2609,10 @@ var CouponSection = () => {
     setIsApplying(true);
     setErrorMessage(null);
     try {
-      const result = await applyDiscount({
+      if (!actions?.applyDiscount) {
+        throw new Error("applyDiscount action is not configured");
+      }
+      const result = await actions.applyDiscount({
         token,
         code: inputValue.trim(),
         source: "web",
@@ -2654,7 +2648,10 @@ var CouponSection = () => {
     setIsApplying(true);
     setErrorMessage(null);
     try {
-      const result = await applyDiscount({
+      if (!actions?.applyDiscount) {
+        throw new Error("applyDiscount action is not configured");
+      }
+      const result = await actions.applyDiscount({
         token,
         discount_id: discountId,
         source: "web",
@@ -2682,9 +2679,13 @@ var CouponSection = () => {
     }
   };
   const handleRemove = async ({ code, discount_id }) => {
-    setRemovingCode(code);
+    setRemovingId(discount_id);
     try {
-      const result = await removeDiscountById({
+      if (!actions?.removeDiscountById && !actions?.removeDiscount) {
+        throw new Error("removeDiscount action is not configured");
+      }
+      const removeFn = actions?.removeDiscountById || actions?.removeDiscount;
+      const result = await removeFn({
         token,
         discount_id,
         region_id: config?.regionId
@@ -2693,9 +2694,10 @@ var CouponSection = () => {
       setCart(updatedCart);
       setIsOpen(true);
     } catch (error) {
-      triggerToast.error(`Failed to remove coupon ${code}`);
+      console.log({ error });
+      triggerToast.error(`Failed to remove coupon ${code || "discount"}`);
     } finally {
-      setRemovingCode(null);
+      setRemovingId(null);
     }
   };
   const getEligibility = (coupon) => {
@@ -2730,7 +2732,7 @@ var CouponSection = () => {
         children: [
           /* @__PURE__ */ jsxs("div", { className: "flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0", children: [
             /* @__PURE__ */ jsx("span", { className: "text-base", children: "\u2705" }),
-            /* @__PURE__ */ jsx("span", { className: "font-[Nunito-bold] text-[#0f0f0f] text-[13px] tracking-wide", children: coupon.code }),
+            /* @__PURE__ */ jsx("span", { className: "font-[Nunito-bold] text-[#0f0f0f] text-[13px] tracking-wide", children: coupon.code ? coupon.code : coupon.display_action_value || "Discount" }),
             /* @__PURE__ */ jsx("span", { className: "font-[Nunito-regular] text-[#0f0f0f] text-[12px]", children: "applied" }),
             /* @__PURE__ */ jsx("span", { className: "text-[#0f0f0f] text-[12px] hidden sm:inline", children: "\xB7" }),
             /* @__PURE__ */ jsxs("span", { className: "text-[#00b300] text-[12px] font-[Nunito-bold]", children: [
@@ -2743,10 +2745,10 @@ var CouponSection = () => {
             {
               type: "button",
               onClick: () => handleRemove({ code: coupon.code, discount_id: coupon.discount_id ?? coupon.id }),
-              disabled: removingCode === coupon.code,
+              disabled: removingId === (coupon.discount_id ?? coupon.id),
               className: "text-[#8e9194] text-lg bg-transparent border-0 cursor-pointer disabled:opacity-50",
-              "aria-label": `Remove coupon ${coupon.code}`,
-              children: removingCode === coupon.code ? "\u2026" : "\u2715"
+              "aria-label": `Remove coupon ${coupon.code || "discount"}`,
+              children: removingId === (coupon.discount_id ?? coupon.id) ? "\u2026" : "\u2715"
             }
           )
         ]
@@ -2853,7 +2855,7 @@ var ViewCart = () => {
   );
   const hasDeletedItems = deletedItems.length > 0;
   const appliedDiscounts = (cart?.cart_discounts || []).filter(
-    (coupon) => coupon.code
+    (coupon) => coupon.code || coupon.display_action_value || coupon.id || coupon.discount_id
   );
   const activeDiscountId = appliedDiscounts?.[0]?.id || cart?.discount_id;
   useEffect(() => {
@@ -2957,7 +2959,7 @@ var ViewCart = () => {
                             color: "#FF6500"
                           },
                           children: [
-                            appliedDiscounts?.length === 1 ? `Discount (${appliedDiscounts[0].code || appliedDiscounts[0].display_action_value || "Coupon"})` : "Discount",
+                            appliedDiscounts?.length === 1 ? `Discount (${appliedDiscounts[0].code ? appliedDiscounts[0].code : appliedDiscounts[0].display_action_value || "Coupon"})` : "Discount",
                             appliedDiscounts?.length > 1 && /* @__PURE__ */ jsx(
                               "svg",
                               {
@@ -3026,7 +3028,7 @@ var ViewCart = () => {
                                   color: "#FF6500",
                                   opacity: 0.85
                                 },
-                                children: coupon.code ? `${coupon.code}` : "Coupon"
+                                children: coupon.code ? `${coupon.code}` : coupon.display_action_value || "Coupon"
                               }
                             ),
                             /* @__PURE__ */ jsxs(
@@ -3194,13 +3196,13 @@ var AddressCard2 = ({ address, onEdit, onDelete }) => {
   ] });
 };
 var ProfileForm = ({ user, onSuccess, onCancel }) => {
-  const { actions, toast } = useCore();
+  const { actions, toast, config } = useCore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const userData = user?.attributes || user?.data?.attributes || user || {};
   const [formData, setFormData] = useState({
     firstName: userData.first_name || "",
     lastName: userData.last_name || "",
-    email: userData.email || ""
+    contactInfo: config?.authType === "own" ? userData.phone || userData.mobile || userData.phone_number || "" : userData.email || ""
   });
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -3214,7 +3216,7 @@ var ProfileForm = ({ user, onSuccess, onCancel }) => {
         await actions.updateUser(userData?.id, {
           first_name: formData.firstName,
           last_name: formData.lastName,
-          email: formData.email
+          ...config?.authType === "own" ? { phone: formData.contactInfo } : { email: formData.contactInfo }
         });
         toast?.success?.("Profile updated successfully!");
         onSuccess?.();
@@ -3264,15 +3266,15 @@ var ProfileForm = ({ user, onSuccess, onCancel }) => {
       ] })
     ] }),
     /* @__PURE__ */ jsxs("div", { className: "space-y-2", children: [
-      /* @__PURE__ */ jsx("label", { className: labelCls, children: "Email Address" }),
+      /* @__PURE__ */ jsx("label", { className: labelCls, children: config?.authType === "own" ? "Phone Number" : "Email Address" }),
       /* @__PURE__ */ jsx(
         "input",
         {
-          type: "email",
-          name: "email",
-          value: formData.email,
+          type: config?.authType === "own" ? "tel" : "email",
+          name: "contactInfo",
+          value: formData.contactInfo,
           onChange: handleChange,
-          placeholder: "Enter email address",
+          placeholder: `Enter ${config?.authType === "own" ? "phone number" : "email address"}`,
           required: true,
           className: inputCls
         }
@@ -3301,7 +3303,7 @@ var ProfileForm = ({ user, onSuccess, onCancel }) => {
   ] });
 };
 var UserInfo = ({ user, isLoading, refetch }) => {
-  const { actions } = useCore();
+  const { actions, config } = useCore();
   const [addresses, setAddresses] = useState([]);
   const [isAddrLoading, setIsAddrLoading] = useState(false);
   const [modalState, setModalState] = useState({ type: null, data: null });
@@ -3351,8 +3353,8 @@ var UserInfo = ({ user, isLoading, refetch }) => {
           /* @__PURE__ */ jsx("p", { className: "border-b border-gray-100 pb-2 text-[15px] font-[Nunito-medium] text-[var(--core-primary)]", children: userData.last_name || userData.lastName || "\u2014" })
         ] }),
         /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-1 md:col-span-2", children: [
-          /* @__PURE__ */ jsx("label", { className: "text-[12px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest", children: "Email address" }),
-          /* @__PURE__ */ jsx("p", { className: "border-b border-gray-100 pb-2 text-[15px] font-[Nunito-medium] text-[var(--core-primary)]", children: userData.email || userData.primaryEmailAddress?.emailAddress || "\u2014" })
+          /* @__PURE__ */ jsx("label", { className: "text-[12px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest", children: config?.authType === "own" ? "Phone number" : "Email address" }),
+          /* @__PURE__ */ jsx("p", { className: "border-b border-gray-100 pb-2 text-[15px] font-[Nunito-medium] text-[var(--core-primary)]", children: config?.authType === "own" ? userData.phone || userData.mobile || userData.phone_number || "\u2014" : userData.email || userData.primaryEmailAddress?.emailAddress || "\u2014" })
         ] })
       ] }) })
     ] }),

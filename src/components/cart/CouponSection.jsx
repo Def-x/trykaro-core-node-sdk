@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useCore } from "../../context/CoreProvider";
 import { useCurrencyFormat } from "../../hooks/useCurrencyFormat";
-import { removeDiscountById, applyDiscount } from "../../actions/discountActions";
+
 
 const CouponSection = () => {
   const { cart, setCart, actions, auth, config, toast } = useCore();
@@ -14,7 +14,7 @@ const CouponSection = () => {
   const [inputValue, setInputValue] = useState("");
   const [errorMessage, setErrorMessage] = useState(null);
   const [isApplying, setIsApplying] = useState(false);
-  const [removingCode, setRemovingCode] = useState(null);
+  const [removingId, setRemovingId] = useState(null);
   const [availableDiscounts, setAvailableDiscounts] = useState([]);
   const [discountsLoading, setDiscountsLoading] = useState(false);
 
@@ -88,7 +88,10 @@ const CouponSection = () => {
     setIsApplying(true);
     setErrorMessage(null);
     try {
-      const result = await applyDiscount({
+      if (!actions?.applyDiscount) {
+        throw new Error("applyDiscount action is not configured");
+      }
+      const result = await actions.applyDiscount({
         token,
         code: inputValue.trim(),
         source: "web",
@@ -130,7 +133,10 @@ const CouponSection = () => {
     setIsApplying(true);
     setErrorMessage(null);
     try {
-      const result = await applyDiscount({
+      if (!actions?.applyDiscount) {
+        throw new Error("applyDiscount action is not configured");
+      }
+      const result = await actions.applyDiscount({
         token,
         discount_id: discountId,
         source: "web",
@@ -164,9 +170,13 @@ const CouponSection = () => {
   };
 
   const handleRemove = async ({ code, discount_id }) => {
-    setRemovingCode(code);
+    setRemovingId(discount_id);
     try {
-      const result = await removeDiscountById({
+      if (!actions?.removeDiscountById && !actions?.removeDiscount) {
+        throw new Error("removeDiscount action is not configured");
+      }
+      const removeFn = actions?.removeDiscountById || actions?.removeDiscount;
+      const result = await removeFn({
         token,
         discount_id,
         region_id: config?.regionId,
@@ -175,9 +185,10 @@ const CouponSection = () => {
       setCart(updatedCart);
       setIsOpen(true);
     } catch (error) {
-      triggerToast.error(`Failed to remove coupon ${code}`);
+      console.log({ error })
+      triggerToast.error(`Failed to remove coupon ${code || "discount"}`);
     } finally {
-      setRemovingCode(null);
+      setRemovingId(null);
     }
   };
 
@@ -228,7 +239,7 @@ const CouponSection = () => {
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
                 <span className="text-base">✅</span>
                 <span className="font-[Nunito-bold] text-[#0f0f0f] text-[13px] tracking-wide">
-                  {coupon.code}
+                  {coupon.code ? coupon.code : (coupon.display_action_value || "Discount")}
                 </span>
                 <span className="font-[Nunito-regular] text-[#0f0f0f] text-[12px]">
                   applied
@@ -241,11 +252,11 @@ const CouponSection = () => {
               <button
                 type="button"
                 onClick={() => handleRemove({ code: coupon.code, discount_id: coupon.discount_id ?? coupon.id })}
-                disabled={removingCode === coupon.code}
+                disabled={removingId === (coupon.discount_id ?? coupon.id)}
                 className="text-[#8e9194] text-lg bg-transparent border-0 cursor-pointer disabled:opacity-50"
-                aria-label={`Remove coupon ${coupon.code}`}
+                aria-label={`Remove coupon ${coupon.code || "discount"}`}
               >
-                {removingCode === coupon.code ? "…" : "✕"}
+                {removingId === (coupon.discount_id ?? coupon.id) ? "…" : "✕"}
               </button>
             </div>
           ))}

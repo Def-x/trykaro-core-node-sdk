@@ -41,7 +41,7 @@ export const ViewCart = () => {
   const hasDeletedItems = deletedItems.length > 0;
 
   const appliedDiscounts = (cart?.cart_discounts || []).filter(
-    (coupon) => coupon.code,
+    (coupon) => coupon.code || coupon.display_action_value || coupon.id || coupon.discount_id
   );
   const activeDiscountId = appliedDiscounts?.[0]?.id || cart?.discount_id;
 
@@ -197,8 +197,8 @@ export const ViewCart = () => {
                                 color: "#FF6500",
                               }}
                             >
-                              {appliedDiscounts?.length === 1 
-                                ? `Discount (${appliedDiscounts[0].code || appliedDiscounts[0].display_action_value || "Coupon"})`
+                              {appliedDiscounts?.length === 1
+                                ? `Discount (${appliedDiscounts[0].code ? appliedDiscounts[0].code : (appliedDiscounts[0].display_action_value || "Coupon")})`
                                 : "Discount"}
                               {appliedDiscounts?.length > 1 && (
                                 <svg
@@ -266,7 +266,7 @@ export const ViewCart = () => {
                                         opacity: 0.85,
                                       }}
                                     >
-                                      {coupon.code ? `${coupon.code}` : "Coupon"}
+                                      {coupon.code ? `${coupon.code}` : (coupon.display_action_value || "Coupon")}
                                     </span>
                                     <span
                                       style={{

@@ -105,8 +105,9 @@ export function useAddToCart() {
         const sellingQTY = product?.selling_quantity?.values?.[0]?.label;
         const qty = overrideQty !== null ? overrideQty : (quantity ?? 1);
         const existingLineItem = getCartItem(product, customizations);
-        if (existingLineItem) {
-            // Quantity already exists → increment
+        
+        if (existingLineItem && !sellingQTY) {
+            // Quantity already exists and no sellingQTY → increment
             const newQty = existingLineItem.quantity + qty;
             await actions.updateLineItem?.(existingLineItem.id, { quantity: newQty });
         } else {
@@ -173,10 +174,15 @@ export function useAddToCart() {
 
             await addItemToCart(product, resolvedCartId, customizations, overrideQty);
 
-            toast?.success?.("Item added to cart");
+            toast?.success?.(`${product?.name || "Item"} added to cart`);
         } catch (err) {
             console.error("[useAddToCart] handleAddToCart error:", err);
-            toast?.error?.("Failed to add item to cart");
+            const errorMsg = err?.data?.error || err?.message;
+            if (errorMsg && typeof errorMsg === "string") {
+                toast?.error?.(errorMsg);
+            } else {
+                toast?.error?.(`Failed to add ${product?.name || "item"} to cart`);
+            }
         } finally {
             setIsAddToCartLoading(false);
         }
@@ -207,6 +213,12 @@ export function useAddToCart() {
             }
         } catch (err) {
             console.error("[useAddToCart] handleDecreaseQty error:", err);
+            const errorMsg = err?.data?.error || err?.message;
+            if (errorMsg && typeof errorMsg === "string") {
+                toast?.error?.(errorMsg);
+            } else {
+                toast?.error?.("Failed to update item quantity");
+            }
         } finally {
             setIsAddToCartLoading(false);
         }
@@ -226,10 +238,15 @@ export function useAddToCart() {
                 await refreshCart(activeCartId);
             }
 
-            toast?.success?.("Item removed from cart");
+            toast?.success?.(`${product?.line_itemable?.name || "Item"} removed from cart`);
         } catch (err) {
             console.error("[useAddToCart] handleDeleteLineItem error:", err);
-            toast?.error?.("Failed to remove item");
+            const errorMsg = err?.data?.error || err?.message;
+            if (errorMsg && typeof errorMsg === "string") {
+                toast?.error?.(errorMsg);
+            } else {
+                toast?.error?.(`Failed to remove ${product?.line_itemable?.name || "item"}`);
+            }
         } finally {
             setIsAddToCartLoading(false);
         }

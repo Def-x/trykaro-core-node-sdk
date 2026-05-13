@@ -63,7 +63,7 @@ const LoginPage = () => {
 const OrderInfo = ({ user, hasDeletedItems }) => {
   const router = useRouter();
   const { Razorpay } = useRazorpay();
-  const { cart, setCart, actions, config, auth, orgData, primaryColor } = useCore();
+  const { cart, setCart, actions, config, auth, orgData, primaryColor, toast } = useCore();
 
   // Read StripeCheckout from the gateway registry.
   const StripeCheckout = getPaymentGateway("stripe");
@@ -115,20 +115,38 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
 
   useEffect(() => {
     setOrderType(cart?.order_type ?? "delivery");
-    const shippingId = cart?.shipping_address?.id ?? addresses?.[0]?.id;
-    const billingId = cart?.billing_address?.id ?? addresses?.[0]?.id;
+    
+    const hasShipping = !!cart?.shipping_address?.id;
+    const hasBilling = !!cart?.billing_address?.id;
+    const defaultAddressId = addresses?.[0]?.id;
+
+    const shippingId = cart?.shipping_address?.id ?? defaultAddressId;
+    const billingId = cart?.billing_address?.id ?? defaultAddressId;
+
     setSelectedAddress({
       shippingAddressId: shippingId,
       billingAddressId: billingId,
     });
     setSameAsShipping(billingId === shippingId);
-  }, [cart, addresses]);
+
+    // Auto-update cart if it's missing addresses and we have a default address
+    if ((!hasShipping || !hasBilling) && defaultAddressId && cart?.id && actions?.updateCart) {
+      const apiData = { id: cart.id };
+      if (!hasShipping) apiData.shipping_address_id = defaultAddressId;
+      if (!hasBilling) apiData.billing_address_id = defaultAddressId;
+      
+      actions.updateCart(cart.id, apiData).then((updatedCart) => {
+        if (updatedCart) setCart(updatedCart);
+      }).catch((err) => console.error("Failed to auto-set cart addresses:", err));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cart?.shipping_address?.id, cart?.billing_address?.id, addresses?.length]);
 
   const onUpdateOrderType = async (type) => {
     try {
       setOrderType(type);
       if (actions?.updateCart && cart?.id) {
-        await actions.updateCart({
+        await actions.updateCart(cart.id, {
           id: cart.id,
           order_type: type,
         });
@@ -136,6 +154,12 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
       }
     } catch (err) {
       console.error("Failed to update order type:", err);
+      const errorMsg = err?.data?.error || err?.message;
+      if (errorMsg && typeof errorMsg === "string") {
+        toast?.error?.(errorMsg);
+      } else {
+        toast?.error?.("Failed to update order type");
+      }
     }
   };
 
@@ -170,11 +194,21 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
             );
           }
           if (order?.order_id) {
+            if (typeof window !== "undefined") {
+              localStorage.removeItem("cartid");
+            }
+            setCart(null);
             router.push(`/order/${order?.order_id}?show=true`);
           }
         } catch (err) {
           console.error("Payment update failed:", err);
           setIsProcessingPayment(false);
+          const errorMsg = err?.data?.error || err?.message;
+          if (errorMsg && typeof errorMsg === "string") {
+            toast?.error?.(errorMsg);
+          } else {
+            toast?.error?.("Payment update failed");
+          }
         }
       },
       prefill: {
@@ -188,6 +222,7 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
     const razorpay = new Razorpay(options);
     razorpay.on("payment.failed", (response) => {
       console.error("Razorpay payment failed:", response);
+      toast?.error?.(response?.error?.description || "Payment failed");
     });
     razorpay.open();
   };
@@ -208,6 +243,12 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
       }
     } catch (err) {
       console.error("Failed to create order:", err);
+      const errorMsg = err?.data?.error || err?.message;
+      if (errorMsg && typeof errorMsg === "string") {
+        toast?.error?.(errorMsg);
+      } else {
+        toast?.error?.("Failed to process payment");
+      }
     } finally {
       setIsPlacingOrder(false);
     }

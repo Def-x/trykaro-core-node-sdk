@@ -113,19 +113,7 @@ export const AddressSelection = ({
     updateCart(apiData);
   };
 
-  useEffect(() => {
-    if (!user) return;
-    const apiData = { id: cart?.id };
-    if (!isCartHaveBillingAddress && billingAddressId)
-      apiData.billing_address_id = billingAddressId;
-    if (!isCarthaveShippingAddress && shippingAddressId)
-      apiData.shipping_address_id = sameAsShipping
-        ? billingAddressId
-        : shippingAddressId;
-    if (apiData.billing_address_id || apiData.shipping_address_id) {
-      updateCart(apiData);
-    }
-  }, [address, shippingAddressId, billingAddressId]);
+
 
   return (
     <div className="w-full flex justify-center">
