@@ -1,5 +1,5 @@
 import { getPaymentGateway } from './chunk-ICFWQ2RM.js';
-import React8, { createContext, useState, useMemo, useEffect, useCallback, useContext, useRef } from 'react';
+import React8, { createContext, useState, useEffect, useCallback, useMemo, useContext, useRef } from 'react';
 import { jsx, jsxs, Fragment } from 'react/jsx-runtime';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { flatten, map, compact, filter, uniqBy } from 'lodash';
@@ -23,14 +23,6 @@ var CoreProvider = ({
   const [region, setRegion] = useState(config?.region ?? null);
   const [authState, setAuthState] = useState(() => injectedAuth ?? {});
   const authType = config?.authType ?? "clerk";
-  const resolvedConfig = useMemo(
-    () => ({
-      ...config,
-      apiBaseUrl: config?.apiBaseUrl ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? process.env.API_BASE_URL,
-      orgId: config?.orgId ?? process.env.NEXT_PUBLIC_ORG_ID ?? process.env.ORG_ID
-    }),
-    [config]
-  );
   useEffect(() => {
     if (!injectedAuth) return;
     setAuthState((prev) => ({
@@ -137,24 +129,13 @@ var CoreProvider = ({
       actions,
       toast,
       auth,
-      config: resolvedConfig,
+      config,
       orgData,
       primaryColor,
       secondaryColor
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [
-      cart,
-      isCartLoading,
-      region,
-      actions,
-      toast,
-      auth,
-      resolvedConfig,
-      orgData,
-      primaryColor,
-      secondaryColor
-    ]
+    [cart, isCartLoading, region, actions, toast, auth, config, orgData, primaryColor, secondaryColor]
   );
   return /* @__PURE__ */ jsx(CoreContext.Provider, { value, children: /* @__PURE__ */ jsx(
     "div",
@@ -540,28 +521,6 @@ function useVariantSelection(rawProduct) {
     getDisplayImages
   };
 }
-
-// src/utils/coreConfig.js
-var resolveApiBaseUrl = ({ apiBaseUrl, config } = {}) => {
-  const resolvedApiBaseUrl = apiBaseUrl ?? config?.apiBaseUrl ?? process.env.API_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL;
-  if (!resolvedApiBaseUrl) {
-    throw new Error("API base URL is not configured");
-  }
-  return resolvedApiBaseUrl;
-};
-var resolveOrganizationId = ({ orgId, config } = {}) => {
-  return orgId ?? config?.orgId ?? process.env.ORG_ID ?? process.env.NEXT_PUBLIC_ORG_ID ?? process.env.NEXT_PUBLIC_ORGANIZATION_ID ?? null;
-};
-
-// src/hooks/useCoreConfig.js
-var useCoreConfig = () => {
-  const { config } = useCore();
-  return {
-    config,
-    apiBaseUrl: resolveApiBaseUrl({ config }),
-    orgId: resolveOrganizationId({ config })
-  };
-};
 
 // src/hooks/userCartInfo.js
 var useCartInfo = () => {
@@ -2929,46 +2888,17 @@ var ViewCart = () => {
     prevDiscountIdRef.current = activeDiscountId;
   }, [activeDiscountId, items?.length, toast]);
   console.log({ cart, appliedDiscounts });
-  return /* @__PURE__ */ jsx("div", { className: "mx-4 md:mx-[24px] my-[100px] flex justify-center", children: isLoading ? /* @__PURE__ */ jsx("div", { className: "flex justify-center items-center w-full h-[400px]", children: /* @__PURE__ */ jsx(
-    "div",
-    {
-      className: "animate-spin rounded-full h-10 w-10 border-t-2 border-b-2",
-      style: { borderColor: "var(--core-primary)" }
-    }
-  ) }) : items.length === 0 ? /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center justify-center p-12 bg-gray-50/50 border border-gray-100 rounded-2xl min-h-[400px] gap-y-6 max-w-[600px] w-full mx-auto", children: [
-    /* @__PURE__ */ jsx("div", { className: "p-4 bg-white rounded-full shadow-sm border border-gray-100", children: /* @__PURE__ */ jsxs(
-      "svg",
-      {
-        xmlns: "http://www.w3.org/2000/svg",
-        width: "32",
-        height: "32",
-        viewBox: "0 0 24 24",
-        fill: "none",
-        stroke: "currentColor",
-        strokeWidth: "1.5",
-        strokeLinecap: "round",
-        strokeLinejoin: "round",
-        style: { color: "var(--core-primary)" },
-        children: [
-          /* @__PURE__ */ jsx("path", { d: "M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" }),
-          /* @__PURE__ */ jsx("path", { d: "M3 6h18" }),
-          /* @__PURE__ */ jsx("path", { d: "M16 10a4 4 0 0 1-8 0" })
-        ]
-      }
-    ) }),
+  return /* @__PURE__ */ jsx("div", { className: "mx-4 md:mx-[24px] my-[100px] flex justify-center", children: isLoading ? /* @__PURE__ */ jsx("div", { className: "flex justify-center items-center w-full h-[400px]", children: /* @__PURE__ */ jsx("div", { className: "animate-spin rounded-full h-10 w-10 border-t-2 border-b-2", style: { borderColor: "var(--core-primary)" } }) }) : items.length === 0 ? /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center justify-center p-12 bg-gray-50/50 border border-gray-100 rounded-2xl min-h-[400px] gap-y-6 max-w-[600px] w-full mx-auto", children: [
+    /* @__PURE__ */ jsx("div", { className: "p-4 bg-white rounded-full shadow-sm border border-gray-100", children: /* @__PURE__ */ jsxs("svg", { xmlns: "http://www.w3.org/2000/svg", width: "32", height: "32", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", style: { color: "var(--core-primary)" }, children: [
+      /* @__PURE__ */ jsx("path", { d: "M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" }),
+      /* @__PURE__ */ jsx("path", { d: "M3 6h18" }),
+      /* @__PURE__ */ jsx("path", { d: "M16 10a4 4 0 0 1-8 0" })
+    ] }) }),
     /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center gap-2 text-center", children: [
       /* @__PURE__ */ jsx("p", { className: "font-[Nunito-bold] text-[22px] text-gray-800", children: "Your cart is empty" }),
       /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[15px] text-gray-500 max-w-[400px]", children: "Looks like you haven't added anything to your cart yet. Explore our collections and find something you love!" })
     ] }),
-    /* @__PURE__ */ jsx(
-      "a",
-      {
-        href: "/",
-        className: "mt-4 px-8 py-3 rounded-full text-white font-[Nunito-medium] transition-opacity hover:opacity-90",
-        style: { backgroundColor: "var(--core-primary)" },
-        children: "Continue Shopping"
-      }
-    )
+    /* @__PURE__ */ jsx("a", { href: "/", className: "mt-4 px-8 py-3 rounded-full text-white font-[Nunito-medium] transition-opacity hover:opacity-90", style: { backgroundColor: "var(--core-primary)" }, children: "Continue Shopping" })
   ] }) : /* @__PURE__ */ jsxs("div", { className: "flex flex-row flex-wrap gap-[16px] max-w-[1248px] w-full", children: [
     /* @__PURE__ */ jsx("div", { className: "flex-1 mt-8 md:mt-0", children: /* @__PURE__ */ jsx(Checkout_default, { hasDeletedItems }) }),
     /* @__PURE__ */ jsx("div", { className: "border border-[var(--borders)] sticky hidden md:block" }),
@@ -4024,6 +3954,6 @@ var Hello = () => {
   return /* @__PURE__ */ jsx("div", { children: isCartLoading ? "Loading..." : "Core Working \u2705" });
 };
 
-export { AccountPage, AddressCard2 as AddressCard, AddressForm, AuthManager, CartItem, CartPage, CartSummary, CoreProvider, CouponSection_default as CouponSection, CustomOTPAuth, EmptyState, Hello, Order, OrdersList, Popup, ProfileForm, Spinner, UserInfo, ViewCart, useAddToCart, useAuth, useCart, userCartInfo_default as useCartInfo, useCore, useCoreConfig, useCurrencyFormat, useLogout, useVariantSelection };
+export { AccountPage, AddressCard2 as AddressCard, AddressForm, AuthManager, CartItem, CartPage, CartSummary, CoreProvider, CouponSection_default as CouponSection, CustomOTPAuth, EmptyState, Hello, Order, OrdersList, Popup, ProfileForm, Spinner, UserInfo, ViewCart, useAddToCart, useAuth, useCart, userCartInfo_default as useCartInfo, useCore, useCurrencyFormat, useLogout, useVariantSelection };
 //# sourceMappingURL=index.js.map
 //# sourceMappingURL=index.js.map
