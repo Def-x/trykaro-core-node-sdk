@@ -469,7 +469,7 @@ export const removeDiscountAction = async (params = {}) => {
     headers: await buildHeaders(params),
     cache: "no-store",
   });
-
+  console.log({ res });
   return wrapJsonResponse(res, "Failed to remove discount");
 };
 
