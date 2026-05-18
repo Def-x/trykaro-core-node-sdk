@@ -61,19 +61,6 @@ export const CoreProvider = ({
 
   const authType = config?.authType ?? "clerk";
 
-  const resolvedConfig = useMemo(
-    () => ({
-      ...config,
-      apiBaseUrl:
-        config?.apiBaseUrl ??
-        process.env.NEXT_PUBLIC_API_BASE_URL ??
-        process.env.API_BASE_URL,
-      orgId:
-        config?.orgId ?? process.env.NEXT_PUBLIC_ORG_ID ?? process.env.ORG_ID,
-    }),
-    [config],
-  );
-
   useEffect(() => {
     if (!injectedAuth) return;
 
@@ -89,9 +76,7 @@ export const CoreProvider = ({
     (nextAuth) => {
       setAuthState((prev) => {
         const resolved =
-          typeof nextAuth === "function"
-            ? nextAuth(prev ?? {})
-            : (nextAuth ?? {});
+          typeof nextAuth === "function" ? nextAuth(prev ?? {}) : nextAuth ?? {};
         const token = resolved?.token ?? resolved?.access_token ?? null;
         const merged = {
           ...prev,
@@ -148,9 +133,7 @@ export const CoreProvider = ({
           resolvedCart = Array.isArray(data) ? data[0] : data;
         } else {
           const storedCartId =
-            typeof window !== "undefined"
-              ? localStorage.getItem("cartid")
-              : null;
+            typeof window !== "undefined" ? localStorage.getItem("cartid") : null;
 
           if (storedCartId && actions?.getCartById) {
             resolvedCart = await actions.getCartById(
@@ -207,24 +190,13 @@ export const CoreProvider = ({
       actions,
       toast,
       auth,
-      config: resolvedConfig,
+      config,
       orgData,
       primaryColor,
       secondaryColor,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [
-      cart,
-      isCartLoading,
-      region,
-      actions,
-      toast,
-      auth,
-      resolvedConfig,
-      orgData,
-      primaryColor,
-      secondaryColor,
-    ],
+    [cart, isCartLoading, region, actions, toast, auth, config, orgData, primaryColor, secondaryColor],
   );
 
   return (
@@ -251,7 +223,7 @@ export const useCore = () => {
   if (!context) {
     throw new Error(
       "[useCore] must be used inside <CoreProvider>. " +
-        "Wrap your app (or the relevant subtree) with <CoreProvider>.",
+      "Wrap your app (or the relevant subtree) with <CoreProvider>.",
     );
   }
 

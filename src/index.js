@@ -1,3 +1,4 @@
+
 // ─── Context ──────────────────────────────────────────────────────────────────
 export { CoreProvider, useCore } from "./context/CoreProvider";
 
@@ -8,7 +9,6 @@ export { useCurrencyFormat } from "./hooks/useCurrencyFormat";
 export { useAuth } from "./hooks/useAuth";
 export { useLogout } from "./hooks/useLogout";
 export { useVariantSelection } from "./hooks/useVariantSelection";
-export { useCoreConfig } from "./hooks/useCoreConfig";
 export { default as useCartInfo } from "./hooks/userCartInfo";
 
 // ─── Auth Components ──────────────────────────────────────────────────────────
