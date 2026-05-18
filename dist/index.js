@@ -1,5 +1,5 @@
 import { getPaymentGateway } from './chunk-ICFWQ2RM.js';
-import React8, { createContext, useState, useEffect, useCallback, useMemo, useContext, useRef } from 'react';
+import React8, { createContext, useState, useMemo, useEffect, useCallback, useContext, useRef } from 'react';
 import { jsx, jsxs, Fragment } from 'react/jsx-runtime';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { flatten, map, compact, filter, uniqBy } from 'lodash';
@@ -23,6 +23,14 @@ var CoreProvider = ({
   const [region, setRegion] = useState(config?.region ?? null);
   const [authState, setAuthState] = useState(() => injectedAuth ?? {});
   const authType = config?.authType ?? "clerk";
+  const resolvedConfig = useMemo(
+    () => ({
+      ...config,
+      apiBaseUrl: config?.apiBaseUrl ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? process.env.API_BASE_URL,
+      orgId: config?.orgId ?? process.env.NEXT_PUBLIC_ORG_ID ?? process.env.ORG_ID
+    }),
+    [config]
+  );
   useEffect(() => {
     if (!injectedAuth) return;
     setAuthState((prev) => ({
@@ -129,13 +137,24 @@ var CoreProvider = ({
       actions,
       toast,
       auth,
-      config,
+      config: resolvedConfig,
       orgData,
       primaryColor,
       secondaryColor
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [cart, isCartLoading, region, actions, toast, auth, config, orgData, primaryColor, secondaryColor]
+    [
+      cart,
+      isCartLoading,
+      region,
+      actions,
+      toast,
+      auth,
+      resolvedConfig,
+      orgData,
+      primaryColor,
+      secondaryColor
+    ]
   );
   return /* @__PURE__ */ jsx(CoreContext.Provider, { value, children: /* @__PURE__ */ jsx(
     "div",
@@ -521,6 +540,28 @@ function useVariantSelection(rawProduct) {
     getDisplayImages
   };
 }
+
+// src/utils/coreConfig.js
+var resolveApiBaseUrl = ({ apiBaseUrl, config } = {}) => {
+  const resolvedApiBaseUrl = apiBaseUrl ?? config?.apiBaseUrl ?? process.env.API_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL;
+  if (!resolvedApiBaseUrl) {
+    throw new Error("API base URL is not configured");
+  }
+  return resolvedApiBaseUrl;
+};
+var resolveOrganizationId = ({ orgId, config } = {}) => {
+  return orgId ?? config?.orgId ?? process.env.ORG_ID ?? process.env.NEXT_PUBLIC_ORG_ID ?? process.env.NEXT_PUBLIC_ORGANIZATION_ID ?? null;
+};
+
+// src/hooks/useCoreConfig.js
+var useCoreConfig = () => {
+  const { config } = useCore();
+  return {
+    config,
+    apiBaseUrl: resolveApiBaseUrl({ config }),
+    orgId: resolveOrganizationId({ config })
+  };
+};
 
 // src/hooks/userCartInfo.js
 var useCartInfo = () => {
@@ -3983,6 +4024,6 @@ var Hello = () => {
   return /* @__PURE__ */ jsx("div", { children: isCartLoading ? "Loading..." : "Core Working \u2705" });
 };
 
-export { AccountPage, AddressCard2 as AddressCard, AddressForm, AuthManager, CartItem, CartPage, CartSummary, CoreProvider, CouponSection_default as CouponSection, CustomOTPAuth, EmptyState, Hello, Order, OrdersList, Popup, ProfileForm, Spinner, UserInfo, ViewCart, useAddToCart, useAuth, useCart, userCartInfo_default as useCartInfo, useCore, useCurrencyFormat, useLogout, useVariantSelection };
+export { AccountPage, AddressCard2 as AddressCard, AddressForm, AuthManager, CartItem, CartPage, CartSummary, CoreProvider, CouponSection_default as CouponSection, CustomOTPAuth, EmptyState, Hello, Order, OrdersList, Popup, ProfileForm, Spinner, UserInfo, ViewCart, useAddToCart, useAuth, useCart, userCartInfo_default as useCartInfo, useCore, useCoreConfig, useCurrencyFormat, useLogout, useVariantSelection };
 //# sourceMappingURL=index.js.map
 //# sourceMappingURL=index.js.map

@@ -1,26 +1,10 @@
 "use server";
 
+import { resolveApiBaseUrl, resolveOrganizationId } from "../utils/coreConfig";
+
 const API_VERSION_ACCEPT = "application/vnd.defx-store.v2";
-
-const getApiBaseUrl = (apiBaseUrl) => {
-  const baseUrl =
-    apiBaseUrl ||
-    process.env.API_BASE_URL ||
-    process.env.NEXT_PUBLIC_API_BASE_URL;
-
-  console.log({ baseUrl });
-  if (!baseUrl) {
-    throw new Error("API base URL is not configured");
-  }
-
-  return baseUrl;
-};
-
-const getOrganizationId = (orgId) =>
-  orgId ||
-  process.env.ORG_ID ||
-  process.env.NEXT_PUBLIC_ORG_ID ||
-  process.env.NEXT_PUBLIC_ORGANIZATION_ID;
+const getApiBaseUrl = resolveApiBaseUrl;
+const getOrganizationId = resolveOrganizationId;
 
 const getServerToken = async (token) => {
   if (token) return token;
@@ -45,10 +29,12 @@ const getServerToken = async (token) => {
 const buildHeaders = async ({
   token,
   orgId,
+  config,
   json = true,
   requireAuth = false,
 } = {}) => {
   const authToken = await getServerToken(token);
+  const organizationId = resolveOrganizationId({ orgId, config });
 
   if (requireAuth && !authToken) {
     throw new Error("Unauthorized");
@@ -57,9 +43,7 @@ const buildHeaders = async ({
   return {
     ...(json ? { "Content-Type": "application/json" } : {}),
     accept: API_VERSION_ACCEPT,
-    ...(getOrganizationId(orgId)
-      ? { "Set-Organization": getOrganizationId(orgId) }
-      : {}),
+    ...(organizationId ? { "Set-Organization": organizationId } : {}),
     ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
   };
 };
@@ -102,7 +86,7 @@ const requestJson = async (url, options, fallback) => {
 };
 
 export const createCartAction = async (body = {}, options = {}) => {
-  const res = await fetch(`${getApiBaseUrl(options.apiBaseUrl)}/api/carts`, {
+  const res = await fetch(`${getApiBaseUrl(options)}/api/carts`, {
     method: "POST",
     headers: await buildHeaders(options),
     body: JSON.stringify(body),
@@ -119,7 +103,7 @@ const requestJsonFromResponse = async (res, fallback) => {
 };
 
 export const getCartAction = async (regionId, options = {}) => {
-  const url = new URL(`${getApiBaseUrl(options.apiBaseUrl)}/api/carts`);
+  const url = new URL(`${getApiBaseUrl(options)}/api/carts`);
   if (regionId) url.searchParams.set("region_id", regionId);
 
   return requestJson(
@@ -134,9 +118,7 @@ export const getCartAction = async (regionId, options = {}) => {
 };
 
 export const getCartByIdAction = async (cartId, regionId, options = {}) => {
-  const url = new URL(
-    `${getApiBaseUrl(options.apiBaseUrl)}/api/carts/${cartId}`,
-  );
+  const url = new URL(`${getApiBaseUrl(options)}/api/carts/${cartId}`);
   if (regionId) url.searchParams.set("region_id", regionId);
 
   const res = await fetch(url.toString(), {
@@ -151,7 +133,7 @@ export const getCartByIdAction = async (cartId, regionId, options = {}) => {
 
 export const updateCartAction = async (cartId, payload, options = {}) =>
   requestJson(
-    `${getApiBaseUrl(options.apiBaseUrl)}/api/carts/${cartId}`,
+    `${getApiBaseUrl(options)}/api/carts/${cartId}`,
     {
       method: "PUT",
       headers: await buildHeaders(options),
@@ -163,7 +145,7 @@ export const updateCartAction = async (cartId, payload, options = {}) =>
 
 export const updateCartIdLineItemsAction = async (payload, options = {}) =>
   requestJson(
-    `${getApiBaseUrl(options.apiBaseUrl)}/api/update_cart_id_line_items`,
+    `${getApiBaseUrl(options)}/api/update_cart_id_line_items`,
     {
       method: "PUT",
       headers: await buildHeaders(options),
@@ -175,7 +157,7 @@ export const updateCartIdLineItemsAction = async (payload, options = {}) =>
 
 export const createLineItemAction = async (body = {}, options = {}) =>
   requestJson(
-    `${getApiBaseUrl(options.apiBaseUrl)}/api/line_items`,
+    `${getApiBaseUrl(options)}/api/line_items`,
     {
       method: "POST",
       headers: await buildHeaders(options),
@@ -187,7 +169,7 @@ export const createLineItemAction = async (body = {}, options = {}) =>
 
 export const updateLineItemAction = async (lineItemId, body, options = {}) =>
   requestJson(
-    `${getApiBaseUrl(options.apiBaseUrl)}/api/line_items/${lineItemId}`,
+    `${getApiBaseUrl(options)}/api/line_items/${lineItemId}`,
     {
       method: "PUT",
       headers: await buildHeaders(options),
@@ -199,7 +181,7 @@ export const updateLineItemAction = async (lineItemId, body, options = {}) =>
 
 export const deleteLineItemAction = async (lineItemId, options = {}) =>
   requestJson(
-    `${getApiBaseUrl(options.apiBaseUrl)}/api/line_items/${lineItemId}`,
+    `${getApiBaseUrl(options)}/api/line_items/${lineItemId}`,
     {
       method: "DELETE",
       headers: await buildHeaders(options),
@@ -210,7 +192,7 @@ export const deleteLineItemAction = async (lineItemId, options = {}) =>
 
 export const createRazorpayOrderAction = async (cartId, options = {}) =>
   requestJson(
-    `${getApiBaseUrl(options.apiBaseUrl)}/api/cart_payments`,
+    `${getApiBaseUrl(options)}/api/cart_payments`,
     {
       method: "POST",
       headers: await buildHeaders({ ...options, requireAuth: true }),
@@ -226,7 +208,7 @@ export const updateRazorpayPaymentAction = async (
   options = {},
 ) =>
   requestJson(
-    `${getApiBaseUrl(options.apiBaseUrl)}/api/cart_payments/${paymentId}`,
+    `${getApiBaseUrl(options)}/api/cart_payments/${paymentId}`,
     {
       method: "PUT",
       headers: await buildHeaders({ ...options, requireAuth: true }),
@@ -241,7 +223,7 @@ export const getAddressesAction = async (options = {}) => {
   if (!token) return { data: [] };
 
   return requestJson(
-    `${getApiBaseUrl(options.apiBaseUrl)}/api/addresses`,
+    `${getApiBaseUrl(options)}/api/addresses`,
     {
       method: "GET",
       headers: await buildHeaders({ ...options, token }),
@@ -253,7 +235,7 @@ export const getAddressesAction = async (options = {}) => {
 
 export const createAddressAction = async (addressData, options = {}) =>
   requestJson(
-    `${getApiBaseUrl(options.apiBaseUrl)}/api/addresses`,
+    `${getApiBaseUrl(options)}/api/addresses`,
     {
       method: "POST",
       headers: await buildHeaders({ ...options, requireAuth: true }),
@@ -269,7 +251,7 @@ export const updateAddressAction = async (
   options = {},
 ) =>
   requestJson(
-    `${getApiBaseUrl(options.apiBaseUrl)}/api/addresses/${addressId}`,
+    `${getApiBaseUrl(options)}/api/addresses/${addressId}`,
     {
       method: "PUT",
       headers: await buildHeaders({ ...options, requireAuth: true }),
@@ -281,7 +263,7 @@ export const updateAddressAction = async (
 
 export const deleteAddressAction = async (addressId, options = {}) =>
   requestJson(
-    `${getApiBaseUrl(options.apiBaseUrl)}/api/addresses/${addressId}`,
+    `${getApiBaseUrl(options)}/api/addresses/${addressId}`,
     {
       method: "DELETE",
       headers: await buildHeaders({ ...options, requireAuth: true }),
@@ -294,11 +276,11 @@ export const loginUser = async (data = {}, options = {}) => {
   const payload = {
     phone: data?.phone ?? data,
     country_code: data?.country_code ?? data?.countryCode ?? "+91",
-    organization_id: getOrganizationId(options.orgId),
+    organization_id: getOrganizationId(options),
   };
 
   return requestJson(
-    `${getApiBaseUrl(options.apiBaseUrl)}/api/login`,
+    `${getApiBaseUrl(options)}/api/login`,
     {
       method: "POST",
       headers: await buildHeaders(options),
@@ -320,7 +302,7 @@ export const signUpUser = async (data = {}, options = {}) => {
   }
 
   return requestJson(
-    `${getApiBaseUrl(options.apiBaseUrl)}/api/users`,
+    `${getApiBaseUrl(options)}/api/users`,
     {
       method: "POST",
       headers: await buildHeaders({ ...options, json: false }),
@@ -333,7 +315,7 @@ export const signUpUser = async (data = {}, options = {}) => {
 
 export const verifyOtp = async (data = {}, options = {}) => {
   const result = await requestJson(
-    `${getApiBaseUrl(options.apiBaseUrl)}/api/verify`,
+    `${getApiBaseUrl(options)}/api/verify`,
     {
       method: "POST",
       headers: await buildHeaders(options),
@@ -355,7 +337,7 @@ export const getUserAction = async (options = {}) => {
   if (!token) return null;
 
   return requestJson(
-    `${getApiBaseUrl(options.apiBaseUrl)}/api/users`,
+    `${getApiBaseUrl(options)}/api/users`,
     {
       method: "GET",
       headers: await buildHeaders({ ...options, token }),
@@ -367,7 +349,7 @@ export const getUserAction = async (options = {}) => {
 
 export const updateUserAction = async (userId, userData, options = {}) =>
   requestJson(
-    `${getApiBaseUrl(options.apiBaseUrl)}/api/users/${userId}`,
+    `${getApiBaseUrl(options)}/api/users/${userId}`,
     {
       method: "PUT",
       headers: await buildHeaders({ ...options, requireAuth: true }),
@@ -378,7 +360,7 @@ export const updateUserAction = async (userId, userData, options = {}) =>
   );
 
 export const getOrdersAction = async (regionId, page = 1, options = {}) => {
-  const url = new URL(`${getApiBaseUrl(options.apiBaseUrl)}/api/orders`);
+  const url = new URL(`${getApiBaseUrl(options)}/api/orders`);
   if (regionId) url.searchParams.set("region_id", regionId);
   url.searchParams.set("page", page.toString());
 
@@ -395,7 +377,7 @@ export const getOrdersAction = async (regionId, page = 1, options = {}) => {
 
 export const getOrderByIdAction = async (orderId, options = {}) =>
   requestJson(
-    `${getApiBaseUrl(options.apiBaseUrl)}/api/orders/${orderId}`,
+    `${getApiBaseUrl(options)}/api/orders/${orderId}`,
     {
       method: "GET",
       headers: await buildHeaders(options),
@@ -406,7 +388,7 @@ export const getOrderByIdAction = async (orderId, options = {}) =>
 
 export const getOrderInvoiceAction = async (orderId, options = {}) => {
   const res = await fetch(
-    `${getApiBaseUrl(options.apiBaseUrl)}/api/generate_invoice_pdf/${orderId}`,
+    `${getApiBaseUrl(options)}/api/generate_invoice_pdf/${orderId}`,
     {
       method: "GET",
       headers: await buildHeaders(options),
@@ -420,9 +402,7 @@ export const getOrderInvoiceAction = async (orderId, options = {}) => {
 };
 
 export const getAvailableDiscountsAction = async (params = {}) => {
-  const url = new URL(
-    `${getApiBaseUrl(params.apiBaseUrl)}/api/discounts/available`,
-  );
+  const url = new URL(`${getApiBaseUrl(params)}/api/discounts/available`);
   if (params.cart_id) url.searchParams.set("cart_id", params.cart_id);
   if (params.region_id) url.searchParams.set("region_id", params.region_id);
 
@@ -443,23 +423,18 @@ export const applyDiscountAction = async (params = {}) => {
     ...(params.discount_id ? { discount_id: params.discount_id } : {}),
   };
 
-  const res = await fetch(
-    `${getApiBaseUrl(params.apiBaseUrl)}/api/discounts/apply`,
-    {
-      method: "POST",
-      headers: await buildHeaders(params),
-      body: JSON.stringify(payload),
-      cache: "no-store",
-    },
-  );
+  const res = await fetch(`${getApiBaseUrl(params)}/api/discounts/apply`, {
+    method: "POST",
+    headers: await buildHeaders(params),
+    body: JSON.stringify(payload),
+    cache: "no-store",
+  });
 
   return wrapJsonResponse(res, "Failed to apply discount");
 };
 
 export const removeDiscountAction = async (params = {}) => {
-  const url = new URL(
-    `${getApiBaseUrl(params.apiBaseUrl)}/api/discounts/remove`,
-  );
+  const url = new URL(`${getApiBaseUrl(params)}/api/discounts/remove`);
   if (params.discount_id)
     url.searchParams.set("discount_id", params.discount_id);
   if (params.region_id) url.searchParams.set("region_id", params.region_id);
@@ -475,7 +450,7 @@ export const removeDiscountAction = async (params = {}) => {
 
 export const trackDiscountEventAction = async (params = {}) => {
   const res = await fetch(
-    `${getApiBaseUrl(params.apiBaseUrl)}/api/discounts/track_event`,
+    `${getApiBaseUrl(params)}/api/discounts/track_event`,
     {
       method: "POST",
       headers: await buildHeaders(params),
