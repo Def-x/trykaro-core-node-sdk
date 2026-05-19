@@ -159,9 +159,9 @@ export const AddressSelection = ({
 
           {/* Same as shipping toggle */}
           <div
-            className={`flex items-center justify-between mb-6 p-4 rounded-lg border cursor-pointer ${sameAsShipping
-              ? "border-[var(--main)]"
-              : "border-[var(--borders)]"
+            className={`flex items-center justify-between mb-6 p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 ${sameAsShipping
+              ? "border-[var(--core-primary)] bg-gray-50 shadow-sm"
+              : "border-gray-200 hover:border-gray-300"
               }`}
             onClick={onSwitchChange}
           >
@@ -279,9 +279,10 @@ export const AddressCard = ({
   const isPayment = type === "stripe";
   return (
     <div
-      className={`w-full border p-[16px] transition-all duration-150 rounded-lg ${isPayment || isSelected
-        ? "border-[var(--main)]"
-        : "border-[var(--borders)]"
+      className={`w-full border-2 p-[16px] transition-all duration-200 rounded-lg ${
+        isSelected || isPayment
+          ? "border-[var(--core-primary)] bg-gray-50 shadow-sm"
+          : "border-gray-200 hover:border-gray-300"
         } ${!isPayment ? "cursor-pointer" : ""}`}
       onClick={onClick}
     >

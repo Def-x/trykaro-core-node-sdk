@@ -2543,7 +2543,7 @@ var AddressSelection = ({
         /* @__PURE__ */ jsxs(
           "div",
           {
-            className: `flex items-center justify-between mb-6 p-4 rounded-lg border cursor-pointer ${sameAsShipping ? "border-[var(--main)]" : "border-[var(--borders)]"}`,
+            className: `flex items-center justify-between mb-6 p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 ${sameAsShipping ? "border-[var(--core-primary)] bg-gray-50 shadow-sm" : "border-gray-200 hover:border-gray-300"}`,
             onClick: onSwitchChange,
             children: [
               /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-base text-[var(--main)]", children: "Same as Shipping address" }),
@@ -2652,7 +2652,7 @@ var AddressCard = ({
   return /* @__PURE__ */ jsx(
     "div",
     {
-      className: `w-full border p-[16px] transition-all duration-150 rounded-lg ${isPayment || isSelected ? "border-[var(--main)]" : "border-[var(--borders)]"} ${!isPayment ? "cursor-pointer" : ""}`,
+      className: `w-full border-2 p-[16px] transition-all duration-200 rounded-lg ${isSelected || isPayment ? "border-[var(--core-primary)] bg-gray-50 shadow-sm" : "border-gray-200 hover:border-gray-300"} ${!isPayment ? "cursor-pointer" : ""}`,
       onClick,
       children: isPayment ? /* @__PURE__ */ jsxs("div", { className: "flex flex-row items-center justify-between", children: [
         /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between", children: [
