@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Cookies from "js-cookie";
 import { useCore } from "../context/CoreProvider";
 
 /**
@@ -27,13 +28,34 @@ export const useLogout = () => {
     if (auth?.logout) {
       await auth.logout();
     } else {
+      // Clear auth state in CoreProvider
+      if (auth?.clearAuth) {
+        auth.clearAuth();
+      }
+
       // Remove localStorage items
       localStorage.removeItem("cartid");
       localStorage.removeItem("access_token");
 
-      // Remove browser cookie
+      // Remove non-HttpOnly cookies via js-cookie (fallback for client-set cookies)
+      try {
+        Cookies.remove("access_token", { path: "/" });
+      } catch (e) {
+        console.error("Failed to remove cookies using js-cookie:", e);
+      }
+
+      // Expire via document.cookie (works only for non-HttpOnly cookies)
       document.cookie =
         "access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/";
+
+      // ✅ Server-side cookie removal: clears HttpOnly cookies by responding
+      // with Set-Cookie: access_token=; Max-Age=0. js-cookie / document.cookie
+      // CANNOT remove HttpOnly cookies — only the server can.
+      try {
+        await fetch("/api/logout", { method: "POST" });
+      } catch (e) {
+        console.error("Failed to call /api/logout:", e);
+      }
 
       router.push("/");
     }

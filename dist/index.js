@@ -1,17 +1,482 @@
 import { getPaymentGateway } from './chunk-ICFWQ2RM.js';
-import React8, { createContext, useState, useEffect, useCallback, useMemo, useContext, useRef } from 'react';
+import React8, { createContext, useState, useMemo, useEffect, useCallback, useContext, useRef } from 'react';
 import { jsx, jsxs, Fragment } from 'react/jsx-runtime';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
+import Cookies from 'js-cookie';
 import { flatten, map, compact, filter, uniqBy } from 'lodash';
 import Link from 'next/link';
 import { useRazorpay } from 'react-razorpay';
 import { createPortal } from 'react-dom';
 
+// src/actions/storefrontActions.js
+var API_VERSION_ACCEPT = "application/vnd.defx-store.v2";
+var getApiBaseUrl = (options = {}) => options?.config?.apiBaseUrl || options?.apiBaseUrl || process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || "";
+var getOrganizationId = (options = {}) => options?.config?.storeId || options?.orgId || process.env.NEXT_PUBLIC_ORGANIZATION_ID || process.env.ORG_ID || null;
+var getServerToken = async (token) => {
+  if (token) return token;
+  if (typeof window !== "undefined") {
+    return window.localStorage?.getItem("access_token") || null;
+  }
+  try {
+    const { cookies } = await import('next/headers');
+    const cookieStore = await cookies();
+    return cookieStore.get("access_token")?.value || cookieStore.get("token")?.value || null;
+  } catch {
+    return null;
+  }
+};
+var buildHeaders = async ({
+  token,
+  orgId,
+  config,
+  json = true,
+  requireAuth = false
+} = {}) => {
+  const authToken = await getServerToken(token);
+  const organizationId = getOrganizationId({ orgId, config });
+  if (requireAuth && !authToken) {
+    throw new Error("Unauthorized");
+  }
+  return {
+    ...json ? { "Content-Type": "application/json" } : {},
+    accept: API_VERSION_ACCEPT,
+    ...organizationId ? { "Set-Organization": organizationId } : {},
+    ...authToken ? { Authorization: `Bearer ${authToken}` } : {}
+  };
+};
+var readError = async (res, fallback) => {
+  const text = await res.text().catch(() => "");
+  if (!text) return fallback;
+  try {
+    const data = JSON.parse(text);
+    return data?.message || data?.error || fallback;
+  } catch {
+    return text;
+  }
+};
+var wrapJsonResponse = async (res, fallback) => {
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    return {
+      serverError: data?.error || data?.message || fallback,
+      data,
+      status: res.status
+    };
+  }
+  return data;
+};
+var requestJson = async (url, options, fallback) => {
+  const res = await fetch(url, options);
+  if (!res.ok) {
+    return { serverError: await readError(res, fallback) };
+  }
+  if (res.status === 204) return true;
+  return res.json();
+};
+var requestJsonFromResponse = async (res, fallback) => {
+  if (!res.ok) return { serverError: await readError(res, fallback) };
+  if (res.status === 204) return true;
+  return res.json();
+};
+var createCartAction = async (body = {}, options = {}) => {
+  const res = await fetch(`${getApiBaseUrl(options)}/api/carts`, {
+    method: "POST",
+    headers: await buildHeaders(options),
+    body: JSON.stringify(body),
+    cache: "no-store"
+  });
+  return requestJsonFromResponse(res, "Failed to create cart");
+};
+var getCartAction = async (regionId, options = {}) => {
+  const url = new URL(`${getApiBaseUrl(options)}/api/carts`);
+  if (regionId) url.searchParams.set("region_id", regionId);
+  return requestJson(
+    url.toString(),
+    {
+      method: "GET",
+      headers: await buildHeaders(options),
+      cache: "no-store"
+    },
+    "Failed to get cart"
+  );
+};
+var getCartByIdAction = async (cartId, regionId, options = {}) => {
+  const url = new URL(`${getApiBaseUrl(options)}/api/carts/${cartId}`);
+  if (regionId) url.searchParams.set("region_id", regionId);
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: await buildHeaders(options),
+    cache: "no-store"
+  });
+  if (res.status === 404) return null;
+  return requestJsonFromResponse(res, "Failed to get cart");
+};
+var updateCartAction = async (cartId, payload, options = {}) => requestJson(
+  `${getApiBaseUrl(options)}/api/carts/${cartId}`,
+  {
+    method: "PUT",
+    headers: await buildHeaders(options),
+    body: JSON.stringify(payload),
+    cache: "no-store"
+  },
+  "Failed to update cart"
+);
+var updateCartIdLineItemsAction = async (payload, options = {}) => requestJson(
+  `${getApiBaseUrl(options)}/api/update_cart_id_line_items`,
+  {
+    method: "PUT",
+    headers: await buildHeaders(options),
+    body: JSON.stringify(payload),
+    cache: "no-store"
+  },
+  "Failed to update cart line items"
+);
+var createLineItemAction = async (body = {}, options = {}) => requestJson(
+  `${getApiBaseUrl(options)}/api/line_items`,
+  {
+    method: "POST",
+    headers: await buildHeaders(options),
+    body: JSON.stringify(body),
+    cache: "no-store"
+  },
+  "Failed to create line item"
+);
+var updateLineItemAction = async (lineItemId, body, options = {}) => requestJson(
+  `${getApiBaseUrl(options)}/api/line_items/${lineItemId}`,
+  {
+    method: "PUT",
+    headers: await buildHeaders(options),
+    body: JSON.stringify(body),
+    cache: "no-store"
+  },
+  "Failed to update line item"
+);
+var deleteLineItemAction = async (lineItemId, options = {}) => requestJson(
+  `${getApiBaseUrl(options)}/api/line_items/${lineItemId}`,
+  {
+    method: "DELETE",
+    headers: await buildHeaders(options),
+    cache: "no-store"
+  },
+  "Failed to delete line item"
+);
+var createRazorpayOrderAction = async (cartId, options = {}) => requestJson(
+  `${getApiBaseUrl(options)}/api/cart_payments`,
+  {
+    method: "POST",
+    headers: await buildHeaders({ ...options, requireAuth: true }),
+    body: JSON.stringify({ cart_id: cartId }),
+    cache: "no-store"
+  },
+  "Failed to create Razorpay order"
+);
+var updateRazorpayPaymentAction = async (paymentId, razorpayPaymentId, options = {}) => requestJson(
+  `${getApiBaseUrl(options)}/api/cart_payments/${paymentId}`,
+  {
+    method: "PUT",
+    headers: await buildHeaders({ ...options, requireAuth: true }),
+    body: JSON.stringify({ razor_payment_id: razorpayPaymentId }),
+    cache: "no-store"
+  },
+  "Failed to update Razorpay payment id"
+);
+var getAddressesAction = async (options = {}) => {
+  const token = await getServerToken(options.token);
+  if (!token) return { data: [] };
+  return requestJson(
+    `${getApiBaseUrl(options)}/api/addresses`,
+    {
+      method: "GET",
+      headers: await buildHeaders({ ...options, token }),
+      cache: "no-store"
+    },
+    "Failed to fetch addresses"
+  );
+};
+var createAddressAction = async (addressData, options = {}) => requestJson(
+  `${getApiBaseUrl(options)}/api/addresses`,
+  {
+    method: "POST",
+    headers: await buildHeaders({ ...options, requireAuth: true }),
+    body: JSON.stringify({ address: addressData }),
+    cache: "no-store"
+  },
+  "Failed to create address"
+);
+var updateAddressAction = async (addressId, addressData, options = {}) => requestJson(
+  `${getApiBaseUrl(options)}/api/addresses/${addressId}`,
+  {
+    method: "PUT",
+    headers: await buildHeaders({ ...options, requireAuth: true }),
+    body: JSON.stringify({ address: addressData }),
+    cache: "no-store"
+  },
+  "Failed to update address"
+);
+var deleteAddressAction = async (addressId, options = {}) => requestJson(
+  `${getApiBaseUrl(options)}/api/addresses/${addressId}`,
+  {
+    method: "DELETE",
+    headers: await buildHeaders({ ...options, requireAuth: true }),
+    cache: "no-store"
+  },
+  "Failed to delete address"
+);
+var loginUser = async (data = {}, options = {}) => {
+  const payload = {
+    phone: data?.phone ?? data,
+    country_code: data?.country_code ?? data?.countryCode ?? "+91",
+    organization_id: getOrganizationId(options)
+  };
+  return requestJson(
+    `${getApiBaseUrl(options)}/api/login`,
+    {
+      method: "POST",
+      headers: await buildHeaders(options),
+      body: JSON.stringify(payload),
+      cache: "no-store"
+    },
+    "Failed to send OTP"
+  );
+};
+var signUpUser = async (data = {}, options = {}) => {
+  const formData = data instanceof FormData ? data : new FormData();
+  if (!(data instanceof FormData)) {
+    formData.append("user[first_name]", data?.firstName ?? "");
+    formData.append("user[last_name]", data?.lastName ?? "");
+    formData.append("user[phone]", data?.phone ?? "");
+    formData.append("user[country_code]", data?.countryCode ?? "+91");
+  }
+  return requestJson(
+    `${getApiBaseUrl(options)}/api/users`,
+    {
+      method: "POST",
+      headers: await buildHeaders({ ...options, json: false }),
+      body: formData,
+      cache: "no-store"
+    },
+    "Failed to sign up"
+  );
+};
+var verifyOtp = async (data = {}, options = {}) => {
+  const result = await requestJson(
+    `${getApiBaseUrl(options)}/api/verify`,
+    {
+      method: "POST",
+      headers: await buildHeaders(options),
+      body: JSON.stringify(data),
+      cache: "no-store"
+    },
+    "Invalid OTP"
+  );
+  const token = result?.token ?? result?.access_token;
+  if (!token || result?.serverError) return result;
+  const user = await getUserAction({ ...options, token });
+  return { ...result, user };
+};
+var getUserAction = async (options = {}) => {
+  const token = await getServerToken(options.token);
+  if (!token) return null;
+  return requestJson(
+    `${getApiBaseUrl(options)}/api/users`,
+    {
+      method: "GET",
+      headers: await buildHeaders({ ...options, token }),
+      cache: "no-store"
+    },
+    "Failed to get user"
+  );
+};
+var updateUserAction = async (userId, userData, options = {}) => requestJson(
+  `${getApiBaseUrl(options)}/api/users/${userId}`,
+  {
+    method: "PUT",
+    headers: await buildHeaders({ ...options, requireAuth: true }),
+    body: JSON.stringify(userData),
+    cache: "no-store"
+  },
+  "Failed to update user"
+);
+var getOrdersAction = async (regionId, page = 1, options = {}) => {
+  const url = new URL(`${getApiBaseUrl(options)}/api/orders`);
+  if (regionId) url.searchParams.set("region_id", regionId);
+  url.searchParams.set("page", page.toString());
+  return requestJson(
+    url.toString(),
+    {
+      method: "GET",
+      headers: await buildHeaders(options),
+      cache: "no-store"
+    },
+    "Failed to get orders"
+  );
+};
+var getOrderByIdAction = async (orderId, options = {}) => requestJson(
+  `${getApiBaseUrl(options)}/api/orders/${orderId}`,
+  {
+    method: "GET",
+    headers: await buildHeaders(options),
+    cache: "no-store"
+  },
+  "Failed to get order"
+);
+var getOrderInvoiceAction = async (orderId, options = {}) => {
+  const res = await fetch(
+    `${getApiBaseUrl(options)}/api/generate_invoice_pdf/${orderId}`,
+    {
+      method: "GET",
+      headers: await buildHeaders(options),
+      cache: "no-store"
+    }
+  );
+  if (!res.ok)
+    return { serverError: await readError(res, "Failed to get order invoice") };
+  return res.text();
+};
+var getAvailableDiscountsAction = async (params = {}) => {
+  const url = new URL(`${getApiBaseUrl(params)}/api/discounts/available`);
+  if (params.cart_id) url.searchParams.set("cart_id", params.cart_id);
+  if (params.region_id) url.searchParams.set("region_id", params.region_id);
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: await buildHeaders(params),
+    cache: "no-store"
+  });
+  return wrapJsonResponse(res, "Failed to fetch available discounts");
+};
+var applyDiscountAction = async (params = {}) => {
+  const payload = {
+    source: params.source || "web",
+    ...params.region_id ? { region_id: params.region_id } : {},
+    ...params.code ? { code: params.code } : {},
+    ...params.discount_id ? { discount_id: params.discount_id } : {}
+  };
+  const res = await fetch(`${getApiBaseUrl(params)}/api/discounts/apply`, {
+    method: "POST",
+    headers: await buildHeaders(params),
+    body: JSON.stringify(payload),
+    cache: "no-store"
+  });
+  return wrapJsonResponse(res, "Failed to apply discount");
+};
+var removeDiscountAction = async (params = {}) => {
+  const url = new URL(`${getApiBaseUrl(params)}/api/discounts/remove`);
+  if (params.discount_id)
+    url.searchParams.set("discount_id", params.discount_id);
+  if (params.region_id) url.searchParams.set("region_id", params.region_id);
+  const res = await fetch(url.toString(), {
+    method: "DELETE",
+    headers: await buildHeaders(params),
+    cache: "no-store"
+  });
+  return wrapJsonResponse(res, "Failed to remove discount");
+};
+var trackDiscountEventAction = async (params = {}) => {
+  const res = await fetch(
+    `${getApiBaseUrl(params)}/api/discounts/track_event`,
+    {
+      method: "POST",
+      headers: await buildHeaders(params),
+      body: JSON.stringify({
+        discount_id: params.discount_id,
+        event_type: params.event_type,
+        source: params.source,
+        region_id: params.region_id
+      }),
+      cache: "no-store"
+    }
+  );
+  return wrapJsonResponse(res, "Failed to track discount event");
+};
+
+// src/actions/discountActions.js
+var buildHeaders2 = (token, orgId) => {
+  const headers = {
+    "Content-Type": "application/json",
+    accept: "application/vnd.defx-store.v2"
+  };
+  if (orgId) {
+    headers["Set-Organization"] = orgId;
+  } else if (process.env.NEXT_PUBLIC_ORGANIZATION_ID) {
+    headers["Set-Organization"] = process.env.NEXT_PUBLIC_ORGANIZATION_ID;
+  } else if (process.env.ORG_ID) {
+    headers["Set-Organization"] = process.env.ORG_ID;
+  }
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  return headers;
+};
+var wrapResponse = async (res, fallbackMessage) => {
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    const err = new Error(
+      data?.error || data?.message || fallbackMessage
+    );
+    err.data = data;
+    err.status = res.status;
+    throw err;
+  }
+  return data;
+};
+var removeDiscountById = async ({ token, discount_id, region_id, apiBaseUrl, orgId } = {}) => {
+  const baseUrl = apiBaseUrl || process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL;
+  if (!baseUrl) throw new Error("API base URL is not configured");
+  const url = new URL(`${baseUrl}/api/discounts/remove`);
+  if (discount_id) url.searchParams.set("discount_id", discount_id);
+  if (region_id) url.searchParams.set("region_id", region_id);
+  const res = await fetch(url.toString(), {
+    method: "DELETE",
+    headers: buildHeaders2(token, orgId),
+    cache: "no-store"
+  });
+  return wrapResponse(res, "Failed to remove discount");
+};
 var CoreContext = createContext(null);
+var inbuiltActions = {
+  // Cart
+  getCart: getCartAction,
+  getCartById: getCartByIdAction,
+  createCart: createCartAction,
+  updateCart: updateCartAction,
+  updateCartIdLineItems: updateCartIdLineItemsAction,
+  // Line items
+  createLineItem: createLineItemAction,
+  updateLineItem: updateLineItemAction,
+  deleteLineItem: deleteLineItemAction,
+  // Payments
+  createRazorOrder: createRazorpayOrderAction,
+  updateRazorPayment: updateRazorpayPaymentAction,
+  // Addresses
+  getUserAddress: getAddressesAction,
+  createAddress: createAddressAction,
+  updateAddress: updateAddressAction,
+  deleteAddress: deleteAddressAction,
+  // Auth — wrappers align the (phone, code, countryCode) call signature used by
+  // CustomOTPAuth with the payload shape expected by the Rails API.
+  // Mirrors exactly what sbs-store-frontend/context/Coreproviders.js does.
+  login: (phone, countryCode = "+91") => loginUser({ phone, country_code: countryCode }),
+  signup: ({ firstName, lastName, phone, countryCode = "+91" }) => signUpUser({ firstName, lastName, phone, countryCode }),
+  verifyOtp: (phone, code, countryCode = "+91") => verifyOtp({ phone, country_code: countryCode, code }),
+  getUser: getUserAction,
+  updateUser: updateUserAction,
+  // Orders
+  getOrders: getOrdersAction,
+  getOrderById: getOrderByIdAction,
+  getOrderInvoice: getOrderInvoiceAction,
+  // Discounts
+  getAvailableDiscounts: getAvailableDiscountsAction,
+  applyDiscount: applyDiscountAction,
+  removeDiscount: removeDiscountAction,
+  removeDiscountById,
+  trackDiscountEvent: trackDiscountEventAction
+};
+var EMPTY_ACTIONS = {};
+var EMPTY_CONFIG = {};
 var CoreProvider = ({
   children,
-  config = {},
-  actions = {},
+  config = EMPTY_CONFIG,
+  actions = EMPTY_ACTIONS,
   toast = null,
   auth: injectedAuth = null,
   orgData
@@ -19,6 +484,15 @@ var CoreProvider = ({
   const primaryColor = config?.primaryColor ?? "#00214c";
   const secondaryColor = config?.secondaryColor ?? "#c8a95a";
   const [cart, setCart] = useState();
+  const resolvedActions = useMemo(() => {
+    const merged = { ...actions };
+    Object.entries(inbuiltActions).forEach(([key, fn]) => {
+      if (!merged[key]) {
+        merged[key] = fn;
+      }
+    });
+    return merged;
+  }, [actions]);
   const [isCartLoading, setIsCartLoading] = useState(true);
   const [region, setRegion] = useState(config?.region ?? null);
   const [authState, setAuthState] = useState(() => injectedAuth ?? {});
@@ -72,19 +546,19 @@ var CoreProvider = ({
     };
   }, [authType, injectedAuth, authState, setAuth, clearAuth]);
   useEffect(() => {
-    if (!actions?.getCart) return;
+    if (!resolvedActions?.getCart) return;
     const loadCart = async () => {
       try {
         setIsCartLoading(true);
         let resolvedCart = null;
         const isSignedIn = auth?.isSignedIn ?? false;
         if (isSignedIn) {
-          const data = await actions.getCart(config?.regionId);
+          const data = await resolvedActions.getCart(config?.regionId);
           resolvedCart = Array.isArray(data) ? data[0] : data;
         } else {
           const storedCartId = typeof window !== "undefined" ? localStorage.getItem("cartid") : null;
-          if (storedCartId && actions?.getCartById) {
-            resolvedCart = await actions.getCartById(
+          if (storedCartId && resolvedActions?.getCartById) {
+            resolvedCart = await resolvedActions.getCartById(
               storedCartId,
               config?.regionId
             );
@@ -126,7 +600,7 @@ var CoreProvider = ({
       isCartLoading,
       region,
       setRegion,
-      actions,
+      actions: resolvedActions,
       toast,
       auth,
       config,
@@ -135,7 +609,18 @@ var CoreProvider = ({
       secondaryColor
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [cart, isCartLoading, region, actions, toast, auth, config, orgData, primaryColor, secondaryColor]
+    [
+      cart,
+      isCartLoading,
+      region,
+      resolvedActions,
+      toast,
+      auth,
+      config,
+      orgData,
+      primaryColor,
+      secondaryColor
+    ]
   );
   return /* @__PURE__ */ jsx(CoreContext.Provider, { value, children: /* @__PURE__ */ jsx(
     "div",
@@ -370,9 +855,22 @@ var useLogout = () => {
     if (auth?.logout) {
       await auth.logout();
     } else {
+      if (auth?.clearAuth) {
+        auth.clearAuth();
+      }
       localStorage.removeItem("cartid");
       localStorage.removeItem("access_token");
+      try {
+        Cookies.remove("access_token", { path: "/" });
+      } catch (e) {
+        console.error("Failed to remove cookies using js-cookie:", e);
+      }
       document.cookie = "access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/";
+      try {
+        await fetch("/api/logout", { method: "POST" });
+      } catch (e) {
+        console.error("Failed to call /api/logout:", e);
+      }
       router.push("/");
     }
     router.refresh();
@@ -2320,12 +2818,35 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
       handler: async (response) => {
         try {
           setIsProcessingPayment(true);
-          let order;
-          if (actions?.updateRazorPayment) {
-            order = await actions.updateRazorPayment(
-              res?.id,
-              response.razorpay_payment_id
-            );
+          const MAX_ATTEMPTS = 5;
+          const RETRY_DELAY_MS = 1e3;
+          let order = null;
+          let lastError = null;
+          for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+            try {
+              if (actions?.updateRazorPayment) {
+                const result = await actions.updateRazorPayment(
+                  res?.id,
+                  response.razorpay_payment_id
+                );
+                if (result?.serverError) {
+                  lastError = result.serverError;
+                  console.warn(`[Checkout] updateRazorPayment attempt ${attempt} failed:`, result.serverError);
+                } else if (result?.order_id) {
+                  order = result;
+                  break;
+                } else {
+                  lastError = "Payment update returned no order ID";
+                  console.warn(`[Checkout] updateRazorPayment attempt ${attempt}: no order_id`, result);
+                }
+              }
+            } catch (err) {
+              lastError = err?.data?.error || err?.message || "Payment update failed";
+              console.error(`[Checkout] updateRazorPayment attempt ${attempt} threw:`, err);
+            }
+            if (attempt < MAX_ATTEMPTS) {
+              await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+            }
           }
           if (order?.order_id) {
             if (typeof window !== "undefined") {
@@ -2333,15 +2854,19 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
             }
             setCart(null);
             router.push(`/order/${order?.order_id}?show=true`);
+          } else {
+            setIsProcessingPayment(false);
+            const msg = typeof lastError === "string" ? lastError : "Payment could not be updated. Please contact support.";
+            toast?.error?.(msg);
           }
         } catch (err) {
-          console.error("Payment update failed:", err);
+          console.error("Payment handler error:", err);
           setIsProcessingPayment(false);
           const errorMsg = err?.data?.error || err?.message;
           if (errorMsg && typeof errorMsg === "string") {
             toast?.error?.(errorMsg);
           } else {
-            toast?.error?.("Payment update failed");
+            toast?.error?.("Payment could not be updated. Please contact support.");
           }
         }
       },
@@ -2572,7 +3097,9 @@ var CouponSection = () => {
         const data = await actions.getAvailableDiscounts({
           token,
           cart_id: cart?.id,
-          region_id: config?.regionId
+          region_id: config?.regionId,
+          apiBaseUrl: config?.apiBaseUrl,
+          orgId: config?.storeId
         });
         if (isMounted) {
           setAvailableDiscounts(Array.isArray(data) ? data : []);
@@ -2616,8 +3143,14 @@ var CouponSection = () => {
         token,
         code: inputValue.trim(),
         source: "web",
-        region_id: config?.regionId
+        region_id: config?.regionId,
+        apiBaseUrl: config?.apiBaseUrl,
+        orgId: config?.storeId
       });
+      if (result?.serverError) {
+        setErrorMessage(result.serverError);
+        return;
+      }
       const updatedCart = result?.cart ?? result;
       setCart(updatedCart);
       setIsOpen(false);
@@ -2655,8 +3188,14 @@ var CouponSection = () => {
         token,
         discount_id: discountId,
         source: "web",
-        region_id: config?.regionId
+        region_id: config?.regionId,
+        apiBaseUrl: config?.apiBaseUrl,
+        orgId: config?.storeId
       });
+      if (result?.serverError) {
+        setErrorMessage(result.serverError);
+        return;
+      }
       const updatedCart = result?.cart ?? result;
       setCart(updatedCart);
       setIsOpen(false);
@@ -2688,7 +3227,9 @@ var CouponSection = () => {
       const result = await removeFn({
         token,
         discount_id,
-        region_id: config?.regionId
+        region_id: config?.regionId,
+        apiBaseUrl: config?.apiBaseUrl,
+        orgId: config?.storeId
       });
       const updatedCart = result?.cart ?? result;
       setCart(updatedCart);
@@ -3440,7 +3981,7 @@ var OrdersList = ({ initialOrders }) => {
       setIsLoading(true);
       try {
         if (actions?.getOrders) {
-          const data = await actions.getOrders(config?.storeId);
+          const data = await actions.getOrders(config?.regionId);
           setOrders(data || []);
         }
       } catch (error) {
@@ -3450,7 +3991,7 @@ var OrdersList = ({ initialOrders }) => {
       }
     };
     fetchOrders();
-  }, [actions, config?.storeId, initialOrders]);
+  }, [actions, config?.regionId, initialOrders]);
   if (isLoading) {
     return /* @__PURE__ */ jsx("div", { className: "flex justify-center py-20", children: /* @__PURE__ */ jsx(Spinner, {}) });
   }

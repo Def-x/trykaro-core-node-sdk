@@ -186,28 +186,64 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
       handler: async (response) => {
         try {
           setIsProcessingPayment(true);
-          let order;
-          if (actions?.updateRazorPayment) {
-            order = await actions.updateRazorPayment(
-              res?.id,
-              response.razorpay_payment_id,
-            );
+
+          const MAX_ATTEMPTS = 5;
+          const RETRY_DELAY_MS = 1000;
+          let order = null;
+          let lastError = null;
+
+          for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+            try {
+              if (actions?.updateRazorPayment) {
+                const result = await actions.updateRazorPayment(
+                  res?.id,
+                  response.razorpay_payment_id,
+                );
+
+                // updateRazorPayment may return {serverError} instead of throwing
+                if (result?.serverError) {
+                  lastError = result.serverError;
+                  console.warn(`[Checkout] updateRazorPayment attempt ${attempt} failed:`, result.serverError);
+                } else if (result?.order_id) {
+                  order = result;
+                  break; // success — stop retrying
+                } else {
+                  lastError = "Payment update returned no order ID";
+                  console.warn(`[Checkout] updateRazorPayment attempt ${attempt}: no order_id`, result);
+                }
+              }
+            } catch (err) {
+              lastError = err?.data?.error || err?.message || "Payment update failed";
+              console.error(`[Checkout] updateRazorPayment attempt ${attempt} threw:`, err);
+            }
+
+            if (attempt < MAX_ATTEMPTS) {
+              await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+            }
           }
+
           if (order?.order_id) {
             if (typeof window !== "undefined") {
               localStorage.removeItem("cartid");
             }
             setCart(null);
             router.push(`/order/${order?.order_id}?show=true`);
+          } else {
+            // All 5 attempts failed — stop showing the processing screen
+            setIsProcessingPayment(false);
+            const msg = typeof lastError === "string"
+              ? lastError
+              : "Payment could not be updated. Please contact support.";
+            toast?.error?.(msg);
           }
         } catch (err) {
-          console.error("Payment update failed:", err);
+          console.error("Payment handler error:", err);
           setIsProcessingPayment(false);
           const errorMsg = err?.data?.error || err?.message;
           if (errorMsg && typeof errorMsg === "string") {
             toast?.error?.(errorMsg);
           } else {
-            toast?.error?.("Payment update failed");
+            toast?.error?.("Payment could not be updated. Please contact support.");
           }
         }
       },

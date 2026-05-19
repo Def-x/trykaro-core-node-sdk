@@ -1,11 +1,9 @@
-"use server";
-
 /**
  * Discount API actions — @defx/storefront-core
  *
- * Server actions used directly by CouponSection.
- * Next.js bundles these on the server and creates an RPC bridge
- * so "use client" components can call them seamlessly.
+ * Plain async fetch helpers for discount operations.
+ * No "use server" directive — this file is bundled by tsup (esbuild) and
+ * "use server" is a Next.js-only directive that breaks package builds.
  *
  * process.env.API_BASE_URL and process.env.ORG_ID are resolved
  * from the host Next.js project's environment at server runtime.
@@ -19,6 +17,8 @@ const buildHeaders = (token, orgId) => {
 
   if (orgId) {
     headers["Set-Organization"] = orgId;
+  } else if (process.env.NEXT_PUBLIC_ORGANIZATION_ID) {
+    headers["Set-Organization"] = process.env.NEXT_PUBLIC_ORGANIZATION_ID;
   } else if (process.env.ORG_ID) {
     headers["Set-Organization"] = process.env.ORG_ID;
   }

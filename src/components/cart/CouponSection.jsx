@@ -40,6 +40,8 @@ const CouponSection = () => {
           token,
           cart_id: cart?.id,
           region_id: config?.regionId,
+          apiBaseUrl: config?.apiBaseUrl,
+          orgId: config?.storeId,
         });
         if (isMounted) {
           setAvailableDiscounts(Array.isArray(data) ? data : []);
@@ -96,7 +98,14 @@ const CouponSection = () => {
         code: inputValue.trim(),
         source: "web",
         region_id: config?.regionId,
+        apiBaseUrl: config?.apiBaseUrl,
+        orgId: config?.storeId,
       });
+      // wrapJsonResponse returns {serverError} on API failure (does not throw)
+      if (result?.serverError) {
+        setErrorMessage(result.serverError);
+        return;
+      }
       const updatedCart = result?.cart ?? result;
       setCart(updatedCart);
       setIsOpen(false);
@@ -141,7 +150,14 @@ const CouponSection = () => {
         discount_id: discountId,
         source: "web",
         region_id: config?.regionId,
+        apiBaseUrl: config?.apiBaseUrl,
+        orgId: config?.storeId,
       });
+      // wrapJsonResponse returns {serverError} on API failure (does not throw)
+      if (result?.serverError) {
+        setErrorMessage(result.serverError);
+        return;
+      }
       const updatedCart = result?.cart ?? result;
       setCart(updatedCart);
       setIsOpen(false);
@@ -180,6 +196,8 @@ const CouponSection = () => {
         token,
         discount_id,
         region_id: config?.regionId,
+        apiBaseUrl: config?.apiBaseUrl,
+        orgId: config?.storeId,
       });
       const updatedCart = result?.cart ?? result;
       setCart(updatedCart);

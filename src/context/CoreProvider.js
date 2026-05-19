@@ -8,8 +8,62 @@ import React, {
   useMemo,
   useState,
 } from "react";
+import * as storefrontActions from "../actions/storefrontActions";
+import * as discountActions from "../actions/discountActions";
 
 const CoreContext = createContext(null);
+
+// Actions bundled inside the package — used as defaults when the host app
+// does not inject its own action for a given key via the `actions` prop.
+const inbuiltActions = {
+  // Cart
+  getCart: storefrontActions.getCartAction,
+  getCartById: storefrontActions.getCartByIdAction,
+  createCart: storefrontActions.createCartAction,
+  updateCart: storefrontActions.updateCartAction,
+  updateCartIdLineItems: storefrontActions.updateCartIdLineItemsAction,
+  // Line items
+  createLineItem: storefrontActions.createLineItemAction,
+  updateLineItem: storefrontActions.updateLineItemAction,
+  deleteLineItem: storefrontActions.deleteLineItemAction,
+  // Payments
+  createRazorOrder: storefrontActions.createRazorpayOrderAction,
+  updateRazorPayment: storefrontActions.updateRazorpayPaymentAction,
+  // Addresses
+  getUserAddress: storefrontActions.getAddressesAction,
+  createAddress: storefrontActions.createAddressAction,
+  updateAddress: storefrontActions.updateAddressAction,
+  deleteAddress: storefrontActions.deleteAddressAction,
+  // Auth — wrappers align the (phone, code, countryCode) call signature used by
+  // CustomOTPAuth with the payload shape expected by the Rails API.
+  // Mirrors exactly what sbs-store-frontend/context/Coreproviders.js does.
+  login: (phone, countryCode = "+91") =>
+    storefrontActions.loginUser({ phone, country_code: countryCode }),
+
+  signup: ({ firstName, lastName, phone, countryCode = "+91" }) =>
+    storefrontActions.signUpUser({ firstName, lastName, phone, countryCode }),
+
+  verifyOtp: (phone, code, countryCode = "+91") =>
+    storefrontActions.verifyOtp({ phone, country_code: countryCode, code }),
+
+  getUser: storefrontActions.getUserAction,
+  updateUser: storefrontActions.updateUserAction,
+  // Orders
+  getOrders: storefrontActions.getOrdersAction,
+  getOrderById: storefrontActions.getOrderByIdAction,
+  getOrderInvoice: storefrontActions.getOrderInvoiceAction,
+  // Discounts
+  getAvailableDiscounts: storefrontActions.getAvailableDiscountsAction,
+  applyDiscount: storefrontActions.applyDiscountAction,
+  removeDiscount: storefrontActions.removeDiscountAction,
+  removeDiscountById: discountActions.removeDiscountById,
+  trackDiscountEvent: storefrontActions.trackDiscountEventAction,
+};
+
+// Stable empty defaults — avoids creating a new object reference on every render,
+// which would cause useMemo/useEffect loops when no actions/config are passed.
+const EMPTY_ACTIONS = {};
+const EMPTY_CONFIG = {};
 
 /**
  * CoreProvider
@@ -45,8 +99,8 @@ const CoreContext = createContext(null);
  */
 export const CoreProvider = ({
   children,
-  config = {},
-  actions = {},
+  config = EMPTY_CONFIG,
+  actions = EMPTY_ACTIONS,
   toast = null,
   auth: injectedAuth = null,
   orgData,
@@ -55,6 +109,16 @@ export const CoreProvider = ({
   const primaryColor = config?.primaryColor ?? "#00214c";
   const secondaryColor = config?.secondaryColor ?? "#c8a95a";
   const [cart, setCart] = useState();
+
+  const resolvedActions = useMemo(() => {
+    const merged = { ...actions };
+    Object.entries(inbuiltActions).forEach(([key, fn]) => {
+      if (!merged[key]) {
+        merged[key] = fn;
+      }
+    });
+    return merged;
+  }, [actions]);
   const [isCartLoading, setIsCartLoading] = useState(true);
   const [region, setRegion] = useState(config?.region ?? null);
   const [authState, setAuthState] = useState(() => injectedAuth ?? {});
@@ -119,7 +183,7 @@ export const CoreProvider = ({
   }, [authType, injectedAuth, authState, setAuth, clearAuth]);
 
   useEffect(() => {
-    if (!actions?.getCart) return;
+    if (!resolvedActions?.getCart) return;
 
     const loadCart = async () => {
       try {
@@ -129,14 +193,14 @@ export const CoreProvider = ({
         const isSignedIn = auth?.isSignedIn ?? false;
 
         if (isSignedIn) {
-          const data = await actions.getCart(config?.regionId);
+          const data = await resolvedActions.getCart(config?.regionId);
           resolvedCart = Array.isArray(data) ? data[0] : data;
         } else {
           const storedCartId =
             typeof window !== "undefined" ? localStorage.getItem("cartid") : null;
 
-          if (storedCartId && actions?.getCartById) {
-            resolvedCart = await actions.getCartById(
+          if (storedCartId && resolvedActions?.getCartById) {
+            resolvedCart = await resolvedActions.getCartById(
               storedCartId,
               config?.regionId,
             );
@@ -187,7 +251,7 @@ export const CoreProvider = ({
       isCartLoading,
       region,
       setRegion,
-      actions,
+      actions: resolvedActions,
       toast,
       auth,
       config,
@@ -196,7 +260,18 @@ export const CoreProvider = ({
       secondaryColor,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [cart, isCartLoading, region, actions, toast, auth, config, orgData, primaryColor, secondaryColor],
+    [
+      cart,
+      isCartLoading,
+      region,
+      resolvedActions,
+      toast,
+      auth,
+      config,
+      orgData,
+      primaryColor,
+      secondaryColor,
+    ],
   );
 
   return (
