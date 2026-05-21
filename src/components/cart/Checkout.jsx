@@ -13,6 +13,7 @@ import {
   AddressSelectionCard,
   AddressCard,
 } from "./AddressComponents";
+import { trackPurchase, trackPaymentFailed } from "../../lib/gtm";
 
 // ─── Top-level Checkout ────────────────────────────────────────────────────────
 const Checkout = ({ hasDeletedItems }) => {
@@ -226,6 +227,13 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
             if (typeof window !== "undefined") {
               localStorage.removeItem("cartid");
             }
+
+            // ── GA4 via GTM ────────────────────────────────────────────────
+            const userId = user?.id ?? user?.userId ?? null;
+            const currency = config?.currency ?? "INR";
+            trackPurchase({ userId, cart, currency });
+            // ───────────────────────────────────────────────────────────────
+
             setCart(null);
             router.push(`/order/${order?.order_id}?show=true`);
           } else {
@@ -259,6 +267,18 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
     razorpay.on("payment.failed", (response) => {
       console.error("Razorpay payment failed:", response);
       toast?.error?.(response?.error?.description || "Payment failed");
+
+      // ── GA4 via GTM ────────────────────────────────────────────────
+      const userId = user?.id ?? user?.userId ?? null;
+      const currency = config?.currency ?? "INR";
+      trackPaymentFailed({
+        userId,
+        cart,
+        currency,
+        errorCode: response?.error?.code ?? "",
+        errorReason: response?.error?.reason ?? response?.error?.description ?? "",
+      });
+      // ───────────────────────────────────────────────────────────────
     });
     razorpay.open();
   };

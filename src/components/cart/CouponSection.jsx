@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useCore } from "../../context/CoreProvider";
 import { useCurrencyFormat } from "../../hooks/useCurrencyFormat";
+import { trackApplyCoupon } from "../../lib/gtm";
 
 
 const CouponSection = () => {
@@ -108,6 +109,13 @@ const CouponSection = () => {
       }
       const updatedCart = result?.cart ?? result;
       setCart(updatedCart);
+
+      // ── GA4 via GTM ───────────────────────────────────────────────
+      const userId = auth?.user?.id ?? auth?.user?.userId ?? null;
+      const currency = config?.currency ?? "INR";
+      trackApplyCoupon({ userId, cart: updatedCart, couponCode: inputValue.trim(), currency });
+      // ───────────────────────────────────────────────────────────────
+
       setIsOpen(false);
       setInputValue("");
       setErrorMessage(null);
@@ -160,6 +168,13 @@ const CouponSection = () => {
       }
       const updatedCart = result?.cart ?? result;
       setCart(updatedCart);
+
+      // ── GA4 via GTM ───────────────────────────────────────────────
+      const userId = auth?.user?.id ?? auth?.user?.userId ?? null;
+      const currency = config?.currency ?? "INR";
+      trackApplyCoupon({ userId, cart: updatedCart, couponCode: "", currency });
+      // ───────────────────────────────────────────────────────────────
+
       setIsOpen(false);
       setInputValue("");
       setErrorMessage(null);
