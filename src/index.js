@@ -52,6 +52,7 @@ export {
   trackPageView,
   trackViewItem,
   trackAddToCart,
+  trackBeginCheckout,
   trackPurchase,
   trackApplyCoupon,
   trackPaymentFailed,

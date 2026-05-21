@@ -13,7 +13,7 @@ import {
   AddressSelectionCard,
   AddressCard,
 } from "./AddressComponents";
-import { trackPurchase, trackPaymentFailed } from "../../lib/gtm";
+import { trackBeginCheckout, trackPurchase, trackPaymentFailed } from "../../lib/gtm";
 
 // ─── Top-level Checkout ────────────────────────────────────────────────────────
 const Checkout = ({ hasDeletedItems }) => {
@@ -228,11 +228,17 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
               localStorage.removeItem("cartid");
             }
 
-            // ── GA4 via GTM ────────────────────────────────────────────────
+            // ── GA4 purchase (fires only after payment is fully captured) ─
             const userId = user?.id ?? user?.userId ?? null;
             const currency = config?.currency ?? "INR";
-            trackPurchase({ userId, cart, currency });
-            // ───────────────────────────────────────────────────────────────
+            trackPurchase({
+              userId,
+              transactionId: String(order.order_id),
+              cart,
+              currency,
+              metaOverrides: { source: "checkout" },
+            });
+            // ─────────────────────────────────────────────────────────────
 
             setCart(null);
             router.push(`/order/${order?.order_id}?show=true`);
@@ -295,6 +301,18 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
       setIsPlacingOrder(true);
       if (actions?.createRazorOrder) {
         const orderResponse = await actions.createRazorOrder(cart.id);
+
+        // ── GA4 begin_checkout (fires only after Razorpay order is created) ─
+        const userId = user?.id ?? user?.userId ?? null;
+        const currency = config?.currency ?? "INR";
+        trackBeginCheckout({
+          userId,
+          cart,
+          currency,
+          metaOverrides: { source: "checkout" },
+        });
+        // ───────────────────────────────────────────────────────────────────
+
         onRazorPayHandler(orderResponse);
       }
     } catch (err) {
