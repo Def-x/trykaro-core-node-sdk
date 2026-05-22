@@ -11,6 +11,10 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
+const isGtmEnabled =
+  process.env.NODE_ENV === "production" &&
+  Boolean(process.env.NEXT_PUBLIC_GTM_ID?.trim());
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /**
@@ -19,7 +23,7 @@
  * @param {Object} payload
  */
 export function pushToDataLayer(payload) {
-  if (typeof window === "undefined") return;
+  if (!isGtmEnabled || typeof window === "undefined") return;
   window.dataLayer = window.dataLayer || [];
   window.dataLayer.push(payload);
 }

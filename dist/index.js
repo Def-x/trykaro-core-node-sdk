@@ -651,8 +651,9 @@ var useCart = () => {
 };
 
 // src/lib/gtm.js
+var isGtmEnabled = process.env.NODE_ENV === "production" && Boolean(process.env.NEXT_PUBLIC_GTM_ID?.trim());
 function pushToDataLayer(payload) {
-  if (typeof window === "undefined") return;
+  if (!isGtmEnabled || typeof window === "undefined") return;
   window.dataLayer = window.dataLayer || [];
   window.dataLayer.push(payload);
 }
@@ -3488,7 +3489,10 @@ var CouponSection = () => {
     (coupon) => coupon.code || coupon.id
   );
   if (cart && rawDiscounts.length === 0) {
-    console.warn("[CouponSection] No discounts found on cart. Cart keys:", Object.keys(cart));
+    console.warn(
+      "[CouponSection] No discounts found on cart. Cart keys:",
+      Object.keys(cart)
+    );
   }
   const firstAppliedDiscount = appliedDiscounts?.[0];
   const showInput = !firstAppliedDiscount || firstAppliedDiscount.stackable;
@@ -3520,7 +3524,6 @@ var CouponSection = () => {
       setCart(updatedCart);
       const userId = auth?.userId ?? auth?.user?.id ?? auth?.user?.userId ?? null;
       const currency = config?.currency ?? "INR";
-      trackApplyCoupon({ userId, cart: updatedCart, couponCode: inputValue.trim(), currency });
       setIsOpen(false);
       setInputValue("");
       setErrorMessage(null);
@@ -3568,7 +3571,6 @@ var CouponSection = () => {
       setCart(updatedCart);
       const userId = auth?.userId ?? auth?.user?.id ?? auth?.user?.userId ?? null;
       const currency = config?.currency ?? "INR";
-      trackApplyCoupon({ userId, cart: updatedCart, couponCode: coupon.code || coupon.display_action_value || "", currency });
       setIsOpen(false);
       setInputValue("");
       setErrorMessage(null);
@@ -3614,7 +3616,10 @@ var CouponSection = () => {
   };
   const getEligibility = (coupon) => {
     if (coupon.min_order_value > 0 && (cart?.item_total ?? 0) < coupon.min_order_value) {
-      return { eligible: false, reason: `Add ${coupon.display_min_order_value} more to apply` };
+      return {
+        eligible: false,
+        reason: `Add ${coupon.display_min_order_value} more to apply`
+      };
     }
     return { eligible: true, reason: null };
   };
@@ -3648,15 +3653,21 @@ var CouponSection = () => {
             /* @__PURE__ */ jsx("span", { className: "font-[Nunito-regular] text-[#0f0f0f] text-[12px]", children: "applied" }),
             /* @__PURE__ */ jsx("span", { className: "text-[#0f0f0f] text-[12px] hidden sm:inline", children: "\xB7" }),
             /* @__PURE__ */ jsxs("span", { className: "text-[#00b300] text-[12px] font-[Nunito-bold]", children: [
-              "You save ",
-              formatCurrency(coupon.display_discount_amount || coupon.discount_amount / 100)
+              "You save",
+              " ",
+              formatCurrency(
+                coupon.display_discount_amount || coupon.discount_amount / 100
+              )
             ] })
           ] }),
           /* @__PURE__ */ jsx(
             "button",
             {
               type: "button",
-              onClick: () => handleRemove({ code: coupon.code, discount_id: coupon.discount_id ?? coupon.id }),
+              onClick: () => handleRemove({
+                code: coupon.code,
+                discount_id: coupon.discount_id ?? coupon.id
+              }),
               disabled: removingId === (coupon.discount_id ?? coupon.id),
               className: "text-[#8e9194] text-lg bg-transparent border-0 cursor-pointer disabled:opacity-50",
               "aria-label": `Remove coupon ${coupon.code || "discount"}`,
@@ -3714,30 +3725,37 @@ var CouponSection = () => {
             const conditionParts = [];
             if (endDate) conditionParts.push(`Ends ${endDate}`);
             const conditionText = conditionParts.join(" \xB7 ");
-            return /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-[2px]", children: [
-              /* @__PURE__ */ jsxs(
-                "button",
-                {
-                  type: "button",
-                  onClick: () => {
-                    if (!eligible) return;
-                    if (!coupon.code) {
-                      applyById(coupon);
-                    } else {
-                      setInputValue(coupon.code);
+            return /* @__PURE__ */ jsxs(
+              "div",
+              {
+                className: "flex flex-col gap-[2px]",
+                children: [
+                  /* @__PURE__ */ jsxs(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: () => {
+                        if (!eligible) return;
+                        if (!coupon.code) {
+                          applyById(coupon);
+                        } else {
+                          setInputValue(coupon.code);
+                        }
+                      },
+                      disabled: !eligible || isApplying,
+                      className: `bg-[#fff5ee] border border-dashed border-[#FF6500] text-[#FF6500] text-[11px] font-[Nunito-bold] px-3 py-1 rounded ${!eligible || isApplying ? "opacity-40 cursor-not-allowed" : ""}`,
+                      children: [
+                        coupon.code ? `${coupon.code} \u2014 ` : "",
+                        coupon.display_action_value || "Discount"
+                      ]
                     }
-                  },
-                  disabled: !eligible || isApplying,
-                  className: `bg-[#fff5ee] border border-dashed border-[#FF6500] text-[#FF6500] text-[11px] font-[Nunito-bold] px-3 py-1 rounded ${!eligible || isApplying ? "opacity-40 cursor-not-allowed" : ""}`,
-                  children: [
-                    coupon.code ? `${coupon.code} \u2014 ` : "",
-                    coupon.display_action_value || "Discount"
-                  ]
-                }
-              ),
-              reason && /* @__PURE__ */ jsx("span", { className: "text-[11px] text-[#8e9194]", children: reason }),
-              !reason && conditionText && /* @__PURE__ */ jsx("span", { className: "text-[11px] text-[#8e9194]", children: conditionText })
-            ] }, coupon?.code || coupon?.id);
+                  ),
+                  reason && /* @__PURE__ */ jsx("span", { className: "text-[11px] text-[#8e9194]", children: reason }),
+                  !reason && conditionText && /* @__PURE__ */ jsx("span", { className: "text-[11px] text-[#8e9194]", children: conditionText })
+                ]
+              },
+              coupon?.code || coupon?.id
+            );
           }) })
         ] })
       ] })
