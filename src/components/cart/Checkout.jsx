@@ -13,7 +13,7 @@ import {
   AddressSelectionCard,
   AddressCard,
 } from "./AddressComponents";
-import { trackBeginCheckout, trackPurchase, trackPaymentFailed } from "../../lib/gtm";
+import { trackBeginCheckout, trackPurchase, trackPaymentFailed, trackAddShippingInfo, trackAddPaymentInfo } from "../../lib/gtm";
 
 // ─── Top-level Checkout ────────────────────────────────────────────────────────
 const Checkout = ({ hasDeletedItems }) => {
@@ -229,7 +229,8 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
             }
 
             // ── GA4 purchase (fires only after payment is fully captured) ─
-            const userId = user?.id ?? user?.userId ?? null;
+            // auth.userId is always the decoded JWT sub set by Coreproviders.js
+            const userId = auth?.userId ?? auth?.user?.id ?? user?.id ?? null;
             const currency = config?.currency ?? "INR";
             trackPurchase({
               userId,
@@ -275,7 +276,7 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
       toast?.error?.(response?.error?.description || "Payment failed");
 
       // ── GA4 via GTM ────────────────────────────────────────────────
-      const userId = user?.id ?? user?.userId ?? null;
+      const userId = auth?.userId ?? auth?.user?.id ?? user?.id ?? null;
       const currency = config?.currency ?? "INR";
       trackPaymentFailed({
         userId,
@@ -302,16 +303,37 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
       if (actions?.createRazorOrder) {
         const orderResponse = await actions.createRazorOrder(cart.id);
 
-        // ── GA4 begin_checkout (fires only after Razorpay order is created) ─
-        const userId = user?.id ?? user?.userId ?? null;
+        // ── GA4 checkout funnel steps ────────────────────────────────────
+        // auth.userId is always the decoded JWT sub set by Coreproviders.js
+        const userId = auth?.userId ?? auth?.user?.id ?? user?.id ?? null;
         const currency = config?.currency ?? "INR";
+
+        // Step 1: begin_checkout
         trackBeginCheckout({
           userId,
           cart,
           currency,
           metaOverrides: { source: "checkout" },
         });
-        // ───────────────────────────────────────────────────────────────────
+
+        // Step 2: add_shipping_info (address already set on cart at this point)
+        trackAddShippingInfo({
+          userId,
+          cart,
+          shippingTier: orderType === "pickup" ? "Pickup" : "Standard",
+          currency,
+          metaOverrides: { source: "checkout" },
+        });
+
+        // Step 3: add_payment_info (Razorpay selected)
+        trackAddPaymentInfo({
+          userId,
+          cart,
+          paymentType: "Razorpay",
+          currency,
+          metaOverrides: { source: "checkout" },
+        });
+        // ─────────────────────────────────────────────────────────────────
 
         onRazorPayHandler(orderResponse);
       }

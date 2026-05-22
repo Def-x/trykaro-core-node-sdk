@@ -674,7 +674,7 @@ function buildItem(product, qty = 1) {
     item_name: product?.name ?? product?.line_itemable?.name ?? "",
     item_category: product?.taxons?.[0]?.display_name ?? product?.category ?? "",
     price: Number(
-      product?.price ?? product?.display_price ?? product?.line_itemable?.price ?? 0
+      product?.display_price ?? product?.price ?? product?.line_itemable?.price ?? 0
     ),
     quantity: Number(qty)
   };
@@ -694,7 +694,7 @@ function trackViewItem({
   currency = "INR",
   metaOverrides = {}
 }) {
-  const price = Number(product?.price ?? product?.display_price ?? 0);
+  const price = Number(product?.display_price ?? product?.price ?? 0);
   clearEcommerce();
   pushToDataLayer({
     event: "view_item",
@@ -717,7 +717,7 @@ function trackAddToCart({
   currency = "INR",
   metaOverrides = {}
 }) {
-  const price = Number(product?.price ?? product?.display_price ?? 0);
+  const price = Number(product?.display_price ?? product?.price ?? 0);
   clearEcommerce();
   pushToDataLayer({
     event: "add_to_cart",
@@ -788,6 +788,66 @@ function trackPurchase({
       shipping,
       discount: Math.abs(discount),
       // promo_total is usually negative
+      items
+    },
+    meta: buildMeta(metaOverrides)
+  });
+}
+function trackAddShippingInfo({
+  userId,
+  cart,
+  shippingTier = "Standard",
+  currency = "INR",
+  metaOverrides = {}
+}) {
+  const value = Number(cart?.total ?? cart?.display_total ?? 0);
+  const tax = Number(cart?.tax_total ?? 0);
+  const shipping = Number(cart?.ship_total ?? 0);
+  const discount = Number(cart?.promo_total ?? 0);
+  const items = (cart?.line_items ?? []).map(
+    (li) => buildItem(li?.variant ?? li?.line_itemable ?? li, li?.quantity ?? 1)
+  );
+  clearEcommerce();
+  pushToDataLayer({
+    event: "add_shipping_info",
+    user_id: userId ?? null,
+    ecommerce: {
+      currency,
+      value,
+      tax,
+      shipping,
+      discount: Math.abs(discount),
+      shipping_tier: shippingTier,
+      items
+    },
+    meta: buildMeta(metaOverrides)
+  });
+}
+function trackAddPaymentInfo({
+  userId,
+  cart,
+  paymentType = "Razorpay",
+  currency = "INR",
+  metaOverrides = {}
+}) {
+  const value = Number(cart?.total ?? cart?.display_total ?? 0);
+  const tax = Number(cart?.tax_total ?? 0);
+  const shipping = Number(cart?.ship_total ?? 0);
+  const discount = Number(cart?.promo_total ?? 0);
+  const items = (cart?.line_items ?? []).map(
+    (li) => buildItem(li?.variant ?? li?.line_itemable ?? li, li?.quantity ?? 1)
+  );
+  clearEcommerce();
+  pushToDataLayer({
+    event: "add_payment_info",
+    user_id: userId ?? null,
+    ecommerce: {
+      currency,
+      value,
+      tax,
+      shipping,
+      discount: Math.abs(discount),
+      payment_type: paymentType,
       items
     },
     meta: buildMeta(metaOverrides)
@@ -980,6 +1040,7 @@ function useAddToCart() {
       const userId = auth?.user?.id ?? auth?.user?.userId ?? null;
       const currency = config?.currency ?? "INR";
       const qty = overrideQty !== null ? overrideQty : quantity ?? 1;
+      console.log("trackAddToCart", { userId, product, qty, currency, auth });
       trackAddToCart({ userId, product, qty, currency });
       toast?.success?.(`${product?.name || "Item"} added to cart`);
     } catch (err) {
@@ -3091,7 +3152,7 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
             if (typeof window !== "undefined") {
               localStorage.removeItem("cartid");
             }
-            const userId = user?.id ?? user?.userId ?? null;
+            const userId = auth?.userId ?? auth?.user?.id ?? user?.id ?? null;
             const currency = config?.currency ?? "INR";
             trackPurchase({
               userId,
@@ -3129,7 +3190,7 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
     razorpay.on("payment.failed", (response) => {
       console.error("Razorpay payment failed:", response);
       toast?.error?.(response?.error?.description || "Payment failed");
-      const userId = user?.id ?? user?.userId ?? null;
+      const userId = auth?.userId ?? auth?.user?.id ?? user?.id ?? null;
       const currency = config?.currency ?? "INR";
       trackPaymentFailed({
         userId,
@@ -3151,11 +3212,25 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
       setIsPlacingOrder(true);
       if (actions?.createRazorOrder) {
         const orderResponse = await actions.createRazorOrder(cart.id);
-        const userId = user?.id ?? user?.userId ?? null;
+        const userId = auth?.userId ?? auth?.user?.id ?? user?.id ?? null;
         const currency = config?.currency ?? "INR";
         trackBeginCheckout({
           userId,
           cart,
+          currency,
+          metaOverrides: { source: "checkout" }
+        });
+        trackAddShippingInfo({
+          userId,
+          cart,
+          shippingTier: orderType === "pickup" ? "Pickup" : "Standard",
+          currency,
+          metaOverrides: { source: "checkout" }
+        });
+        trackAddPaymentInfo({
+          userId,
+          cart,
+          paymentType: "Razorpay",
           currency,
           metaOverrides: { source: "checkout" }
         });
@@ -3418,7 +3493,7 @@ var CouponSection = () => {
       }
       const updatedCart = result?.cart ?? result;
       setCart(updatedCart);
-      const userId = auth?.user?.id ?? auth?.user?.userId ?? null;
+      const userId = auth?.userId ?? auth?.user?.id ?? auth?.user?.userId ?? null;
       const currency = config?.currency ?? "INR";
       trackApplyCoupon({ userId, cart: updatedCart, couponCode: inputValue.trim(), currency });
       setIsOpen(false);
@@ -3466,7 +3541,7 @@ var CouponSection = () => {
       }
       const updatedCart = result?.cart ?? result;
       setCart(updatedCart);
-      const userId = auth?.user?.id ?? auth?.user?.userId ?? null;
+      const userId = auth?.userId ?? auth?.user?.id ?? auth?.user?.userId ?? null;
       const currency = config?.currency ?? "INR";
       trackApplyCoupon({ userId, cart: updatedCart, couponCode: "", currency });
       setIsOpen(false);
@@ -4766,6 +4841,6 @@ var Hello = () => {
   return /* @__PURE__ */ jsx("div", { children: isCartLoading ? "Loading..." : "Core Working \u2705" });
 };
 
-export { AccountPage, AddressCard2 as AddressCard, AddressForm, AuthManager, CartItem, CartPage, CartSummary, CoreProvider, CouponSection_default as CouponSection, CustomOTPAuth, EmptyState, Hello, Order, OrdersList, Popup, ProfileForm, Spinner, UserInfo, ViewCart, buildItem, buildMeta, clearEcommerce, pushToDataLayer, trackAddToCart, trackApplyCoupon, trackBeginCheckout, trackCustomEvent, trackPageView, trackPaymentFailed, trackPurchase, trackViewItem, useAddToCart, useAuth, useCart, userCartInfo_default as useCartInfo, useCore, useCurrencyFormat, useLogout, useVariantSelection };
+export { AccountPage, AddressCard2 as AddressCard, AddressForm, AuthManager, CartItem, CartPage, CartSummary, CoreProvider, CouponSection_default as CouponSection, CustomOTPAuth, EmptyState, Hello, Order, OrdersList, Popup, ProfileForm, Spinner, UserInfo, ViewCart, buildItem, buildMeta, clearEcommerce, pushToDataLayer, trackAddPaymentInfo, trackAddShippingInfo, trackAddToCart, trackApplyCoupon, trackBeginCheckout, trackCustomEvent, trackPageView, trackPaymentFailed, trackPurchase, trackViewItem, useAddToCart, useAuth, useCart, userCartInfo_default as useCartInfo, useCore, useCurrencyFormat, useLogout, useVariantSelection };
 //# sourceMappingURL=index.js.map
 //# sourceMappingURL=index.js.map

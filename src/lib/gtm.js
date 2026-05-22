@@ -69,8 +69,8 @@ export function buildItem(product, qty = 1) {
     item_category:
       product?.taxons?.[0]?.display_name ?? product?.category ?? "",
     price: Number(
-      product?.price ??
-        product?.display_price ??
+      product?.display_price ??
+        product?.price ??
         product?.line_itemable?.price ??
         0,
     ),
@@ -110,7 +110,7 @@ export function trackViewItem({
   currency = "INR",
   metaOverrides = {},
 }) {
-  const price = Number(product?.price ?? product?.display_price ?? 0);
+  const price = Number(product?.display_price ?? product?.price ?? 0);
   clearEcommerce();
   pushToDataLayer({
     event: "view_item",
@@ -145,7 +145,7 @@ export function trackAddToCart({
   currency = "INR",
   metaOverrides = {},
 }) {
-  const price = Number(product?.price ?? product?.display_price ?? 0);
+  const price = Number(product?.display_price ?? product?.price ?? 0);
   clearEcommerce();
   pushToDataLayer({
     event: "add_to_cart",
@@ -242,6 +242,94 @@ export function trackPurchase({
       tax,
       shipping,
       discount: Math.abs(discount), // promo_total is usually negative
+      items,
+    },
+    meta: buildMeta(metaOverrides),
+  });
+}
+
+/**
+ * add_shipping_info  (GA4 funnel step 2 — "Add delivery")
+ * Fired when the user selects / confirms a shipping address during checkout.
+ *
+ * @param {Object} params
+ * @param {string}  params.userId
+ * @param {Object}  params.cart         - Current cart object.
+ * @param {string}  [params.shippingTier] - e.g. "Standard", "Express".
+ * @param {string}  [params.currency]
+ * @param {Object}  [params.metaOverrides]
+ */
+export function trackAddShippingInfo({
+  userId,
+  cart,
+  shippingTier = "Standard",
+  currency = "INR",
+  metaOverrides = {},
+}) {
+  const value = Number(cart?.total ?? cart?.display_total ?? 0);
+  const tax = Number(cart?.tax_total ?? 0);
+  const shipping = Number(cart?.ship_total ?? 0);
+  const discount = Number(cart?.promo_total ?? 0);
+
+  const items = (cart?.line_items ?? []).map((li) =>
+    buildItem(li?.variant ?? li?.line_itemable ?? li, li?.quantity ?? 1),
+  );
+
+  clearEcommerce();
+  pushToDataLayer({
+    event: "add_shipping_info",
+    user_id: userId ?? null,
+    ecommerce: {
+      currency,
+      value,
+      tax,
+      shipping,
+      discount: Math.abs(discount),
+      shipping_tier: shippingTier,
+      items,
+    },
+    meta: buildMeta(metaOverrides),
+  });
+}
+
+/**
+ * add_payment_info  (GA4 funnel step 3 — "Add payment")
+ * Fired when the user selects a payment method during checkout.
+ *
+ * @param {Object} params
+ * @param {string}  params.userId
+ * @param {Object}  params.cart          - Current cart object.
+ * @param {string}  [params.paymentType] - e.g. "Razorpay", "Stripe".
+ * @param {string}  [params.currency]
+ * @param {Object}  [params.metaOverrides]
+ */
+export function trackAddPaymentInfo({
+  userId,
+  cart,
+  paymentType = "Razorpay",
+  currency = "INR",
+  metaOverrides = {},
+}) {
+  const value = Number(cart?.total ?? cart?.display_total ?? 0);
+  const tax = Number(cart?.tax_total ?? 0);
+  const shipping = Number(cart?.ship_total ?? 0);
+  const discount = Number(cart?.promo_total ?? 0);
+
+  const items = (cart?.line_items ?? []).map((li) =>
+    buildItem(li?.variant ?? li?.line_itemable ?? li, li?.quantity ?? 1),
+  );
+
+  clearEcommerce();
+  pushToDataLayer({
+    event: "add_payment_info",
+    user_id: userId ?? null,
+    ecommerce: {
+      currency,
+      value,
+      tax,
+      shipping,
+      discount: Math.abs(discount),
+      payment_type: paymentType,
       items,
     },
     meta: buildMeta(metaOverrides),

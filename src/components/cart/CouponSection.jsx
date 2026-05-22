@@ -110,11 +110,12 @@ const CouponSection = () => {
       const updatedCart = result?.cart ?? result;
       setCart(updatedCart);
 
-      // ── GA4 via GTM ───────────────────────────────────────────────
-      const userId = auth?.user?.id ?? auth?.user?.userId ?? null;
+      // ── GA4 via GTM ────────────────────────────────────────────────
+      // auth.userId = decoded JWT sub, always set after OTP login
+      const userId = auth?.userId ?? auth?.user?.id ?? auth?.user?.userId ?? null;
       const currency = config?.currency ?? "INR";
       trackApplyCoupon({ userId, cart: updatedCart, couponCode: inputValue.trim(), currency });
-      // ───────────────────────────────────────────────────────────────
+      // ─────────────────────────────────────────────────────────────────
 
       setIsOpen(false);
       setInputValue("");
@@ -169,11 +170,12 @@ const CouponSection = () => {
       const updatedCart = result?.cart ?? result;
       setCart(updatedCart);
 
-      // ── GA4 via GTM ───────────────────────────────────────────────
-      const userId = auth?.user?.id ?? auth?.user?.userId ?? null;
+      // ── GA4 via GTM ────────────────────────────────────────────────
+      // auth.userId = decoded JWT sub, always set after OTP login
+      const userId = auth?.userId ?? auth?.user?.id ?? auth?.user?.userId ?? null;
       const currency = config?.currency ?? "INR";
       trackApplyCoupon({ userId, cart: updatedCart, couponCode: "", currency });
-      // ───────────────────────────────────────────────────────────────
+      // ─────────────────────────────────────────────────────────────────
 
       setIsOpen(false);
       setInputValue("");
