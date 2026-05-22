@@ -622,6 +622,7 @@ var CoreProvider = ({
       secondaryColor
     ]
   );
+  console.log({ auth, config });
   return /* @__PURE__ */ jsx(CoreContext.Provider, { value, children: /* @__PURE__ */ jsx(
     "div",
     {
@@ -737,7 +738,8 @@ function trackBeginCheckout({
   userId,
   cart,
   currency = "INR",
-  metaOverrides = {}
+  metaOverrides = {},
+  transactionId
 }) {
   const value = Number(cart?.total ?? cart?.display_total ?? 0);
   const tax = Number(cart?.tax_total ?? 0);
@@ -751,6 +753,8 @@ function trackBeginCheckout({
     event: "begin_checkout",
     user_id: userId ?? null,
     ecommerce: {
+      transaction_id: transactionId ?? "",
+      // optional, but recommended for GA4 funnel reports
       currency,
       value,
       tax,
@@ -2993,7 +2997,8 @@ var AddressCard = ({
 var Checkout = ({ hasDeletedItems }) => {
   const { auth, config } = useCore();
   const { isSignedIn, isLoading } = auth || {};
-  if (isLoading) return /* @__PURE__ */ jsx("div", { className: "w-full h-[400px] flex items-center justify-center", children: /* @__PURE__ */ jsx("div", { className: "w-8 h-8 border-4 border-[var(--core-primary)] border-t-transparent rounded-full animate-spin" }) });
+  if (isLoading)
+    return /* @__PURE__ */ jsx("div", { className: "w-full h-[400px] flex items-center justify-center", children: /* @__PURE__ */ jsx("div", { className: "w-8 h-8 border-4 border-[var(--core-primary)] border-t-transparent rounded-full animate-spin" }) });
   return !isSignedIn ? /* @__PURE__ */ jsx(LoginPage, {}) : /* @__PURE__ */ jsx(OrderInfo, { user: auth.user, hasDeletedItems });
 };
 var LoginPage = () => {
@@ -3079,9 +3084,15 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
       if (!hasBilling) apiData.billing_address_id = defaultAddressId;
       actions.updateCart(cart.id, apiData).then((updatedCart) => {
         if (updatedCart) setCart(updatedCart);
-      }).catch((err) => console.error("Failed to auto-set cart addresses:", err));
+      }).catch(
+        (err) => console.error("Failed to auto-set cart addresses:", err)
+      );
     }
-  }, [cart?.shipping_address?.id, cart?.billing_address?.id, addresses?.length]);
+  }, [
+    cart?.shipping_address?.id,
+    cart?.billing_address?.id,
+    addresses?.length
+  ]);
   const onUpdateOrderType = async (type) => {
     try {
       setOrderType(type);
@@ -3130,21 +3141,32 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
                 );
                 if (result?.serverError) {
                   lastError = result.serverError;
-                  console.warn(`[Checkout] updateRazorPayment attempt ${attempt} failed:`, result.serverError);
+                  console.warn(
+                    `[Checkout] updateRazorPayment attempt ${attempt} failed:`,
+                    result.serverError
+                  );
                 } else if (result?.order_id) {
                   order = result;
                   break;
                 } else {
                   lastError = "Payment update returned no order ID";
-                  console.warn(`[Checkout] updateRazorPayment attempt ${attempt}: no order_id`, result);
+                  console.warn(
+                    `[Checkout] updateRazorPayment attempt ${attempt}: no order_id`,
+                    result
+                  );
                 }
               }
             } catch (err) {
               lastError = err?.data?.error || err?.message || "Payment update failed";
-              console.error(`[Checkout] updateRazorPayment attempt ${attempt} threw:`, err);
+              console.error(
+                `[Checkout] updateRazorPayment attempt ${attempt} threw:`,
+                err
+              );
             }
             if (attempt < MAX_ATTEMPTS) {
-              await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+              await new Promise(
+                (resolve) => setTimeout(resolve, RETRY_DELAY_MS)
+              );
             }
           }
           if (order?.order_id) {
@@ -3174,7 +3196,9 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
           if (errorMsg && typeof errorMsg === "string") {
             toast?.error?.(errorMsg);
           } else {
-            toast?.error?.("Payment could not be updated. Please contact support.");
+            toast?.error?.(
+              "Payment could not be updated. Please contact support."
+            );
           }
         }
       },
@@ -3217,6 +3241,7 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
           userId,
           cart,
           currency,
+          transactionId: String(orderResponse?.id ?? ""),
           metaOverrides: { source: "checkout" }
         });
         trackAddShippingInfo({
@@ -3383,7 +3408,8 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
         ] }),
         /* @__PURE__ */ jsxs("div", { className: "space-y-2", children: [
           /* @__PURE__ */ jsxs("p", { className: "font-[Nunito-medium] text-[#2d2d2d] text-base", children: [
-            "We're finalizing your order with ",
+            "We're finalizing your order with",
+            " ",
             paymentMode === "stripe" ? "Stripe" : "Razorpay",
             "."
           ] }),

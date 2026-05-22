@@ -13,18 +13,25 @@ import {
   AddressSelectionCard,
   AddressCard,
 } from "./AddressComponents";
-import { trackBeginCheckout, trackPurchase, trackPaymentFailed, trackAddShippingInfo, trackAddPaymentInfo } from "../../lib/gtm";
+import {
+  trackBeginCheckout,
+  trackPurchase,
+  trackPaymentFailed,
+  trackAddShippingInfo,
+  trackAddPaymentInfo,
+} from "../../lib/gtm";
 
 // ─── Top-level Checkout ────────────────────────────────────────────────────────
 const Checkout = ({ hasDeletedItems }) => {
   const { auth, config } = useCore();
   const { isSignedIn, isLoading } = auth || {};
 
-  if (isLoading) return (
-    <div className="w-full h-[400px] flex items-center justify-center">
-      <div className="w-8 h-8 border-4 border-[var(--core-primary)] border-t-transparent rounded-full animate-spin" />
-    </div>
-  );
+  if (isLoading)
+    return (
+      <div className="w-full h-[400px] flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-[var(--core-primary)] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
 
   return !isSignedIn ? (
     <LoginPage />
@@ -64,7 +71,8 @@ const LoginPage = () => {
 const OrderInfo = ({ user, hasDeletedItems }) => {
   const router = useRouter();
   const { Razorpay } = useRazorpay();
-  const { cart, setCart, actions, config, auth, orgData, primaryColor, toast } = useCore();
+  const { cart, setCart, actions, config, auth, orgData, primaryColor, toast } =
+    useCore();
 
   // Read StripeCheckout from the gateway registry.
   const StripeCheckout = getPaymentGateway("stripe");
@@ -116,7 +124,7 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
 
   useEffect(() => {
     setOrderType(cart?.order_type ?? "delivery");
-    
+
     const hasShipping = !!cart?.shipping_address?.id;
     const hasBilling = !!cart?.billing_address?.id;
     const defaultAddressId = addresses?.[0]?.id;
@@ -131,17 +139,31 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
     setSameAsShipping(billingId === shippingId);
 
     // Auto-update cart if it's missing addresses and we have a default address
-    if ((!hasShipping || !hasBilling) && defaultAddressId && cart?.id && actions?.updateCart) {
+    if (
+      (!hasShipping || !hasBilling) &&
+      defaultAddressId &&
+      cart?.id &&
+      actions?.updateCart
+    ) {
       const apiData = { id: cart.id };
       if (!hasShipping) apiData.shipping_address_id = defaultAddressId;
       if (!hasBilling) apiData.billing_address_id = defaultAddressId;
-      
-      actions.updateCart(cart.id, apiData).then((updatedCart) => {
-        if (updatedCart) setCart(updatedCart);
-      }).catch((err) => console.error("Failed to auto-set cart addresses:", err));
+
+      actions
+        .updateCart(cart.id, apiData)
+        .then((updatedCart) => {
+          if (updatedCart) setCart(updatedCart);
+        })
+        .catch((err) =>
+          console.error("Failed to auto-set cart addresses:", err),
+        );
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cart?.shipping_address?.id, cart?.billing_address?.id, addresses?.length]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    cart?.shipping_address?.id,
+    cart?.billing_address?.id,
+    addresses?.length,
+  ]);
 
   const onUpdateOrderType = async (type) => {
     try {
@@ -167,9 +189,9 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
   const onRazorPayHandler = (res) => {
     // Normalize user info for Razorpay prefill
     const isClerk = config?.authType === "clerk";
-    const name = isClerk 
+    const name = isClerk
       ? `${user?.firstName ?? ""} ${user?.lastName ?? ""}`.trim()
-      : (user?.name || user?.first_name || "");
+      : user?.name || user?.first_name || "";
     const email = isClerk
       ? user?.primaryEmailAddress?.emailAddress
       : user?.email;
@@ -204,22 +226,34 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
                 // updateRazorPayment may return {serverError} instead of throwing
                 if (result?.serverError) {
                   lastError = result.serverError;
-                  console.warn(`[Checkout] updateRazorPayment attempt ${attempt} failed:`, result.serverError);
+                  console.warn(
+                    `[Checkout] updateRazorPayment attempt ${attempt} failed:`,
+                    result.serverError,
+                  );
                 } else if (result?.order_id) {
                   order = result;
                   break; // success — stop retrying
                 } else {
                   lastError = "Payment update returned no order ID";
-                  console.warn(`[Checkout] updateRazorPayment attempt ${attempt}: no order_id`, result);
+                  console.warn(
+                    `[Checkout] updateRazorPayment attempt ${attempt}: no order_id`,
+                    result,
+                  );
                 }
               }
             } catch (err) {
-              lastError = err?.data?.error || err?.message || "Payment update failed";
-              console.error(`[Checkout] updateRazorPayment attempt ${attempt} threw:`, err);
+              lastError =
+                err?.data?.error || err?.message || "Payment update failed";
+              console.error(
+                `[Checkout] updateRazorPayment attempt ${attempt} threw:`,
+                err,
+              );
             }
 
             if (attempt < MAX_ATTEMPTS) {
-              await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+              await new Promise((resolve) =>
+                setTimeout(resolve, RETRY_DELAY_MS),
+              );
             }
           }
 
@@ -246,9 +280,10 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
           } else {
             // All 5 attempts failed — stop showing the processing screen
             setIsProcessingPayment(false);
-            const msg = typeof lastError === "string"
-              ? lastError
-              : "Payment could not be updated. Please contact support.";
+            const msg =
+              typeof lastError === "string"
+                ? lastError
+                : "Payment could not be updated. Please contact support.";
             toast?.error?.(msg);
           }
         } catch (err) {
@@ -258,7 +293,9 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
           if (errorMsg && typeof errorMsg === "string") {
             toast?.error?.(errorMsg);
           } else {
-            toast?.error?.("Payment could not be updated. Please contact support.");
+            toast?.error?.(
+              "Payment could not be updated. Please contact support.",
+            );
           }
         }
       },
@@ -283,7 +320,8 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
         cart,
         currency,
         errorCode: response?.error?.code ?? "",
-        errorReason: response?.error?.reason ?? response?.error?.description ?? "",
+        errorReason:
+          response?.error?.reason ?? response?.error?.description ?? "",
       });
       // ───────────────────────────────────────────────────────────────
     });
@@ -313,6 +351,7 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
           userId,
           cart,
           currency,
+          transactionId: String(orderResponse?.id ?? ""),
           metaOverrides: { source: "checkout" },
         });
 
@@ -416,7 +455,9 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
                   <StripeCheckout
                     cartId={cart?.id}
                     publishableKey={stripePublishableKey}
-                    createStripePaymentIntent={actions?.createStripePaymentIntent}
+                    createStripePaymentIntent={
+                      actions?.createStripePaymentIntent
+                    }
                     onSuccess={() => {
                       if (typeof window !== "undefined") {
                         localStorage.removeItem("cartid");
@@ -430,7 +471,10 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
               {showStripeForm && !StripeCheckout && (
                 <p className="mt-4 text-sm text-red-500 p-3 bg-red-50 rounded-lg">
                   StripeCheckout component is not configured. Pass it via{" "}
-                  <code className="font-mono">CoreProvider components={{ StripeCheckout }}</code>.
+                  <code className="font-mono">
+                    CoreProvider components={{ StripeCheckout }}
+                  </code>
+                  .
                 </p>
               )}
             </>
@@ -446,59 +490,60 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
 
       {/* ── CHECKOUT BUTTON ── */}
       {!(paymentMode === "stripe" && showStripeForm) && (
-      <div className="mt-[32px]">
-        <button
-          onClick={onPlaceOrder}
-          disabled={hasDeletedItems || isPlacingOrder || isAddressLoading}
-          className={`px-5 py-3 w-full rounded-lg cursor-pointer font-[Nunito-medium] text-[15px] transition-all duration-300 ${hasDeletedItems || isPlacingOrder || isAddressLoading
-            ? "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none"
-            : "bg-[var(--core-primary)] text-white hover:opacity-90 hover:shadow-lg transform active:scale-[0.98]"
+        <div className="mt-[32px]">
+          <button
+            onClick={onPlaceOrder}
+            disabled={hasDeletedItems || isPlacingOrder || isAddressLoading}
+            className={`px-5 py-3 w-full rounded-lg cursor-pointer font-[Nunito-medium] text-[15px] transition-all duration-300 ${
+              hasDeletedItems || isPlacingOrder || isAddressLoading
+                ? "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none"
+                : "bg-[var(--core-primary)] text-white hover:opacity-90 hover:shadow-lg transform active:scale-[0.98]"
             }`}
-        >
-          {isPlacingOrder
-            ? "Processing…"
-            : hasDeletedItems
-              ? "Remove Deleted Items to Checkout"
-              : paymentMode === "stripe"
-                ? "Proceed to Card Payment"
-                : "Checkout"}
-        </button>
+          >
+            {isPlacingOrder
+              ? "Processing…"
+              : hasDeletedItems
+                ? "Remove Deleted Items to Checkout"
+                : paymentMode === "stripe"
+                  ? "Proceed to Card Payment"
+                  : "Checkout"}
+          </button>
 
-        {/* Policy Links */}
-        <div className="mt-4 text-center">
-          <p className="text-[11px] text-[#8c92a4] font-[Nunito-regular] leading-relaxed">
-            By placing your order, you agree to our{" "}
-            <Link
-              href="/terms-and-conditions"
-              className="text-[var(--core-primary)] underline hover:text-[var(--core-secondary)] transition-colors"
-            >
-              Terms & Conditions
-            </Link>{" "}
-            and{" "}
-            <Link
-              href="/privacy-policy"
-              className="text-[var(--core-primary)] underline hover:text-[var(--core-secondary)] transition-colors"
-            >
-              Privacy Policy
-            </Link>
-            .
-          </p>
-          <div className="mt-2 flex justify-center gap-3">
-            <Link
-              href="/refund-policy"
-              className="text-[10px] text-[#8c92a4] hover:text-[var(--core-primary)] transition-colors underline uppercase tracking-wider"
-            >
-              Refund Policy
-            </Link>
+          {/* Policy Links */}
+          <div className="mt-4 text-center">
+            <p className="text-[11px] text-[#8c92a4] font-[Nunito-regular] leading-relaxed">
+              By placing your order, you agree to our{" "}
+              <Link
+                href="/terms-and-conditions"
+                className="text-[var(--core-primary)] underline hover:text-[var(--core-secondary)] transition-colors"
+              >
+                Terms & Conditions
+              </Link>{" "}
+              and{" "}
+              <Link
+                href="/privacy-policy"
+                className="text-[var(--core-primary)] underline hover:text-[var(--core-secondary)] transition-colors"
+              >
+                Privacy Policy
+              </Link>
+              .
+            </p>
+            <div className="mt-2 flex justify-center gap-3">
+              <Link
+                href="/refund-policy"
+                className="text-[10px] text-[#8c92a4] hover:text-[var(--core-primary)] transition-colors underline uppercase tracking-wider"
+              >
+                Refund Policy
+              </Link>
+            </div>
           </div>
-        </div>
 
-        {hasDeletedItems && (
-          <p className="text-xs text-red-600 mt-2 font-[Nunito-regular]">
-            Please remove unavailable items before proceeding to checkout.
-          </p>
-        )}
-      </div>
+          {hasDeletedItems && (
+            <p className="text-xs text-red-600 mt-2 font-[Nunito-regular]">
+              Please remove unavailable items before proceeding to checkout.
+            </p>
+          )}
+        </div>
       )}
 
       {/* ── PAYMENT PROCESSING OVERLAY ── */}
@@ -523,7 +568,8 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
 
               <div className="space-y-2">
                 <p className="font-[Nunito-medium] text-[#2d2d2d] text-base">
-                  We're finalizing your order with {paymentMode === "stripe" ? "Stripe" : "Razorpay"}.
+                  We're finalizing your order with{" "}
+                  {paymentMode === "stripe" ? "Stripe" : "Razorpay"}.
                 </p>
                 <p className="font-[Nunito-regular] text-[#8c92a4] text-sm leading-relaxed">
                   Please do not refresh the page or close this window. <br />

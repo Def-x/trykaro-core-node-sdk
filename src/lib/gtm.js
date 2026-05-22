@@ -177,6 +177,7 @@ export function trackBeginCheckout({
   cart,
   currency = "INR",
   metaOverrides = {},
+  transactionId,
 }) {
   const value = Number(cart?.total ?? cart?.display_total ?? 0);
   const tax = Number(cart?.tax_total ?? 0);
@@ -192,6 +193,7 @@ export function trackBeginCheckout({
     event: "begin_checkout",
     user_id: userId ?? null,
     ecommerce: {
+      transaction_id: transactionId ?? "", // optional, but recommended for GA4 funnel reports
       currency,
       value,
       tax,
