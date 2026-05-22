@@ -16,7 +16,16 @@ const DeleteIcon = ({ onClick, disabled, className, title }) => (
     title={title}
     aria-label={title || "Delete"}
   >
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <polyline points="3 6 5 6 21 6" />
       <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
       <path d="M10 11v6M14 11v6" />
@@ -163,9 +172,16 @@ const ProductlistCard = ({ product, component, orderType }) => {
         {/* Product Info */}
         <div className="flex flex-col justify-between h-[124px] flex-1 min-w-0">
           <div className="min-w-0">
-            <p className="font-[Nunito-medium] text-base text-[var(--main)] line-clamp-1">
-              {name}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="font-[Nunito-medium] text-base text-[var(--main)] line-clamp-1">
+                {name}
+              </p>
+              {product?.bogo_benefit?.benefit_type === "free" && (
+                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-[Nunito-medium] flex-shrink-0 whitespace-nowrap">
+                  FREE
+                </span>
+              )}
+            </div>
             {product?.line_items_customizations?.length > 0 && (
               <div className="mt-1 flex flex-col gap-0.5">
                 {product.line_items_customizations.length > 3 ? (
