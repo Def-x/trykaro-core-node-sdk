@@ -142,8 +142,8 @@ const CouponSection = () => {
     }
   };
 
-  const applyById = async (discountId) => {
-    if (!discountId) return;
+  const applyById = async (coupon) => {
+    if (!coupon?.id) return;
     if (!token) {
       setErrorMessage("Please sign in to apply a coupon");
       return;
@@ -156,7 +156,7 @@ const CouponSection = () => {
       }
       const result = await actions.applyDiscount({
         token,
-        discount_id: discountId,
+        discount_id: coupon.id,
         source: "web",
         region_id: config?.regionId,
         apiBaseUrl: config?.apiBaseUrl,
@@ -174,7 +174,7 @@ const CouponSection = () => {
       // auth.userId = decoded JWT sub, always set after OTP login
       const userId = auth?.userId ?? auth?.user?.id ?? auth?.user?.userId ?? null;
       const currency = config?.currency ?? "INR";
-      trackApplyCoupon({ userId, cart: updatedCart, couponCode: "", currency });
+      trackApplyCoupon({ userId, cart: updatedCart, couponCode: coupon.code || coupon.display_action_value || "", currency });
       // ─────────────────────────────────────────────────────────────────
 
       setIsOpen(false);
@@ -366,7 +366,7 @@ const CouponSection = () => {
                               onClick={() => {
                                 if (!eligible) return;
                                 if (!coupon.code) {
-                                  applyById(coupon.id);
+                                  applyById(coupon);
                                 } else {
                                   setInputValue(coupon.code);
                                 }
