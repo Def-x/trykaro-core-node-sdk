@@ -2210,6 +2210,7 @@ var ProductlistCard = ({ product, component, orderType }) => {
   const quantity = product?.quantity;
   const displayPrice = (price ?? 0) / 100;
   const isSellingQty = !!product?.line_itemable?.selling_quantity_id;
+  const variantOptions = product?.line_itemable?.variant_options ?? [];
   const { formatCurrency } = useCurrencyFormat();
   const {
     handleDeleteLineItem,
@@ -2219,6 +2220,17 @@ var ProductlistCard = ({ product, component, orderType }) => {
   } = useAddToCart();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const handleNavigateToProduct = () => {
+    const lineItemable = product?.line_itemable;
+    if (!lineItemable) return;
+    const productId = lineItemable?.product_id ?? lineItemable?.id;
+    const variantId = lineItemable?.product_id ? lineItemable?.id : null;
+    const taxonId = lineItemable?.taxons?.[0]?.id ?? "taxon";
+    let url = `/product/${productId}?taxonid=${taxonId}`;
+    if (variantId) url += `&variantId=${variantId}`;
+    if (quantity && quantity > 1) url += `&qty=${quantity}`;
+    window.location.href = url;
+  };
   const handleImageError = (event) => {
     event.currentTarget.onerror = null;
     event.currentTarget.src = noProductImage;
@@ -2283,52 +2295,76 @@ var ProductlistCard = ({ product, component, orderType }) => {
     ] });
   }
   return /* @__PURE__ */ jsxs("div", { className: "flex justify-between gap-4", children: [
-    /* @__PURE__ */ jsxs("div", { className: "flex gap-[10px] flex-1 min-w-0", children: [
-      /* @__PURE__ */ jsx("div", { className: "w-[112px] h-[124px] flex-shrink-0 overflow-hidden", children: /* @__PURE__ */ jsx(
-        "img",
-        {
-          src: productImage || noProductImage,
-          alt: name || "Product",
-          className: "w-[112px] h-[124px] object-cover rounded-lg",
-          onError: handleImageError
-        }
-      ) }),
-      /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between h-[124px] flex-1 min-w-0", children: [
-        /* @__PURE__ */ jsxs("div", { className: "min-w-0", children: [
-          /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
-            /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-base text-[var(--main)] line-clamp-1", children: name }),
-            product?.bogo_benefit?.benefit_type === "free" && /* @__PURE__ */ jsx("span", { className: "text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-[Nunito-medium] flex-shrink-0 whitespace-nowrap", children: "FREE" })
-          ] }),
-          product?.line_items_customizations?.length > 0 && /* @__PURE__ */ jsx("div", { className: "mt-1 flex flex-col gap-0.5", children: product.line_items_customizations.length > 3 ? /* @__PURE__ */ jsx(
-            "button",
+    /* @__PURE__ */ jsxs(
+      "div",
+      {
+        className: "flex gap-[10px] flex-1 min-w-0 cursor-pointer",
+        onClick: handleNavigateToProduct,
+        title: "View product",
+        children: [
+          /* @__PURE__ */ jsx("div", { className: "w-[112px] h-[124px] flex-shrink-0 overflow-hidden", children: /* @__PURE__ */ jsx(
+            "img",
             {
-              onClick: () => setIsViewModalOpen(true),
-              className: "text-xs text-[var(--core-primary)] underline hover:text-[var(--core-primary)] transition-colors text-left font-medium",
-              children: "customizations: view"
+              src: productImage || noProductImage,
+              alt: name || "Product",
+              className: "w-[112px] h-[124px] object-cover rounded-lg hover:opacity-90 transition-opacity",
+              onError: handleImageError
             }
-          ) : product.line_items_customizations.map((c) => /* @__PURE__ */ jsxs(
-            "p",
-            {
-              className: "text-xs text-gray-500 line-clamp-1",
-              children: [
-                /* @__PURE__ */ jsxs("span", { className: "font-medium", children: [
-                  c.name || "Custom",
-                  ":"
-                ] }),
-                " ",
-                c.value
-              ]
-            },
-            c.product_customization_id
-          )) })
-        ] }),
-        /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsxs("p", { className: "font-[Nunito-medium] text-base text-[var(--main)]", children: [
-          quantity,
-          " x ",
-          formatCurrency(displayPrice)
-        ] }) })
-      ] })
-    ] }),
+          ) }),
+          /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between h-[124px] flex-1 min-w-0", children: [
+            /* @__PURE__ */ jsxs("div", { className: "min-w-0", children: [
+              /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
+                /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-base text-[var(--main)] line-clamp-1 hover:underline", children: name }),
+                product?.bogo_benefit?.benefit_type === "free" && /* @__PURE__ */ jsx("span", { className: "text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-[Nunito-medium] flex-shrink-0 whitespace-nowrap", children: "FREE" })
+              ] }),
+              variantOptions.length > 0 && /* @__PURE__ */ jsx("div", { className: "mt-1 flex flex-wrap gap-1", children: variantOptions.map((vo, i) => /* @__PURE__ */ jsxs(
+                "span",
+                {
+                  className: "text-[11px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-[Nunito-medium]",
+                  children: [
+                    vo?.option_type?.presentation ?? vo?.option_type?.name,
+                    ":",
+                    " ",
+                    vo?.option_value?.presentation ?? vo?.option_value?.name
+                  ]
+                },
+                i
+              )) }),
+              product?.line_items_customizations?.length > 0 && /* @__PURE__ */ jsx("div", { className: "mt-1 flex flex-col gap-0.5", children: product.line_items_customizations.length > 3 ? /* @__PURE__ */ jsx(
+                "button",
+                {
+                  onClick: (e) => {
+                    e.stopPropagation();
+                    setIsViewModalOpen(true);
+                  },
+                  className: "text-xs text-[var(--core-primary)] underline hover:text-[var(--core-primary)] transition-colors text-left font-medium",
+                  children: "customizations: view"
+                }
+              ) : product.line_items_customizations.map((c) => /* @__PURE__ */ jsxs(
+                "p",
+                {
+                  className: "text-xs text-gray-500 line-clamp-1",
+                  children: [
+                    /* @__PURE__ */ jsxs("span", { className: "font-medium", children: [
+                      c.name || "Custom",
+                      ":"
+                    ] }),
+                    " ",
+                    c.value
+                  ]
+                },
+                c.product_customization_id
+              )) })
+            ] }),
+            /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsxs("p", { className: "font-[Nunito-medium] text-base text-[var(--main)]", children: [
+              quantity,
+              " x ",
+              formatCurrency(displayPrice)
+            ] }) })
+          ] })
+        ]
+      }
+    ),
     /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between items-end h-[124px] flex-shrink-0", children: [
       /* @__PURE__ */ jsx("div", { className: "flex flex-col items-end text-right", children: component !== "order" ? /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-base text-[var(--main)] line-clamp-1", children: formatCurrency(displayPrice * quantity) }) : /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-base text-[var(--main)] line-clamp-2", children: formatCurrency(displayPrice * quantity) }) }),
       component !== "order" && /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3", children: [
