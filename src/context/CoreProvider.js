@@ -140,7 +140,9 @@ export const CoreProvider = ({
     (nextAuth) => {
       setAuthState((prev) => {
         const resolved =
-          typeof nextAuth === "function" ? nextAuth(prev ?? {}) : nextAuth ?? {};
+          typeof nextAuth === "function"
+            ? nextAuth(prev ?? {})
+            : (nextAuth ?? {});
         const token = resolved?.token ?? resolved?.access_token ?? null;
         const merged = {
           ...prev,
@@ -197,7 +199,9 @@ export const CoreProvider = ({
           resolvedCart = Array.isArray(data) ? data[0] : data;
         } else {
           const storedCartId =
-            typeof window !== "undefined" ? localStorage.getItem("cartid") : null;
+            typeof window !== "undefined"
+              ? localStorage.getItem("cartid")
+              : null;
 
           if (storedCartId && resolvedActions?.getCartById) {
             resolvedCart = await resolvedActions.getCartById(
@@ -274,6 +278,7 @@ export const CoreProvider = ({
     ],
   );
 
+  console.log({ auth, config });
   return (
     <CoreContext.Provider value={value}>
       <div
@@ -298,7 +303,7 @@ export const useCore = () => {
   if (!context) {
     throw new Error(
       "[useCore] must be used inside <CoreProvider>. " +
-      "Wrap your app (or the relevant subtree) with <CoreProvider>.",
+        "Wrap your app (or the relevant subtree) with <CoreProvider>.",
     );
   }
 

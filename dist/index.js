@@ -622,6 +622,7 @@ var CoreProvider = ({
       secondaryColor
     ]
   );
+  console.log({ auth, config });
   return /* @__PURE__ */ jsx(CoreContext.Provider, { value, children: /* @__PURE__ */ jsx(
     "div",
     {
@@ -648,6 +649,290 @@ var useCart = () => {
   const { cart, setCart, isCartLoading, config } = useCore();
   return { cart, setCart, isCartLoading, config };
 };
+
+// src/lib/gtm.js
+var isGtmEnabled = process.env.NODE_ENV === "production" && Boolean(process.env.NEXT_PUBLIC_GTM_ID?.trim());
+function pushToDataLayer(payload) {
+  if (!isGtmEnabled || typeof window === "undefined") return;
+  window.dataLayer = window.dataLayer || [];
+  window.dataLayer.push(payload);
+}
+function clearEcommerce() {
+  pushToDataLayer({ ecommerce: null });
+}
+function buildMeta(overrides = {}) {
+  const isMobile = typeof window !== "undefined" && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+  return {
+    country: "IN",
+    device: isMobile ? "mobile" : "desktop",
+    platform: "web",
+    source: "direct",
+    ...overrides
+  };
+}
+function buildItem(product, qty = 1) {
+  return {
+    item_id: product?.id ?? product?.sku ?? "",
+    item_name: product?.name ?? product?.line_itemable?.name ?? "",
+    item_category: product?.taxons?.[0]?.display_name ?? product?.category ?? "",
+    price: Number(
+      product?.display_price ?? product?.price ?? product?.line_itemable?.price ?? 0
+    ),
+    quantity: Number(qty)
+  };
+}
+function trackPageView(userId, metaOverrides = {}) {
+  clearEcommerce();
+  pushToDataLayer({
+    event: "page_view",
+    user_id: userId ?? null,
+    ecommerce: null,
+    meta: buildMeta(metaOverrides)
+  });
+}
+function trackViewItem({
+  userId,
+  product,
+  currency = "INR",
+  metaOverrides = {}
+}) {
+  const price = Number(product?.display_price ?? product?.price ?? 0);
+  clearEcommerce();
+  pushToDataLayer({
+    event: "view_item",
+    user_id: userId ?? null,
+    ecommerce: {
+      currency,
+      value: price,
+      tax: 0,
+      shipping: 0,
+      discount: 0,
+      items: [buildItem(product)]
+    },
+    meta: buildMeta(metaOverrides)
+  });
+}
+function trackAddToCart({
+  userId,
+  product,
+  qty = 1,
+  currency = "INR",
+  metaOverrides = {}
+}) {
+  const price = Number(product?.display_price ?? product?.price ?? 0);
+  clearEcommerce();
+  pushToDataLayer({
+    event: "add_to_cart",
+    user_id: userId ?? null,
+    ecommerce: {
+      currency,
+      value: price * qty,
+      tax: 0,
+      shipping: 0,
+      discount: 0,
+      items: [buildItem(product, qty)]
+    },
+    meta: buildMeta(metaOverrides)
+  });
+}
+function trackBeginCheckout({
+  userId,
+  cart,
+  currency = "INR",
+  metaOverrides = {},
+  transactionId
+}) {
+  const value = Number(cart?.total ?? cart?.display_total ?? 0);
+  const tax = Number(cart?.tax_total ?? 0);
+  const shipping = Number(cart?.ship_total ?? 0);
+  const discount = Number(cart?.promo_total ?? 0);
+  const items = (cart?.line_items ?? []).map(
+    (li) => buildItem(li?.variant ?? li?.line_itemable ?? li, li?.quantity ?? 1)
+  );
+  clearEcommerce();
+  pushToDataLayer({
+    event: "begin_checkout",
+    user_id: userId ?? null,
+    ecommerce: {
+      transaction_id: transactionId ?? "",
+      // optional, but recommended for GA4 funnel reports
+      currency,
+      value,
+      tax,
+      shipping,
+      discount: Math.abs(discount),
+      items
+    },
+    meta: buildMeta(metaOverrides)
+  });
+}
+function trackPurchase({
+  userId,
+  transactionId,
+  cart,
+  currency = "INR",
+  metaOverrides = {}
+}) {
+  const value = Number(cart?.total ?? cart?.display_total ?? 0);
+  const tax = Number(cart?.tax_total ?? 0);
+  const shipping = Number(cart?.ship_total ?? 0);
+  const discount = Number(cart?.promo_total ?? 0);
+  const items = (cart?.line_items ?? []).map(
+    (li) => buildItem(li?.variant ?? li?.line_itemable ?? li, li?.quantity ?? 1)
+  );
+  clearEcommerce();
+  pushToDataLayer({
+    event: "purchase",
+    user_id: userId ?? null,
+    ecommerce: {
+      transaction_id: transactionId ?? "",
+      // ← required for GA4 funnel reports
+      currency,
+      value,
+      tax,
+      shipping,
+      discount: Math.abs(discount),
+      // promo_total is usually negative
+      items
+    },
+    meta: buildMeta(metaOverrides)
+  });
+}
+function trackAddShippingInfo({
+  userId,
+  cart,
+  shippingTier = "Standard",
+  currency = "INR",
+  metaOverrides = {}
+}) {
+  const value = Number(cart?.total ?? cart?.display_total ?? 0);
+  const tax = Number(cart?.tax_total ?? 0);
+  const shipping = Number(cart?.ship_total ?? 0);
+  const discount = Number(cart?.promo_total ?? 0);
+  const items = (cart?.line_items ?? []).map(
+    (li) => buildItem(li?.variant ?? li?.line_itemable ?? li, li?.quantity ?? 1)
+  );
+  clearEcommerce();
+  pushToDataLayer({
+    event: "add_shipping_info",
+    user_id: userId ?? null,
+    ecommerce: {
+      currency,
+      value,
+      tax,
+      shipping,
+      discount: Math.abs(discount),
+      shipping_tier: shippingTier,
+      items
+    },
+    meta: buildMeta(metaOverrides)
+  });
+}
+function trackAddPaymentInfo({
+  userId,
+  cart,
+  paymentType = "Razorpay",
+  currency = "INR",
+  metaOverrides = {}
+}) {
+  const value = Number(cart?.total ?? cart?.display_total ?? 0);
+  const tax = Number(cart?.tax_total ?? 0);
+  const shipping = Number(cart?.ship_total ?? 0);
+  const discount = Number(cart?.promo_total ?? 0);
+  const items = (cart?.line_items ?? []).map(
+    (li) => buildItem(li?.variant ?? li?.line_itemable ?? li, li?.quantity ?? 1)
+  );
+  clearEcommerce();
+  pushToDataLayer({
+    event: "add_payment_info",
+    user_id: userId ?? null,
+    ecommerce: {
+      currency,
+      value,
+      tax,
+      shipping,
+      discount: Math.abs(discount),
+      payment_type: paymentType,
+      items
+    },
+    meta: buildMeta(metaOverrides)
+  });
+}
+function trackApplyCoupon({
+  userId,
+  cart,
+  couponCode,
+  currency = "INR",
+  metaOverrides = {}
+}) {
+  const discount = Math.abs(Number(cart?.promo_total ?? 0));
+  const items = (cart?.line_items ?? []).map(
+    (li) => buildItem(li?.variant ?? li?.line_itemable ?? li, li?.quantity ?? 1)
+  );
+  clearEcommerce();
+  pushToDataLayer({
+    event: "apply_coupon",
+    user_id: userId ?? null,
+    ecommerce: {
+      currency,
+      value: Number(cart?.total ?? 0),
+      tax: Number(cart?.tax_total ?? 0),
+      shipping: Number(cart?.ship_total ?? 0),
+      discount,
+      coupon: couponCode,
+      items
+    },
+    meta: buildMeta(metaOverrides)
+  });
+}
+function trackPaymentFailed({
+  userId,
+  cart,
+  errorCode = "",
+  errorReason = "",
+  currency = "INR",
+  metaOverrides = {}
+}) {
+  const value = Number(cart?.total ?? cart?.display_total ?? 0);
+  const items = (cart?.line_items ?? []).map(
+    (li) => buildItem(li?.variant ?? li?.line_itemable ?? li, li?.quantity ?? 1)
+  );
+  clearEcommerce();
+  pushToDataLayer({
+    event: "payment_failed",
+    user_id: userId ?? null,
+    ecommerce: {
+      currency,
+      value,
+      tax: Number(cart?.tax_total ?? 0),
+      shipping: Number(cart?.ship_total ?? 0),
+      discount: Math.abs(Number(cart?.promo_total ?? 0)),
+      items,
+      error_code: errorCode,
+      error_reason: errorReason
+    },
+    meta: buildMeta(metaOverrides)
+  });
+}
+function trackCustomEvent(eventName, userId, ecommerce = {}, metaOverrides = {}) {
+  clearEcommerce();
+  pushToDataLayer({
+    event: eventName,
+    user_id: userId ?? null,
+    ecommerce: {
+      currency: "INR",
+      value: 0,
+      tax: 0,
+      shipping: 0,
+      discount: 0,
+      items: [],
+      ...ecommerce
+    },
+    meta: buildMeta(metaOverrides)
+  });
+}
+
+// src/hooks/useAddToCart.js
 function useAddToCart() {
   const { cart, setCart, actions, toast, auth, config } = useCore();
   const [quantity, setQuantity] = useState(1);
@@ -684,7 +969,10 @@ function useAddToCart() {
   const getCartItem = (product, customizations = []) => {
     if (!cart?.line_items) return null;
     return cart.line_items.find(
-      (item) => item.line_itemable?.id === product?.id && areCustomizationsEqual(item.line_items_customizations, customizations)
+      (item) => item.line_itemable?.id === product?.id && areCustomizationsEqual(
+        item.line_items_customizations,
+        customizations
+      )
     ) ?? null;
   };
   const refreshCart = async (cartId) => {
@@ -753,6 +1041,11 @@ function useAddToCart() {
         }
       }
       await addItemToCart(product, resolvedCartId, customizations, overrideQty);
+      console.log({ product });
+      const userId = auth?.user?.id ?? auth?.user?.userId ?? null;
+      const currency = config?.currency ?? "INR";
+      const qty = overrideQty !== null ? overrideQty : quantity ?? 1;
+      trackAddToCart({ userId, product, qty, currency });
       toast?.success?.(`${product?.name || "Item"} added to cart`);
     } catch (err) {
       console.error("[useAddToCart] handleAddToCart error:", err);
@@ -801,14 +1094,25 @@ function useAddToCart() {
       if (activeCartId) {
         await refreshCart(activeCartId);
       }
-      toast?.success?.(`${product?.line_itemable?.name || "Item"} removed from cart`);
+      const userId = auth?.user?.id ?? auth?.user?.userId ?? null;
+      const currency = config?.currency ?? "INR";
+      trackCustomEvent("remove_from_cart", userId, {
+        currency,
+        value: Number(product?.line_itemable?.price ?? 0) * (product?.quantity ?? 1),
+        items: [buildItem(product, product?.quantity ?? 1)]
+      });
+      toast?.success?.(
+        `${product?.line_itemable?.name || "Item"} removed from cart`
+      );
     } catch (err) {
       console.error("[useAddToCart] handleDeleteLineItem error:", err);
       const errorMsg = err?.data?.error || err?.message;
       if (errorMsg && typeof errorMsg === "string") {
         toast?.error?.(errorMsg);
       } else {
-        toast?.error?.(`Failed to remove ${product?.line_itemable?.name || "item"}`);
+        toast?.error?.(
+          `Failed to remove ${product?.line_itemable?.name || "item"}`
+        );
       }
     } finally {
       setIsAddToCartLoading(false);
@@ -2746,7 +3050,8 @@ var AddressCard = ({
 var Checkout = ({ hasDeletedItems }) => {
   const { auth, config } = useCore();
   const { isSignedIn, isLoading } = auth || {};
-  if (isLoading) return /* @__PURE__ */ jsx("div", { className: "w-full h-[400px] flex items-center justify-center", children: /* @__PURE__ */ jsx("div", { className: "w-8 h-8 border-4 border-[var(--core-primary)] border-t-transparent rounded-full animate-spin" }) });
+  if (isLoading)
+    return /* @__PURE__ */ jsx("div", { className: "w-full h-[400px] flex items-center justify-center", children: /* @__PURE__ */ jsx("div", { className: "w-8 h-8 border-4 border-[var(--core-primary)] border-t-transparent rounded-full animate-spin" }) });
   return !isSignedIn ? /* @__PURE__ */ jsx(LoginPage, {}) : /* @__PURE__ */ jsx(OrderInfo, { user: auth.user, hasDeletedItems });
 };
 var LoginPage = () => {
@@ -2832,9 +3137,15 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
       if (!hasBilling) apiData.billing_address_id = defaultAddressId;
       actions.updateCart(cart.id, apiData).then((updatedCart) => {
         if (updatedCart) setCart(updatedCart);
-      }).catch((err) => console.error("Failed to auto-set cart addresses:", err));
+      }).catch(
+        (err) => console.error("Failed to auto-set cart addresses:", err)
+      );
     }
-  }, [cart?.shipping_address?.id, cart?.billing_address?.id, addresses?.length]);
+  }, [
+    cart?.shipping_address?.id,
+    cart?.billing_address?.id,
+    addresses?.length
+  ]);
   const onUpdateOrderType = async (type) => {
     try {
       setOrderType(type);
@@ -2883,27 +3194,47 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
                 );
                 if (result?.serverError) {
                   lastError = result.serverError;
-                  console.warn(`[Checkout] updateRazorPayment attempt ${attempt} failed:`, result.serverError);
+                  console.warn(
+                    `[Checkout] updateRazorPayment attempt ${attempt} failed:`,
+                    result.serverError
+                  );
                 } else if (result?.order_id) {
                   order = result;
                   break;
                 } else {
                   lastError = "Payment update returned no order ID";
-                  console.warn(`[Checkout] updateRazorPayment attempt ${attempt}: no order_id`, result);
+                  console.warn(
+                    `[Checkout] updateRazorPayment attempt ${attempt}: no order_id`,
+                    result
+                  );
                 }
               }
             } catch (err) {
               lastError = err?.data?.error || err?.message || "Payment update failed";
-              console.error(`[Checkout] updateRazorPayment attempt ${attempt} threw:`, err);
+              console.error(
+                `[Checkout] updateRazorPayment attempt ${attempt} threw:`,
+                err
+              );
             }
             if (attempt < MAX_ATTEMPTS) {
-              await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+              await new Promise(
+                (resolve) => setTimeout(resolve, RETRY_DELAY_MS)
+              );
             }
           }
           if (order?.order_id) {
             if (typeof window !== "undefined") {
               localStorage.removeItem("cartid");
             }
+            const userId = auth?.userId ?? auth?.user?.id ?? user?.id ?? null;
+            const currency = config?.currency ?? "INR";
+            trackPurchase({
+              userId,
+              transactionId: String(order.order_id),
+              cart,
+              currency,
+              metaOverrides: { source: "checkout" }
+            });
             setCart(null);
             router.push(`/order/${order?.order_id}?show=true`);
           } else {
@@ -2918,7 +3249,9 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
           if (errorMsg && typeof errorMsg === "string") {
             toast?.error?.(errorMsg);
           } else {
-            toast?.error?.("Payment could not be updated. Please contact support.");
+            toast?.error?.(
+              "Payment could not be updated. Please contact support."
+            );
           }
         }
       },
@@ -2933,6 +3266,15 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
     razorpay.on("payment.failed", (response) => {
       console.error("Razorpay payment failed:", response);
       toast?.error?.(response?.error?.description || "Payment failed");
+      const userId = auth?.userId ?? auth?.user?.id ?? user?.id ?? null;
+      const currency = config?.currency ?? "INR";
+      trackPaymentFailed({
+        userId,
+        cart,
+        currency,
+        errorCode: response?.error?.code ?? "",
+        errorReason: response?.error?.reason ?? response?.error?.description ?? ""
+      });
     });
     razorpay.open();
   };
@@ -2946,6 +3288,29 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
       setIsPlacingOrder(true);
       if (actions?.createRazorOrder) {
         const orderResponse = await actions.createRazorOrder(cart.id);
+        const userId = auth?.userId ?? auth?.user?.id ?? user?.id ?? null;
+        const currency = config?.currency ?? "INR";
+        trackBeginCheckout({
+          userId,
+          cart,
+          currency,
+          transactionId: String(orderResponse?.id ?? ""),
+          metaOverrides: { source: "checkout" }
+        });
+        trackAddShippingInfo({
+          userId,
+          cart,
+          shippingTier: orderType === "pickup" ? "Pickup" : "Standard",
+          currency,
+          metaOverrides: { source: "checkout" }
+        });
+        trackAddPaymentInfo({
+          userId,
+          cart,
+          paymentType: "Razorpay",
+          currency,
+          metaOverrides: { source: "checkout" }
+        });
         onRazorPayHandler(orderResponse);
       }
     } catch (err) {
@@ -3096,7 +3461,8 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
         ] }),
         /* @__PURE__ */ jsxs("div", { className: "space-y-2", children: [
           /* @__PURE__ */ jsxs("p", { className: "font-[Nunito-medium] text-[#2d2d2d] text-base", children: [
-            "We're finalizing your order with ",
+            "We're finalizing your order with",
+            " ",
             paymentMode === "stripe" ? "Stripe" : "Razorpay",
             "."
           ] }),
@@ -3175,7 +3541,10 @@ var CouponSection = () => {
     (coupon) => coupon.code || coupon.id
   );
   if (cart && rawDiscounts.length === 0) {
-    console.warn("[CouponSection] No discounts found on cart. Cart keys:", Object.keys(cart));
+    console.warn(
+      "[CouponSection] No discounts found on cart. Cart keys:",
+      Object.keys(cart)
+    );
   }
   const firstAppliedDiscount = appliedDiscounts?.[0];
   const showInput = !firstAppliedDiscount || firstAppliedDiscount.stackable;
@@ -3205,6 +3574,8 @@ var CouponSection = () => {
       }
       const updatedCart = result?.cart ?? result;
       setCart(updatedCart);
+      const userId = auth?.userId ?? auth?.user?.id ?? auth?.user?.userId ?? null;
+      const currency = config?.currency ?? "INR";
       setIsOpen(false);
       setInputValue("");
       setErrorMessage(null);
@@ -3224,8 +3595,8 @@ var CouponSection = () => {
       setIsApplying(false);
     }
   };
-  const applyById = async (discountId) => {
-    if (!discountId) return;
+  const applyById = async (coupon) => {
+    if (!coupon?.id) return;
     if (!token) {
       setErrorMessage("Please sign in to apply a coupon");
       return;
@@ -3238,7 +3609,7 @@ var CouponSection = () => {
       }
       const result = await actions.applyDiscount({
         token,
-        discount_id: discountId,
+        discount_id: coupon.id,
         source: "web",
         region_id: config?.regionId,
         apiBaseUrl: config?.apiBaseUrl,
@@ -3250,6 +3621,8 @@ var CouponSection = () => {
       }
       const updatedCart = result?.cart ?? result;
       setCart(updatedCart);
+      const userId = auth?.userId ?? auth?.user?.id ?? auth?.user?.userId ?? null;
+      const currency = config?.currency ?? "INR";
       setIsOpen(false);
       setInputValue("");
       setErrorMessage(null);
@@ -3295,7 +3668,10 @@ var CouponSection = () => {
   };
   const getEligibility = (coupon) => {
     if (coupon.min_order_value > 0 && (cart?.item_total ?? 0) < coupon.min_order_value) {
-      return { eligible: false, reason: `Add ${coupon.display_min_order_value} more to apply` };
+      return {
+        eligible: false,
+        reason: `Add ${coupon.display_min_order_value} more to apply`
+      };
     }
     return { eligible: true, reason: null };
   };
@@ -3329,15 +3705,21 @@ var CouponSection = () => {
             /* @__PURE__ */ jsx("span", { className: "font-[Nunito-regular] text-[#0f0f0f] text-[12px]", children: "applied" }),
             /* @__PURE__ */ jsx("span", { className: "text-[#0f0f0f] text-[12px] hidden sm:inline", children: "\xB7" }),
             /* @__PURE__ */ jsxs("span", { className: "text-[#00b300] text-[12px] font-[Nunito-bold]", children: [
-              "You save ",
-              formatCurrency(coupon.display_discount_amount || coupon.discount_amount / 100)
+              "You save",
+              " ",
+              formatCurrency(
+                coupon.display_discount_amount || coupon.discount_amount / 100
+              )
             ] })
           ] }),
           /* @__PURE__ */ jsx(
             "button",
             {
               type: "button",
-              onClick: () => handleRemove({ code: coupon.code, discount_id: coupon.discount_id ?? coupon.id }),
+              onClick: () => handleRemove({
+                code: coupon.code,
+                discount_id: coupon.discount_id ?? coupon.id
+              }),
               disabled: removingId === (coupon.discount_id ?? coupon.id),
               className: "text-[#8e9194] text-lg bg-transparent border-0 cursor-pointer disabled:opacity-50",
               "aria-label": `Remove coupon ${coupon.code || "discount"}`,
@@ -3395,30 +3777,37 @@ var CouponSection = () => {
             const conditionParts = [];
             if (endDate) conditionParts.push(`Ends ${endDate}`);
             const conditionText = conditionParts.join(" \xB7 ");
-            return /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-[2px]", children: [
-              /* @__PURE__ */ jsxs(
-                "button",
-                {
-                  type: "button",
-                  onClick: () => {
-                    if (!eligible) return;
-                    if (!coupon.code) {
-                      applyById(coupon.id);
-                    } else {
-                      setInputValue(coupon.code);
+            return /* @__PURE__ */ jsxs(
+              "div",
+              {
+                className: "flex flex-col gap-[2px]",
+                children: [
+                  /* @__PURE__ */ jsxs(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: () => {
+                        if (!eligible) return;
+                        if (!coupon.code) {
+                          applyById(coupon);
+                        } else {
+                          setInputValue(coupon.code);
+                        }
+                      },
+                      disabled: !eligible || isApplying,
+                      className: `bg-[#fff5ee] border border-dashed border-[#FF6500] text-[#FF6500] text-[11px] font-[Nunito-bold] px-3 py-1 rounded ${!eligible || isApplying ? "opacity-40 cursor-not-allowed" : ""}`,
+                      children: [
+                        coupon.code ? `${coupon.code} \u2014 ` : "",
+                        coupon.display_action_value || "Discount"
+                      ]
                     }
-                  },
-                  disabled: !eligible || isApplying,
-                  className: `bg-[#fff5ee] border border-dashed border-[#FF6500] text-[#FF6500] text-[11px] font-[Nunito-bold] px-3 py-1 rounded ${!eligible || isApplying ? "opacity-40 cursor-not-allowed" : ""}`,
-                  children: [
-                    coupon.code ? `${coupon.code} \u2014 ` : "",
-                    coupon.display_action_value || "Discount"
-                  ]
-                }
-              ),
-              reason && /* @__PURE__ */ jsx("span", { className: "text-[11px] text-[#8e9194]", children: reason }),
-              !reason && conditionText && /* @__PURE__ */ jsx("span", { className: "text-[11px] text-[#8e9194]", children: conditionText })
-            ] }, coupon?.code || coupon?.id);
+                  ),
+                  reason && /* @__PURE__ */ jsx("span", { className: "text-[11px] text-[#8e9194]", children: reason }),
+                  !reason && conditionText && /* @__PURE__ */ jsx("span", { className: "text-[11px] text-[#8e9194]", children: conditionText })
+                ]
+              },
+              coupon?.code || coupon?.id
+            );
           }) })
         ] })
       ] })
@@ -4547,6 +4936,6 @@ var Hello = () => {
   return /* @__PURE__ */ jsx("div", { children: isCartLoading ? "Loading..." : "Core Working \u2705" });
 };
 
-export { AccountPage, AddressCard2 as AddressCard, AddressForm, AuthManager, CartItem, CartPage, CartSummary, CoreProvider, CouponSection_default as CouponSection, CustomOTPAuth, EmptyState, Hello, Order, OrdersList, Popup, ProfileForm, Spinner, UserInfo, ViewCart, useAddToCart, useAuth, useCart, userCartInfo_default as useCartInfo, useCore, useCurrencyFormat, useLogout, useVariantSelection };
+export { AccountPage, AddressCard2 as AddressCard, AddressForm, AuthManager, CartItem, CartPage, CartSummary, CoreProvider, CouponSection_default as CouponSection, CustomOTPAuth, EmptyState, Hello, Order, OrdersList, Popup, ProfileForm, Spinner, UserInfo, ViewCart, buildItem, buildMeta, clearEcommerce, pushToDataLayer, trackAddPaymentInfo, trackAddShippingInfo, trackAddToCart, trackApplyCoupon, trackBeginCheckout, trackCustomEvent, trackPageView, trackPaymentFailed, trackPurchase, trackViewItem, useAddToCart, useAuth, useCart, userCartInfo_default as useCartInfo, useCore, useCurrencyFormat, useLogout, useVariantSelection };
 //# sourceMappingURL=index.js.map
 //# sourceMappingURL=index.js.map

@@ -42,3 +42,21 @@ export { AddressForm } from "./components/common/AddressForm";
 
 // ─── Debug / Dev ──────────────────────────────────────────────────────────────
 export { Hello } from "./components/hello";
+
+// ─── Analytics (GTM / GA4) ────────────────────────────────────────────────────
+export {
+  pushToDataLayer,
+  clearEcommerce,
+  buildMeta,
+  buildItem,
+  trackPageView,
+  trackViewItem,
+  trackAddToCart,
+  trackBeginCheckout,
+  trackAddShippingInfo,
+  trackAddPaymentInfo,
+  trackPurchase,
+  trackApplyCoupon,
+  trackPaymentFailed,
+  trackCustomEvent,
+} from "./lib/gtm";
