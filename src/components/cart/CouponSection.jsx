@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useCore } from "../../context/CoreProvider";
 import { useCurrencyFormat } from "../../hooks/useCurrencyFormat";
+import { trackApplyCoupon } from "../../lib/gtm";
 
 const CouponSection = () => {
   const { cart, setCart, actions, auth, config, toast } = useCore();
@@ -13,7 +14,7 @@ const CouponSection = () => {
   const [inputValue, setInputValue] = useState("");
   const [errorMessage, setErrorMessage] = useState(null);
   const [isApplying, setIsApplying] = useState(false);
-  const [removingCode, setRemovingCode] = useState(null);
+  const [removingId, setRemovingId] = useState(null);
   const [availableDiscounts, setAvailableDiscounts] = useState([]);
   const [discountsLoading, setDiscountsLoading] = useState(false);
 
@@ -39,6 +40,8 @@ const CouponSection = () => {
           token,
           cart_id: cart?.id,
           region_id: config?.regionId,
+          apiBaseUrl: config?.apiBaseUrl,
+          orgId: config?.storeId,
         });
         if (isMounted) {
           setAvailableDiscounts(Array.isArray(data) ? data : []);
@@ -58,11 +61,22 @@ const CouponSection = () => {
     };
   }, [actions, cart?.id, token, config?.regionId]);
 
-  const availableDiscountsWithCode = availableDiscounts?.filter((coupon) => coupon.code) || [];
+  // const availableDiscountsWithCode = availableDiscounts?.filter((coupon) => coupon.code) || [];
+  const availableDiscountsWithCode = availableDiscounts || [];
 
-  const appliedDiscounts = (cart?.cart_detail_json?.discounts || cart?.cart_discounts || []).filter(
-    (coupon) => coupon.code
+  // Applied discounts: try both known field paths
+  const rawDiscounts = cart?.cart_discounts || [];
+
+  const appliedDiscounts = rawDiscounts.filter(
+    (coupon) => coupon.code || coupon.id,
   );
+
+  if (cart && rawDiscounts.length === 0) {
+    console.warn(
+      "[CouponSection] No discounts found on cart. Cart keys:",
+      Object.keys(cart),
+    );
+  }
 
   const firstAppliedDiscount = appliedDiscounts?.[0];
   const showInput = !firstAppliedDiscount || firstAppliedDiscount.stackable;
@@ -84,14 +98,31 @@ const CouponSection = () => {
         code: inputValue.trim(),
         source: "web",
         region_id: config?.regionId,
+        apiBaseUrl: config?.apiBaseUrl,
+        orgId: config?.storeId,
       });
+      // wrapJsonResponse returns {serverError} on API failure (does not throw)
+      if (result?.serverError) {
+        setErrorMessage(result.serverError);
+        return;
+      }
       const updatedCart = result?.cart ?? result;
       setCart(updatedCart);
+
+      // ── GA4 via GTM ────────────────────────────────────────────────
+      // auth.userId = decoded JWT sub, always set after OTP login
+      const userId =
+        auth?.userId ?? auth?.user?.id ?? auth?.user?.userId ?? null;
+      const currency = config?.currency ?? "INR";
+      // trackApplyCoupon({ userId, cart: updatedCart, couponCode: inputValue.trim(), currency });
+      // ─────────────────────────────────────────────────────────────────
+
       setIsOpen(false);
       setInputValue("");
       setErrorMessage(null);
     } catch (error) {
-      const msg = error?.data?.error || error?.message || "Failed to apply coupon";
+      const msg =
+        error?.data?.error || error?.message || "Failed to apply coupon";
       setErrorMessage(msg);
 
       if (
@@ -112,31 +143,107 @@ const CouponSection = () => {
     }
   };
 
-  const handleRemove = async (code) => {
-    setRemovingCode(code);
-    console.log({ code })
+  const applyById = async (coupon) => {
+    if (!coupon?.id) return;
+    if (!token) {
+      setErrorMessage("Please sign in to apply a coupon");
+      return;
+    }
+    setIsApplying(true);
+    setErrorMessage(null);
     try {
-      if (!actions?.removeDiscount) {
+      if (!actions?.applyDiscount) {
+        throw new Error("applyDiscount action is not configured");
+      }
+      const result = await actions.applyDiscount({
+        token,
+        discount_id: coupon.id,
+        source: "web",
+        region_id: config?.regionId,
+        apiBaseUrl: config?.apiBaseUrl,
+        orgId: config?.storeId,
+      });
+      // wrapJsonResponse returns {serverError} on API failure (does not throw)
+      if (result?.serverError) {
+        setErrorMessage(result.serverError);
+        return;
+      }
+      const updatedCart = result?.cart ?? result;
+      setCart(updatedCart);
+
+      // ── GA4 via GTM ────────────────────────────────────────────────
+      // auth.userId = decoded JWT sub, always set after OTP login
+      const userId =
+        auth?.userId ?? auth?.user?.id ?? auth?.user?.userId ?? null;
+      const currency = config?.currency ?? "INR";
+      // trackApplyCoupon({
+      //   userId,
+      //   cart: updatedCart,
+      //   couponCode: coupon.code || coupon.display_action_value || "",
+      //   currency,
+      // });
+      // ─────────────────────────────────────────────────────────────────
+
+      setIsOpen(false);
+      setInputValue("");
+      setErrorMessage(null);
+    } catch (error) {
+      const msg =
+        error?.data?.error || error?.message || "Failed to apply coupon";
+      setErrorMessage(msg);
+
+      if (
+        msg.toLowerCase().includes("already applied") ||
+        msg.toLowerCase().includes("discount is already")
+      ) {
+        // Force refresh cart to sync UI
+        if (actions?.getCart && auth?.isSignedIn) {
+          const res = await actions.getCart(config?.regionId);
+          setCart(Array.isArray(res) ? res[0] : res);
+        } else if (actions?.getCartById && cart?.id) {
+          const res = await actions.getCartById(cart.id, config?.regionId);
+          setCart(res);
+        }
+      }
+    } finally {
+      setIsApplying(false);
+    }
+  };
+
+  const handleRemove = async ({ code, discount_id }) => {
+    setRemovingId(discount_id);
+    try {
+      if (!actions?.removeDiscountById && !actions?.removeDiscount) {
         throw new Error("removeDiscount action is not configured");
       }
-      const result = await actions.removeDiscount({
+      const removeFn = actions?.removeDiscountById || actions?.removeDiscount;
+      const result = await removeFn({
         token,
-        code,
+        discount_id,
         region_id: config?.regionId,
+        apiBaseUrl: config?.apiBaseUrl,
+        orgId: config?.storeId,
       });
       const updatedCart = result?.cart ?? result;
       setCart(updatedCart);
       setIsOpen(true);
     } catch (error) {
-      triggerToast.error(`Failed to remove coupon ${code}`);
+      console.log({ error });
+      triggerToast.error(`Failed to remove coupon ${code || "discount"}`);
     } finally {
-      setRemovingCode(null);
+      setRemovingId(null);
     }
   };
 
   const getEligibility = (coupon) => {
-    if (coupon.min_order_value > 0 && (cart?.item_total ?? 0) < coupon.min_order_value) {
-      return { eligible: false, reason: `Add ${coupon.display_min_order_value} more to apply` };
+    if (
+      coupon.min_order_value > 0 &&
+      (cart?.item_total ?? 0) < coupon.min_order_value
+    ) {
+      return {
+        eligible: false,
+        reason: `Add ${coupon.display_min_order_value} more to apply`,
+      };
     }
     return { eligible: true, reason: null };
   };
@@ -166,6 +273,7 @@ const CouponSection = () => {
     );
   }
 
+  console.log({ availableDiscountsWithCode });
   // State 1 — Token exists (render applied discounts and accordion input)
   return (
     <div className="my-4">
@@ -180,24 +288,37 @@ const CouponSection = () => {
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
                 <span className="text-base">✅</span>
                 <span className="font-[Nunito-bold] text-[#0f0f0f] text-[13px] tracking-wide">
-                  {coupon.code}
+                  {coupon.code
+                    ? coupon.code
+                    : coupon.display_action_value || "Discount"}
                 </span>
                 <span className="font-[Nunito-regular] text-[#0f0f0f] text-[12px]">
                   applied
                 </span>
-                <span className="text-[#0f0f0f] text-[12px] hidden sm:inline">·</span>
+                <span className="text-[#0f0f0f] text-[12px] hidden sm:inline">
+                  ·
+                </span>
                 <span className="text-[#00b300] text-[12px] font-[Nunito-bold]">
-                  You save {formatCurrency(coupon.display_discount_amount || (coupon.discount_amount / 100))}
+                  You save{" "}
+                  {formatCurrency(
+                    coupon.display_discount_amount ||
+                      coupon.discount_amount / 100,
+                  )}
                 </span>
               </div>
               <button
                 type="button"
-                onClick={() => handleRemove(coupon.code)}
-                disabled={removingCode === coupon.code}
+                onClick={() =>
+                  handleRemove({
+                    code: coupon.code,
+                    discount_id: coupon.discount_id ?? coupon.id,
+                  })
+                }
+                disabled={removingId === (coupon.discount_id ?? coupon.id)}
                 className="text-[#8e9194] text-lg bg-transparent border-0 cursor-pointer disabled:opacity-50"
-                aria-label={`Remove coupon ${coupon.code}`}
+                aria-label={`Remove coupon ${coupon.code || "discount"}`}
               >
-                {removingCode === coupon.code ? "…" : "✕"}
+                {removingId === (coupon.discount_id ?? coupon.id) ? "…" : "✕"}
               </button>
             </div>
           ))}
@@ -251,46 +372,56 @@ const CouponSection = () => {
               )}
 
               {/* Available coupons */}
-              {!discountsLoading &&
-                availableDiscountsWithCode.length > 0 && (
-                  <div className="flex flex-col gap-2 mt-1">
-                    <p className="font-[Nunito-medium] text-[12px] text-[var(--secondary)]">
-                      Available coupons
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {availableDiscountsWithCode.map((coupon) => {
-                        const endDate = formatEndDate(coupon.end_at);
-                        const { eligible, reason } = getEligibility(coupon);
-                        const conditionParts = [];
-                        if (endDate) conditionParts.push(`Ends ${endDate}`);
-                        const conditionText = conditionParts.join(" · ");
+              {!discountsLoading && availableDiscountsWithCode.length > 0 && (
+                <div className="flex flex-col gap-2 mt-1">
+                  <p className="font-[Nunito-medium] text-[12px] text-[var(--secondary)]">
+                    Available coupons
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {availableDiscountsWithCode.map((coupon) => {
+                      const endDate = formatEndDate(coupon.end_at);
+                      const { eligible, reason } = getEligibility(coupon);
+                      const conditionParts = [];
+                      if (endDate) conditionParts.push(`Ends ${endDate}`);
+                      const conditionText = conditionParts.join(" · ");
 
-                        return (
-                          <div key={coupon.code} className="flex flex-col gap-[2px]">
-                            <button
-                              type="button"
-                              onClick={() => eligible && setInputValue(coupon.code)}
-                              disabled={!eligible}
-                              className={`bg-[#fff5ee] border border-dashed border-[#FF6500] text-[#FF6500] text-[11px] font-[Nunito-bold] px-3 py-1 rounded ${!eligible ? "opacity-40 cursor-not-allowed" : ""}`}
-                            >
-                              {coupon.code} — {coupon.display_action_value}
-                            </button>
-                            {reason && (
-                              <span className="text-[11px] text-[#8e9194]">
-                                {reason}
-                              </span>
-                            )}
-                            {!reason && conditionText && (
-                              <span className="text-[11px] text-[#8e9194]">
-                                {conditionText}
-                              </span>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
+                      return (
+                        <div
+                          key={coupon?.code || coupon?.id}
+                          className="flex flex-col gap-[2px]"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!eligible) return;
+                              if (!coupon.code) {
+                                applyById(coupon);
+                              } else {
+                                setInputValue(coupon.code);
+                              }
+                            }}
+                            disabled={!eligible || isApplying}
+                            className={`bg-[#fff5ee] border border-dashed border-[#FF6500] text-[#FF6500] text-[11px] font-[Nunito-bold] px-3 py-1 rounded ${!eligible || isApplying ? "opacity-40 cursor-not-allowed" : ""}`}
+                          >
+                            {coupon.code ? `${coupon.code} — ` : ""}
+                            {coupon.display_action_value || "Discount"}
+                          </button>
+                          {reason && (
+                            <span className="text-[11px] text-[#8e9194]">
+                              {reason}
+                            </span>
+                          )}
+                          {!reason && conditionText && (
+                            <span className="text-[11px] text-[#8e9194]">
+                              {conditionText}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
-                )}
+                </div>
+              )}
             </div>
           )}
         </>

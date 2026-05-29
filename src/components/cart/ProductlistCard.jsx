@@ -1,11 +1,38 @@
-﻿"use client";
+"use client";
 import React from "react";
-import { useCurrencyFormat } from "@/hooks/useCurrencyFormat";
-import { useAddToCart } from "@/hooks/useAddToCart";
-import { DeleteIcon, EditIcon } from "@/public/SvgImage";
-import CustomizationModal from "@/components/common/CustomizationModal";
+import { useCurrencyFormat } from "../../hooks/useCurrencyFormat";
+import { useAddToCart } from "../../hooks/useAddToCart";
 import { useState } from "react";
-import ViewCustomizationModal from "@/components/common/ViewCustomizationModal";
+import CustomizationModal from "../common/CustomizationModal";
+import ViewCustomizationModal from "../common/ViewCustomizationModal";
+
+// ─── Inline Icons ─────────────────────────────────────────────────────────────
+const DeleteIcon = ({ onClick, disabled, className, title }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    disabled={disabled}
+    className={className}
+    title={title}
+    aria-label={title || "Delete"}
+  >
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+      <path d="M10 11v6M14 11v6" />
+      <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
+    </svg>
+  </button>
+);
 
 const noProductImage = `data:image/svg+xml;utf8,${encodeURIComponent(
   `<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -21,6 +48,9 @@ const ProductlistCard = ({ product, component, orderType }) => {
   const displayPrice = (price ?? 0) / 100;
   const isSellingQty = !!product?.line_itemable?.selling_quantity_id;
 
+  // Variant options (e.g. Size: M, Color: Red)
+  const variantOptions = product?.line_itemable?.variant_options ?? [];
+
   const { formatCurrency } = useCurrencyFormat();
   const {
     handleDeleteLineItem,
@@ -31,6 +61,23 @@ const ProductlistCard = ({ product, component, orderType }) => {
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+
+  // Navigate to product page with variant pre-selected
+  const handleNavigateToProduct = () => {
+    const lineItemable = product?.line_itemable;
+    if (!lineItemable) return;
+
+    // product_id is the parent product; id is the variant id
+    const productId = lineItemable?.product_id ?? lineItemable?.id;
+    const variantId = lineItemable?.product_id ? lineItemable?.id : null;
+    const taxonId = lineItemable?.taxons?.[0]?.id ?? "taxon";
+
+    let url = `/product/${productId}?taxonid=${taxonId}`;
+    if (variantId) url += `&variantId=${variantId}`;
+    if (quantity && quantity > 1) url += `&qty=${quantity}`;
+
+    window.location.href = url;
+  };
 
   const handleImageError = (event) => {
     event.currentTarget.onerror = null;
@@ -130,14 +177,18 @@ const ProductlistCard = ({ product, component, orderType }) => {
   }
   return (
     <div className="flex justify-between gap-4">
-      {/* Left section */}
-      <div className="flex gap-[10px] flex-1 min-w-0">
+      {/* Left section — clickable to navigate to product */}
+      <div
+        className="flex gap-[10px] flex-1 min-w-0 cursor-pointer"
+        onClick={handleNavigateToProduct}
+        title="View product"
+      >
         {/* Product Image */}
         <div className="w-[112px] h-[124px] flex-shrink-0 overflow-hidden">
           <img
             src={productImage || noProductImage}
             alt={name || "Product"}
-            className="w-[112px] h-[124px] object-cover rounded-lg"
+            className="w-[112px] h-[124px] object-cover rounded-lg hover:opacity-90 transition-opacity"
             onError={handleImageError}
           />
         </div>
@@ -145,14 +196,40 @@ const ProductlistCard = ({ product, component, orderType }) => {
         {/* Product Info */}
         <div className="flex flex-col justify-between h-[124px] flex-1 min-w-0">
           <div className="min-w-0">
-            <p className="font-[Nunito-medium] text-base text-[var(--main)] line-clamp-1">
-              {name}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="font-[Nunito-medium] text-base text-[var(--main)] line-clamp-1 hover:underline">
+                {name}
+              </p>
+              {product?.bogo_benefit?.benefit_type === "free" && (
+                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-[Nunito-medium] flex-shrink-0 whitespace-nowrap">
+                  FREE
+                </span>
+              )}
+            </div>
+
+            {/* Variant option badges (e.g. Size: M, Color: Red) */}
+            {variantOptions.length > 0 && (
+              <div className="mt-1 flex flex-wrap gap-1">
+                {variantOptions.map((vo, i) => (
+                  <span
+                    key={i}
+                    className="text-[11px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-[Nunito-medium]"
+                  >
+                    {vo?.option_type?.presentation ?? vo?.option_type?.name}:{" "}
+                    {vo?.option_value?.presentation ?? vo?.option_value?.name}
+                  </span>
+                ))}
+              </div>
+            )}
+
             {product?.line_items_customizations?.length > 0 && (
               <div className="mt-1 flex flex-col gap-0.5">
                 {product.line_items_customizations.length > 3 ? (
                   <button
-                    onClick={() => setIsViewModalOpen(true)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsViewModalOpen(true);
+                    }}
                     className="text-xs text-[var(--core-primary)] underline hover:text-[var(--core-primary)] transition-colors text-left font-medium"
                   >
                     customizations: view

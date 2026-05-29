@@ -1,17 +1,482 @@
 import { getPaymentGateway } from './chunk-ICFWQ2RM.js';
-import React8, { createContext, useState, useEffect, useCallback, useMemo, useContext, useRef } from 'react';
+import React8, { createContext, useState, useMemo, useEffect, useCallback, useContext, useRef } from 'react';
 import { jsx, jsxs, Fragment } from 'react/jsx-runtime';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
+import Cookies from 'js-cookie';
 import { flatten, map, compact, filter, uniqBy } from 'lodash';
 import Link from 'next/link';
 import { useRazorpay } from 'react-razorpay';
 import { createPortal } from 'react-dom';
 
+// src/actions/storefrontActions.js
+var API_VERSION_ACCEPT = "application/vnd.defx-store.v2";
+var getApiBaseUrl = (options = {}) => options?.config?.apiBaseUrl || options?.apiBaseUrl || process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || "";
+var getOrganizationId = (options = {}) => options?.config?.storeId || options?.orgId || process.env.NEXT_PUBLIC_ORGANIZATION_ID || process.env.ORG_ID || null;
+var getServerToken = async (token) => {
+  if (token) return token;
+  if (typeof window !== "undefined") {
+    return window.localStorage?.getItem("access_token") || null;
+  }
+  try {
+    const { cookies } = await import('next/headers');
+    const cookieStore = await cookies();
+    return cookieStore.get("access_token")?.value || cookieStore.get("token")?.value || null;
+  } catch {
+    return null;
+  }
+};
+var buildHeaders = async ({
+  token,
+  orgId,
+  config,
+  json = true,
+  requireAuth = false
+} = {}) => {
+  const authToken = await getServerToken(token);
+  const organizationId = getOrganizationId({ orgId, config });
+  if (requireAuth && !authToken) {
+    throw new Error("Unauthorized");
+  }
+  return {
+    ...json ? { "Content-Type": "application/json" } : {},
+    accept: API_VERSION_ACCEPT,
+    ...organizationId ? { "Set-Organization": organizationId } : {},
+    ...authToken ? { Authorization: `Bearer ${authToken}` } : {}
+  };
+};
+var readError = async (res, fallback) => {
+  const text = await res.text().catch(() => "");
+  if (!text) return fallback;
+  try {
+    const data = JSON.parse(text);
+    return data?.message || data?.error || fallback;
+  } catch {
+    return text;
+  }
+};
+var wrapJsonResponse = async (res, fallback) => {
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    return {
+      serverError: data?.error || data?.message || fallback,
+      data,
+      status: res.status
+    };
+  }
+  return data;
+};
+var requestJson = async (url, options, fallback) => {
+  const res = await fetch(url, options);
+  if (!res.ok) {
+    return { serverError: await readError(res, fallback) };
+  }
+  if (res.status === 204) return true;
+  return res.json();
+};
+var requestJsonFromResponse = async (res, fallback) => {
+  if (!res.ok) return { serverError: await readError(res, fallback) };
+  if (res.status === 204) return true;
+  return res.json();
+};
+var createCartAction = async (body = {}, options = {}) => {
+  const res = await fetch(`${getApiBaseUrl(options)}/api/carts`, {
+    method: "POST",
+    headers: await buildHeaders(options),
+    body: JSON.stringify(body),
+    cache: "no-store"
+  });
+  return requestJsonFromResponse(res, "Failed to create cart");
+};
+var getCartAction = async (regionId, options = {}) => {
+  const url = new URL(`${getApiBaseUrl(options)}/api/carts`);
+  if (regionId) url.searchParams.set("region_id", regionId);
+  return requestJson(
+    url.toString(),
+    {
+      method: "GET",
+      headers: await buildHeaders(options),
+      cache: "no-store"
+    },
+    "Failed to get cart"
+  );
+};
+var getCartByIdAction = async (cartId, regionId, options = {}) => {
+  const url = new URL(`${getApiBaseUrl(options)}/api/carts/${cartId}`);
+  if (regionId) url.searchParams.set("region_id", regionId);
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: await buildHeaders(options),
+    cache: "no-store"
+  });
+  if (res.status === 404) return null;
+  return requestJsonFromResponse(res, "Failed to get cart");
+};
+var updateCartAction = async (cartId, payload, options = {}) => requestJson(
+  `${getApiBaseUrl(options)}/api/carts/${cartId}`,
+  {
+    method: "PUT",
+    headers: await buildHeaders(options),
+    body: JSON.stringify(payload),
+    cache: "no-store"
+  },
+  "Failed to update cart"
+);
+var updateCartIdLineItemsAction = async (payload, options = {}) => requestJson(
+  `${getApiBaseUrl(options)}/api/update_cart_id_line_items`,
+  {
+    method: "PUT",
+    headers: await buildHeaders(options),
+    body: JSON.stringify(payload),
+    cache: "no-store"
+  },
+  "Failed to update cart line items"
+);
+var createLineItemAction = async (body = {}, options = {}) => requestJson(
+  `${getApiBaseUrl(options)}/api/line_items`,
+  {
+    method: "POST",
+    headers: await buildHeaders(options),
+    body: JSON.stringify(body),
+    cache: "no-store"
+  },
+  "Failed to create line item"
+);
+var updateLineItemAction = async (lineItemId, body, options = {}) => requestJson(
+  `${getApiBaseUrl(options)}/api/line_items/${lineItemId}`,
+  {
+    method: "PUT",
+    headers: await buildHeaders(options),
+    body: JSON.stringify(body),
+    cache: "no-store"
+  },
+  "Failed to update line item"
+);
+var deleteLineItemAction = async (lineItemId, options = {}) => requestJson(
+  `${getApiBaseUrl(options)}/api/line_items/${lineItemId}`,
+  {
+    method: "DELETE",
+    headers: await buildHeaders(options),
+    cache: "no-store"
+  },
+  "Failed to delete line item"
+);
+var createRazorpayOrderAction = async (cartId, options = {}) => requestJson(
+  `${getApiBaseUrl(options)}/api/cart_payments`,
+  {
+    method: "POST",
+    headers: await buildHeaders({ ...options, requireAuth: true }),
+    body: JSON.stringify({ cart_id: cartId }),
+    cache: "no-store"
+  },
+  "Failed to create Razorpay order"
+);
+var updateRazorpayPaymentAction = async (paymentId, razorpayPaymentId, options = {}) => requestJson(
+  `${getApiBaseUrl(options)}/api/cart_payments/${paymentId}`,
+  {
+    method: "PUT",
+    headers: await buildHeaders({ ...options, requireAuth: true }),
+    body: JSON.stringify({ razor_payment_id: razorpayPaymentId }),
+    cache: "no-store"
+  },
+  "Failed to update Razorpay payment id"
+);
+var getAddressesAction = async (options = {}) => {
+  const token = await getServerToken(options.token);
+  if (!token) return { data: [] };
+  return requestJson(
+    `${getApiBaseUrl(options)}/api/addresses`,
+    {
+      method: "GET",
+      headers: await buildHeaders({ ...options, token }),
+      cache: "no-store"
+    },
+    "Failed to fetch addresses"
+  );
+};
+var createAddressAction = async (addressData, options = {}) => requestJson(
+  `${getApiBaseUrl(options)}/api/addresses`,
+  {
+    method: "POST",
+    headers: await buildHeaders({ ...options, requireAuth: true }),
+    body: JSON.stringify({ address: addressData }),
+    cache: "no-store"
+  },
+  "Failed to create address"
+);
+var updateAddressAction = async (addressId, addressData, options = {}) => requestJson(
+  `${getApiBaseUrl(options)}/api/addresses/${addressId}`,
+  {
+    method: "PUT",
+    headers: await buildHeaders({ ...options, requireAuth: true }),
+    body: JSON.stringify({ address: addressData }),
+    cache: "no-store"
+  },
+  "Failed to update address"
+);
+var deleteAddressAction = async (addressId, options = {}) => requestJson(
+  `${getApiBaseUrl(options)}/api/addresses/${addressId}`,
+  {
+    method: "DELETE",
+    headers: await buildHeaders({ ...options, requireAuth: true }),
+    cache: "no-store"
+  },
+  "Failed to delete address"
+);
+var loginUser = async (data = {}, options = {}) => {
+  const payload = {
+    phone: data?.phone ?? data,
+    country_code: data?.country_code ?? data?.countryCode ?? "+91",
+    organization_id: getOrganizationId(options)
+  };
+  return requestJson(
+    `${getApiBaseUrl(options)}/api/login`,
+    {
+      method: "POST",
+      headers: await buildHeaders(options),
+      body: JSON.stringify(payload),
+      cache: "no-store"
+    },
+    "Failed to send OTP"
+  );
+};
+var signUpUser = async (data = {}, options = {}) => {
+  const formData = data instanceof FormData ? data : new FormData();
+  if (!(data instanceof FormData)) {
+    formData.append("user[first_name]", data?.firstName ?? "");
+    formData.append("user[last_name]", data?.lastName ?? "");
+    formData.append("user[phone]", data?.phone ?? "");
+    formData.append("user[country_code]", data?.countryCode ?? "+91");
+  }
+  return requestJson(
+    `${getApiBaseUrl(options)}/api/users`,
+    {
+      method: "POST",
+      headers: await buildHeaders({ ...options, json: false }),
+      body: formData,
+      cache: "no-store"
+    },
+    "Failed to sign up"
+  );
+};
+var verifyOtp = async (data = {}, options = {}) => {
+  const result = await requestJson(
+    `${getApiBaseUrl(options)}/api/verify`,
+    {
+      method: "POST",
+      headers: await buildHeaders(options),
+      body: JSON.stringify(data),
+      cache: "no-store"
+    },
+    "Invalid OTP"
+  );
+  const token = result?.token ?? result?.access_token;
+  if (!token || result?.serverError) return result;
+  const user = await getUserAction({ ...options, token });
+  return { ...result, user };
+};
+var getUserAction = async (options = {}) => {
+  const token = await getServerToken(options.token);
+  if (!token) return null;
+  return requestJson(
+    `${getApiBaseUrl(options)}/api/users`,
+    {
+      method: "GET",
+      headers: await buildHeaders({ ...options, token }),
+      cache: "no-store"
+    },
+    "Failed to get user"
+  );
+};
+var updateUserAction = async (userId, userData, options = {}) => requestJson(
+  `${getApiBaseUrl(options)}/api/users/${userId}`,
+  {
+    method: "PUT",
+    headers: await buildHeaders({ ...options, requireAuth: true }),
+    body: JSON.stringify(userData),
+    cache: "no-store"
+  },
+  "Failed to update user"
+);
+var getOrdersAction = async (regionId, page = 1, options = {}) => {
+  const url = new URL(`${getApiBaseUrl(options)}/api/orders`);
+  if (regionId) url.searchParams.set("region_id", regionId);
+  url.searchParams.set("page", page.toString());
+  return requestJson(
+    url.toString(),
+    {
+      method: "GET",
+      headers: await buildHeaders(options),
+      cache: "no-store"
+    },
+    "Failed to get orders"
+  );
+};
+var getOrderByIdAction = async (orderId, options = {}) => requestJson(
+  `${getApiBaseUrl(options)}/api/orders/${orderId}`,
+  {
+    method: "GET",
+    headers: await buildHeaders(options),
+    cache: "no-store"
+  },
+  "Failed to get order"
+);
+var getOrderInvoiceAction = async (orderId, options = {}) => {
+  const res = await fetch(
+    `${getApiBaseUrl(options)}/api/generate_invoice_pdf/${orderId}`,
+    {
+      method: "GET",
+      headers: await buildHeaders(options),
+      cache: "no-store"
+    }
+  );
+  if (!res.ok)
+    return { serverError: await readError(res, "Failed to get order invoice") };
+  return res.text();
+};
+var getAvailableDiscountsAction = async (params = {}) => {
+  const url = new URL(`${getApiBaseUrl(params)}/api/discounts/available`);
+  if (params.cart_id) url.searchParams.set("cart_id", params.cart_id);
+  if (params.region_id) url.searchParams.set("region_id", params.region_id);
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: await buildHeaders(params),
+    cache: "no-store"
+  });
+  return wrapJsonResponse(res, "Failed to fetch available discounts");
+};
+var applyDiscountAction = async (params = {}) => {
+  const payload = {
+    source: params.source || "web",
+    ...params.region_id ? { region_id: params.region_id } : {},
+    ...params.code ? { code: params.code } : {},
+    ...params.discount_id ? { discount_id: params.discount_id } : {}
+  };
+  const res = await fetch(`${getApiBaseUrl(params)}/api/discounts/apply`, {
+    method: "POST",
+    headers: await buildHeaders(params),
+    body: JSON.stringify(payload),
+    cache: "no-store"
+  });
+  return wrapJsonResponse(res, "Failed to apply discount");
+};
+var removeDiscountAction = async (params = {}) => {
+  const url = new URL(`${getApiBaseUrl(params)}/api/discounts/remove`);
+  if (params.discount_id)
+    url.searchParams.set("discount_id", params.discount_id);
+  if (params.region_id) url.searchParams.set("region_id", params.region_id);
+  const res = await fetch(url.toString(), {
+    method: "DELETE",
+    headers: await buildHeaders(params),
+    cache: "no-store"
+  });
+  return wrapJsonResponse(res, "Failed to remove discount");
+};
+var trackDiscountEventAction = async (params = {}) => {
+  const res = await fetch(
+    `${getApiBaseUrl(params)}/api/discounts/track_event`,
+    {
+      method: "POST",
+      headers: await buildHeaders(params),
+      body: JSON.stringify({
+        discount_id: params.discount_id,
+        event_type: params.event_type,
+        source: params.source,
+        region_id: params.region_id
+      }),
+      cache: "no-store"
+    }
+  );
+  return wrapJsonResponse(res, "Failed to track discount event");
+};
+
+// src/actions/discountActions.js
+var buildHeaders2 = (token, orgId) => {
+  const headers = {
+    "Content-Type": "application/json",
+    accept: "application/vnd.defx-store.v2"
+  };
+  if (orgId) {
+    headers["Set-Organization"] = orgId;
+  } else if (process.env.NEXT_PUBLIC_ORGANIZATION_ID) {
+    headers["Set-Organization"] = process.env.NEXT_PUBLIC_ORGANIZATION_ID;
+  } else if (process.env.ORG_ID) {
+    headers["Set-Organization"] = process.env.ORG_ID;
+  }
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  return headers;
+};
+var wrapResponse = async (res, fallbackMessage) => {
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    const err = new Error(
+      data?.error || data?.message || fallbackMessage
+    );
+    err.data = data;
+    err.status = res.status;
+    throw err;
+  }
+  return data;
+};
+var removeDiscountById = async ({ token, discount_id, region_id, apiBaseUrl, orgId } = {}) => {
+  const baseUrl = apiBaseUrl || process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL;
+  if (!baseUrl) throw new Error("API base URL is not configured");
+  const url = new URL(`${baseUrl}/api/discounts/remove`);
+  if (discount_id) url.searchParams.set("discount_id", discount_id);
+  if (region_id) url.searchParams.set("region_id", region_id);
+  const res = await fetch(url.toString(), {
+    method: "DELETE",
+    headers: buildHeaders2(token, orgId),
+    cache: "no-store"
+  });
+  return wrapResponse(res, "Failed to remove discount");
+};
 var CoreContext = createContext(null);
+var inbuiltActions = {
+  // Cart
+  getCart: getCartAction,
+  getCartById: getCartByIdAction,
+  createCart: createCartAction,
+  updateCart: updateCartAction,
+  updateCartIdLineItems: updateCartIdLineItemsAction,
+  // Line items
+  createLineItem: createLineItemAction,
+  updateLineItem: updateLineItemAction,
+  deleteLineItem: deleteLineItemAction,
+  // Payments
+  createRazorOrder: createRazorpayOrderAction,
+  updateRazorPayment: updateRazorpayPaymentAction,
+  // Addresses
+  getUserAddress: getAddressesAction,
+  createAddress: createAddressAction,
+  updateAddress: updateAddressAction,
+  deleteAddress: deleteAddressAction,
+  // Auth — wrappers align the (phone, code, countryCode) call signature used by
+  // CustomOTPAuth with the payload shape expected by the Rails API.
+  // Mirrors exactly what sbs-store-frontend/context/Coreproviders.js does.
+  login: (phone, countryCode = "+91") => loginUser({ phone, country_code: countryCode }),
+  signup: ({ firstName, lastName, phone, countryCode = "+91" }) => signUpUser({ firstName, lastName, phone, countryCode }),
+  verifyOtp: (phone, code, countryCode = "+91") => verifyOtp({ phone, country_code: countryCode, code }),
+  getUser: getUserAction,
+  updateUser: updateUserAction,
+  // Orders
+  getOrders: getOrdersAction,
+  getOrderById: getOrderByIdAction,
+  getOrderInvoice: getOrderInvoiceAction,
+  // Discounts
+  getAvailableDiscounts: getAvailableDiscountsAction,
+  applyDiscount: applyDiscountAction,
+  removeDiscount: removeDiscountAction,
+  removeDiscountById,
+  trackDiscountEvent: trackDiscountEventAction
+};
+var EMPTY_ACTIONS = {};
+var EMPTY_CONFIG = {};
 var CoreProvider = ({
   children,
-  config = {},
-  actions = {},
+  config = EMPTY_CONFIG,
+  actions = EMPTY_ACTIONS,
   toast = null,
   auth: injectedAuth = null,
   orgData
@@ -19,6 +484,15 @@ var CoreProvider = ({
   const primaryColor = config?.primaryColor ?? "#00214c";
   const secondaryColor = config?.secondaryColor ?? "#c8a95a";
   const [cart, setCart] = useState();
+  const resolvedActions = useMemo(() => {
+    const merged = { ...actions };
+    Object.entries(inbuiltActions).forEach(([key, fn]) => {
+      if (!merged[key]) {
+        merged[key] = fn;
+      }
+    });
+    return merged;
+  }, [actions]);
   const [isCartLoading, setIsCartLoading] = useState(true);
   const [region, setRegion] = useState(config?.region ?? null);
   const [authState, setAuthState] = useState(() => injectedAuth ?? {});
@@ -72,19 +546,19 @@ var CoreProvider = ({
     };
   }, [authType, injectedAuth, authState, setAuth, clearAuth]);
   useEffect(() => {
-    if (!actions?.getCart) return;
+    if (!resolvedActions?.getCart) return;
     const loadCart = async () => {
       try {
         setIsCartLoading(true);
         let resolvedCart = null;
         const isSignedIn = auth?.isSignedIn ?? false;
         if (isSignedIn) {
-          const data = await actions.getCart(config?.regionId);
+          const data = await resolvedActions.getCart(config?.regionId);
           resolvedCart = Array.isArray(data) ? data[0] : data;
         } else {
           const storedCartId = typeof window !== "undefined" ? localStorage.getItem("cartid") : null;
-          if (storedCartId && actions?.getCartById) {
-            resolvedCart = await actions.getCartById(
+          if (storedCartId && resolvedActions?.getCartById) {
+            resolvedCart = await resolvedActions.getCartById(
               storedCartId,
               config?.regionId
             );
@@ -126,7 +600,7 @@ var CoreProvider = ({
       isCartLoading,
       region,
       setRegion,
-      actions,
+      actions: resolvedActions,
       toast,
       auth,
       config,
@@ -135,8 +609,20 @@ var CoreProvider = ({
       secondaryColor
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [cart, isCartLoading, region, actions, toast, auth, config, orgData, primaryColor, secondaryColor]
+    [
+      cart,
+      isCartLoading,
+      region,
+      resolvedActions,
+      toast,
+      auth,
+      config,
+      orgData,
+      primaryColor,
+      secondaryColor
+    ]
   );
+  console.log({ auth, config });
   return /* @__PURE__ */ jsx(CoreContext.Provider, { value, children: /* @__PURE__ */ jsx(
     "div",
     {
@@ -163,6 +649,290 @@ var useCart = () => {
   const { cart, setCart, isCartLoading, config } = useCore();
   return { cart, setCart, isCartLoading, config };
 };
+
+// src/lib/gtm.js
+var isGtmEnabled = process.env.NODE_ENV === "production" && Boolean(process.env.NEXT_PUBLIC_GTM_ID?.trim());
+function pushToDataLayer(payload) {
+  if (!isGtmEnabled || typeof window === "undefined") return;
+  window.dataLayer = window.dataLayer || [];
+  window.dataLayer.push(payload);
+}
+function clearEcommerce() {
+  pushToDataLayer({ ecommerce: null });
+}
+function buildMeta(overrides = {}) {
+  const isMobile = typeof window !== "undefined" && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+  return {
+    country: "IN",
+    device: isMobile ? "mobile" : "desktop",
+    platform: "web",
+    source: "direct",
+    ...overrides
+  };
+}
+function buildItem(product, qty = 1) {
+  return {
+    item_id: product?.id ?? product?.sku ?? "",
+    item_name: product?.name ?? product?.line_itemable?.name ?? "",
+    item_category: product?.taxons?.[0]?.display_name ?? product?.category ?? "",
+    price: Number(
+      product?.display_price ?? product?.price ?? product?.line_itemable?.price ?? 0
+    ),
+    quantity: Number(qty)
+  };
+}
+function trackPageView(userId, metaOverrides = {}) {
+  clearEcommerce();
+  pushToDataLayer({
+    event: "page_view",
+    user_id: userId ?? null,
+    ecommerce: null,
+    meta: buildMeta(metaOverrides)
+  });
+}
+function trackViewItem({
+  userId,
+  product,
+  currency = "INR",
+  metaOverrides = {}
+}) {
+  const price = Number(product?.display_price ?? product?.price ?? 0);
+  clearEcommerce();
+  pushToDataLayer({
+    event: "view_item",
+    user_id: userId ?? null,
+    ecommerce: {
+      currency,
+      value: price,
+      tax: 0,
+      shipping: 0,
+      discount: 0,
+      items: [buildItem(product)]
+    },
+    meta: buildMeta(metaOverrides)
+  });
+}
+function trackAddToCart({
+  userId,
+  product,
+  qty = 1,
+  currency = "INR",
+  metaOverrides = {}
+}) {
+  const price = Number(product?.display_price ?? product?.price ?? 0);
+  clearEcommerce();
+  pushToDataLayer({
+    event: "add_to_cart",
+    user_id: userId ?? null,
+    ecommerce: {
+      currency,
+      value: price * qty,
+      tax: 0,
+      shipping: 0,
+      discount: 0,
+      items: [buildItem(product, qty)]
+    },
+    meta: buildMeta(metaOverrides)
+  });
+}
+function trackBeginCheckout({
+  userId,
+  cart,
+  currency = "INR",
+  metaOverrides = {},
+  transactionId
+}) {
+  const value = Number(cart?.total ?? cart?.display_total ?? 0);
+  const tax = Number(cart?.tax_total ?? 0);
+  const shipping = Number(cart?.ship_total ?? 0);
+  const discount = Number(cart?.promo_total ?? 0);
+  const items = (cart?.line_items ?? []).map(
+    (li) => buildItem(li?.variant ?? li?.line_itemable ?? li, li?.quantity ?? 1)
+  );
+  clearEcommerce();
+  pushToDataLayer({
+    event: "begin_checkout",
+    user_id: userId ?? null,
+    ecommerce: {
+      transaction_id: transactionId ?? "",
+      // optional, but recommended for GA4 funnel reports
+      currency,
+      value,
+      tax,
+      shipping,
+      discount: Math.abs(discount),
+      items
+    },
+    meta: buildMeta(metaOverrides)
+  });
+}
+function trackPurchase({
+  userId,
+  transactionId,
+  cart,
+  currency = "INR",
+  metaOverrides = {}
+}) {
+  const value = Number(cart?.total ?? cart?.display_total ?? 0);
+  const tax = Number(cart?.tax_total ?? 0);
+  const shipping = Number(cart?.ship_total ?? 0);
+  const discount = Number(cart?.promo_total ?? 0);
+  const items = (cart?.line_items ?? []).map(
+    (li) => buildItem(li?.variant ?? li?.line_itemable ?? li, li?.quantity ?? 1)
+  );
+  clearEcommerce();
+  pushToDataLayer({
+    event: "purchase",
+    user_id: userId ?? null,
+    ecommerce: {
+      transaction_id: transactionId ?? "",
+      // ← required for GA4 funnel reports
+      currency,
+      value,
+      tax,
+      shipping,
+      discount: Math.abs(discount),
+      // promo_total is usually negative
+      items
+    },
+    meta: buildMeta(metaOverrides)
+  });
+}
+function trackAddShippingInfo({
+  userId,
+  cart,
+  shippingTier = "Standard",
+  currency = "INR",
+  metaOverrides = {}
+}) {
+  const value = Number(cart?.total ?? cart?.display_total ?? 0);
+  const tax = Number(cart?.tax_total ?? 0);
+  const shipping = Number(cart?.ship_total ?? 0);
+  const discount = Number(cart?.promo_total ?? 0);
+  const items = (cart?.line_items ?? []).map(
+    (li) => buildItem(li?.variant ?? li?.line_itemable ?? li, li?.quantity ?? 1)
+  );
+  clearEcommerce();
+  pushToDataLayer({
+    event: "add_shipping_info",
+    user_id: userId ?? null,
+    ecommerce: {
+      currency,
+      value,
+      tax,
+      shipping,
+      discount: Math.abs(discount),
+      shipping_tier: shippingTier,
+      items
+    },
+    meta: buildMeta(metaOverrides)
+  });
+}
+function trackAddPaymentInfo({
+  userId,
+  cart,
+  paymentType = "Razorpay",
+  currency = "INR",
+  metaOverrides = {}
+}) {
+  const value = Number(cart?.total ?? cart?.display_total ?? 0);
+  const tax = Number(cart?.tax_total ?? 0);
+  const shipping = Number(cart?.ship_total ?? 0);
+  const discount = Number(cart?.promo_total ?? 0);
+  const items = (cart?.line_items ?? []).map(
+    (li) => buildItem(li?.variant ?? li?.line_itemable ?? li, li?.quantity ?? 1)
+  );
+  clearEcommerce();
+  pushToDataLayer({
+    event: "add_payment_info",
+    user_id: userId ?? null,
+    ecommerce: {
+      currency,
+      value,
+      tax,
+      shipping,
+      discount: Math.abs(discount),
+      payment_type: paymentType,
+      items
+    },
+    meta: buildMeta(metaOverrides)
+  });
+}
+function trackApplyCoupon({
+  userId,
+  cart,
+  couponCode,
+  currency = "INR",
+  metaOverrides = {}
+}) {
+  const discount = Math.abs(Number(cart?.promo_total ?? 0));
+  const items = (cart?.line_items ?? []).map(
+    (li) => buildItem(li?.variant ?? li?.line_itemable ?? li, li?.quantity ?? 1)
+  );
+  clearEcommerce();
+  pushToDataLayer({
+    event: "apply_coupon",
+    user_id: userId ?? null,
+    ecommerce: {
+      currency,
+      value: Number(cart?.total ?? 0),
+      tax: Number(cart?.tax_total ?? 0),
+      shipping: Number(cart?.ship_total ?? 0),
+      discount,
+      coupon: couponCode,
+      items
+    },
+    meta: buildMeta(metaOverrides)
+  });
+}
+function trackPaymentFailed({
+  userId,
+  cart,
+  errorCode = "",
+  errorReason = "",
+  currency = "INR",
+  metaOverrides = {}
+}) {
+  const value = Number(cart?.total ?? cart?.display_total ?? 0);
+  const items = (cart?.line_items ?? []).map(
+    (li) => buildItem(li?.variant ?? li?.line_itemable ?? li, li?.quantity ?? 1)
+  );
+  clearEcommerce();
+  pushToDataLayer({
+    event: "payment_failed",
+    user_id: userId ?? null,
+    ecommerce: {
+      currency,
+      value,
+      tax: Number(cart?.tax_total ?? 0),
+      shipping: Number(cart?.ship_total ?? 0),
+      discount: Math.abs(Number(cart?.promo_total ?? 0)),
+      items,
+      error_code: errorCode,
+      error_reason: errorReason
+    },
+    meta: buildMeta(metaOverrides)
+  });
+}
+function trackCustomEvent(eventName, userId, ecommerce = {}, metaOverrides = {}) {
+  clearEcommerce();
+  pushToDataLayer({
+    event: eventName,
+    user_id: userId ?? null,
+    ecommerce: {
+      currency: "INR",
+      value: 0,
+      tax: 0,
+      shipping: 0,
+      discount: 0,
+      items: [],
+      ...ecommerce
+    },
+    meta: buildMeta(metaOverrides)
+  });
+}
+
+// src/hooks/useAddToCart.js
 function useAddToCart() {
   const { cart, setCart, actions, toast, auth, config } = useCore();
   const [quantity, setQuantity] = useState(1);
@@ -199,7 +969,10 @@ function useAddToCart() {
   const getCartItem = (product, customizations = []) => {
     if (!cart?.line_items) return null;
     return cart.line_items.find(
-      (item) => item.line_itemable?.id === product?.id && areCustomizationsEqual(item.line_items_customizations, customizations)
+      (item) => item.line_itemable?.id === product?.id && areCustomizationsEqual(
+        item.line_items_customizations,
+        customizations
+      )
     ) ?? null;
   };
   const refreshCart = async (cartId) => {
@@ -222,7 +995,7 @@ function useAddToCart() {
     const sellingQTY = product?.selling_quantity?.values?.[0]?.label;
     const qty = overrideQty !== null ? overrideQty : quantity ?? 1;
     const existingLineItem = getCartItem(product, customizations);
-    if (existingLineItem) {
+    if (existingLineItem && !sellingQTY) {
       const newQty = existingLineItem.quantity + qty;
       await actions.updateLineItem?.(existingLineItem.id, { quantity: newQty });
     } else {
@@ -268,10 +1041,20 @@ function useAddToCart() {
         }
       }
       await addItemToCart(product, resolvedCartId, customizations, overrideQty);
-      toast?.success?.("Item added to cart");
+      console.log({ product });
+      const userId = auth?.user?.id ?? auth?.user?.userId ?? null;
+      const currency = config?.currency ?? "INR";
+      const qty = overrideQty !== null ? overrideQty : quantity ?? 1;
+      trackAddToCart({ userId, product, qty, currency });
+      toast?.success?.(`${product?.name || "Item"} added to cart`);
     } catch (err) {
       console.error("[useAddToCart] handleAddToCart error:", err);
-      toast?.error?.("Failed to add item to cart");
+      const errorMsg = err?.data?.error || err?.message;
+      if (errorMsg && typeof errorMsg === "string") {
+        toast?.error?.(errorMsg);
+      } else {
+        toast?.error?.(`Failed to add ${product?.name || "item"} to cart`);
+      }
     } finally {
       setIsAddToCartLoading(false);
     }
@@ -294,6 +1077,12 @@ function useAddToCart() {
       }
     } catch (err) {
       console.error("[useAddToCart] handleDecreaseQty error:", err);
+      const errorMsg = err?.data?.error || err?.message;
+      if (errorMsg && typeof errorMsg === "string") {
+        toast?.error?.(errorMsg);
+      } else {
+        toast?.error?.("Failed to update item quantity");
+      }
     } finally {
       setIsAddToCartLoading(false);
     }
@@ -305,10 +1094,26 @@ function useAddToCart() {
       if (activeCartId) {
         await refreshCart(activeCartId);
       }
-      toast?.success?.("Item removed from cart");
+      const userId = auth?.user?.id ?? auth?.user?.userId ?? null;
+      const currency = config?.currency ?? "INR";
+      trackCustomEvent("remove_from_cart", userId, {
+        currency,
+        value: Number(product?.line_itemable?.price ?? 0) * (product?.quantity ?? 1),
+        items: [buildItem(product, product?.quantity ?? 1)]
+      });
+      toast?.success?.(
+        `${product?.line_itemable?.name || "Item"} removed from cart`
+      );
     } catch (err) {
       console.error("[useAddToCart] handleDeleteLineItem error:", err);
-      toast?.error?.("Failed to remove item");
+      const errorMsg = err?.data?.error || err?.message;
+      if (errorMsg && typeof errorMsg === "string") {
+        toast?.error?.(errorMsg);
+      } else {
+        toast?.error?.(
+          `Failed to remove ${product?.line_itemable?.name || "item"}`
+        );
+      }
     } finally {
       setIsAddToCartLoading(false);
     }
@@ -354,8 +1159,22 @@ var useLogout = () => {
     if (auth?.logout) {
       await auth.logout();
     } else {
+      if (auth?.clearAuth) {
+        auth.clearAuth();
+      }
       localStorage.removeItem("cartid");
       localStorage.removeItem("access_token");
+      try {
+        Cookies.remove("access_token", { path: "/" });
+      } catch (e) {
+        console.error("Failed to remove cookies using js-cookie:", e);
+      }
+      document.cookie = "access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/";
+      try {
+        await fetch("/api/logout", { method: "POST" });
+      } catch (e) {
+        console.error("Failed to call /api/logout:", e);
+      }
       router.push("/");
     }
     router.refresh();
@@ -1209,35 +2028,6 @@ var CartPage = ({
     ] })
   ] });
 };
-var DeleteIcon = ({
-  onClick,
-  className = "",
-  title = "",
-  disabled = false
-}) => /* @__PURE__ */ jsx(
-  "svg",
-  {
-    onClick,
-    disabled,
-    className,
-    width: "20",
-    height: "20",
-    viewBox: "0 0 20 20",
-    fill: "none",
-    xmlns: "http://www.w3.org/2000/svg",
-    title,
-    children: /* @__PURE__ */ jsx(
-      "path",
-      {
-        d: "M2.5 5h15M8.5 8.5v5M11.5 8.5v5M3 5.5v11c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2v-11M7 5V3.5c0-.3.2-.5.5-.5h5c.3 0 .5.2.5.5V5",
-        stroke: "currentColor",
-        strokeWidth: "1.5",
-        strokeLinecap: "round",
-        strokeLinejoin: "round"
-      }
-    )
-  }
-);
 var CustomizationModal = ({
   isOpen,
   onClose,
@@ -1378,6 +2168,36 @@ var ViewCustomizationModal = ({
   ] }) });
 };
 var ViewCustomizationModal_default = ViewCustomizationModal;
+var DeleteIcon = ({ onClick, disabled, className, title }) => /* @__PURE__ */ jsx(
+  "button",
+  {
+    type: "button",
+    onClick,
+    disabled,
+    className,
+    title,
+    "aria-label": title || "Delete",
+    children: /* @__PURE__ */ jsxs(
+      "svg",
+      {
+        width: "18",
+        height: "18",
+        viewBox: "0 0 24 24",
+        fill: "none",
+        stroke: "currentColor",
+        strokeWidth: "1.8",
+        strokeLinecap: "round",
+        strokeLinejoin: "round",
+        children: [
+          /* @__PURE__ */ jsx("polyline", { points: "3 6 5 6 21 6" }),
+          /* @__PURE__ */ jsx("path", { d: "M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" }),
+          /* @__PURE__ */ jsx("path", { d: "M10 11v6M14 11v6" }),
+          /* @__PURE__ */ jsx("path", { d: "M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" })
+        ]
+      }
+    )
+  }
+);
 var noProductImage = `data:image/svg+xml;utf8,${encodeURIComponent(
   `<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect width="512" height="512" fill="#E0E0E0"/>
@@ -1390,6 +2210,7 @@ var ProductlistCard = ({ product, component, orderType }) => {
   const quantity = product?.quantity;
   const displayPrice = (price ?? 0) / 100;
   const isSellingQty = !!product?.line_itemable?.selling_quantity_id;
+  const variantOptions = product?.line_itemable?.variant_options ?? [];
   const { formatCurrency } = useCurrencyFormat();
   const {
     handleDeleteLineItem,
@@ -1399,6 +2220,17 @@ var ProductlistCard = ({ product, component, orderType }) => {
   } = useAddToCart();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const handleNavigateToProduct = () => {
+    const lineItemable = product?.line_itemable;
+    if (!lineItemable) return;
+    const productId = lineItemable?.product_id ?? lineItemable?.id;
+    const variantId = lineItemable?.product_id ? lineItemable?.id : null;
+    const taxonId = lineItemable?.taxons?.[0]?.id ?? "taxon";
+    let url = `/product/${productId}?taxonid=${taxonId}`;
+    if (variantId) url += `&variantId=${variantId}`;
+    if (quantity && quantity > 1) url += `&qty=${quantity}`;
+    window.location.href = url;
+  };
   const handleImageError = (event) => {
     event.currentTarget.onerror = null;
     event.currentTarget.src = noProductImage;
@@ -1463,49 +2295,76 @@ var ProductlistCard = ({ product, component, orderType }) => {
     ] });
   }
   return /* @__PURE__ */ jsxs("div", { className: "flex justify-between gap-4", children: [
-    /* @__PURE__ */ jsxs("div", { className: "flex gap-[10px] flex-1 min-w-0", children: [
-      /* @__PURE__ */ jsx("div", { className: "w-[112px] h-[124px] flex-shrink-0 overflow-hidden", children: /* @__PURE__ */ jsx(
-        "img",
-        {
-          src: productImage || noProductImage,
-          alt: name || "Product",
-          className: "w-[112px] h-[124px] object-cover rounded-lg",
-          onError: handleImageError
-        }
-      ) }),
-      /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between h-[124px] flex-1 min-w-0", children: [
-        /* @__PURE__ */ jsxs("div", { className: "min-w-0", children: [
-          /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-base text-[var(--main)] line-clamp-1", children: name }),
-          product?.line_items_customizations?.length > 0 && /* @__PURE__ */ jsx("div", { className: "mt-1 flex flex-col gap-0.5", children: product.line_items_customizations.length > 3 ? /* @__PURE__ */ jsx(
-            "button",
+    /* @__PURE__ */ jsxs(
+      "div",
+      {
+        className: "flex gap-[10px] flex-1 min-w-0 cursor-pointer",
+        onClick: handleNavigateToProduct,
+        title: "View product",
+        children: [
+          /* @__PURE__ */ jsx("div", { className: "w-[112px] h-[124px] flex-shrink-0 overflow-hidden", children: /* @__PURE__ */ jsx(
+            "img",
             {
-              onClick: () => setIsViewModalOpen(true),
-              className: "text-xs text-[var(--core-primary)] underline hover:text-[var(--core-primary)] transition-colors text-left font-medium",
-              children: "customizations: view"
+              src: productImage || noProductImage,
+              alt: name || "Product",
+              className: "w-[112px] h-[124px] object-cover rounded-lg hover:opacity-90 transition-opacity",
+              onError: handleImageError
             }
-          ) : product.line_items_customizations.map((c) => /* @__PURE__ */ jsxs(
-            "p",
-            {
-              className: "text-xs text-gray-500 line-clamp-1",
-              children: [
-                /* @__PURE__ */ jsxs("span", { className: "font-medium", children: [
-                  c.name || "Custom",
-                  ":"
-                ] }),
-                " ",
-                c.value
-              ]
-            },
-            c.product_customization_id
-          )) })
-        ] }),
-        /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsxs("p", { className: "font-[Nunito-medium] text-base text-[var(--main)]", children: [
-          quantity,
-          " x ",
-          formatCurrency(displayPrice)
-        ] }) })
-      ] })
-    ] }),
+          ) }),
+          /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between h-[124px] flex-1 min-w-0", children: [
+            /* @__PURE__ */ jsxs("div", { className: "min-w-0", children: [
+              /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
+                /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-base text-[var(--main)] line-clamp-1 hover:underline", children: name }),
+                product?.bogo_benefit?.benefit_type === "free" && /* @__PURE__ */ jsx("span", { className: "text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-[Nunito-medium] flex-shrink-0 whitespace-nowrap", children: "FREE" })
+              ] }),
+              variantOptions.length > 0 && /* @__PURE__ */ jsx("div", { className: "mt-1 flex flex-wrap gap-1", children: variantOptions.map((vo, i) => /* @__PURE__ */ jsxs(
+                "span",
+                {
+                  className: "text-[11px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-[Nunito-medium]",
+                  children: [
+                    vo?.option_type?.presentation ?? vo?.option_type?.name,
+                    ":",
+                    " ",
+                    vo?.option_value?.presentation ?? vo?.option_value?.name
+                  ]
+                },
+                i
+              )) }),
+              product?.line_items_customizations?.length > 0 && /* @__PURE__ */ jsx("div", { className: "mt-1 flex flex-col gap-0.5", children: product.line_items_customizations.length > 3 ? /* @__PURE__ */ jsx(
+                "button",
+                {
+                  onClick: (e) => {
+                    e.stopPropagation();
+                    setIsViewModalOpen(true);
+                  },
+                  className: "text-xs text-[var(--core-primary)] underline hover:text-[var(--core-primary)] transition-colors text-left font-medium",
+                  children: "customizations: view"
+                }
+              ) : product.line_items_customizations.map((c) => /* @__PURE__ */ jsxs(
+                "p",
+                {
+                  className: "text-xs text-gray-500 line-clamp-1",
+                  children: [
+                    /* @__PURE__ */ jsxs("span", { className: "font-medium", children: [
+                      c.name || "Custom",
+                      ":"
+                    ] }),
+                    " ",
+                    c.value
+                  ]
+                },
+                c.product_customization_id
+              )) })
+            ] }),
+            /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsxs("p", { className: "font-[Nunito-medium] text-base text-[var(--main)]", children: [
+              quantity,
+              " x ",
+              formatCurrency(displayPrice)
+            ] }) })
+          ] })
+        ]
+      }
+    ),
     /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between items-end h-[124px] flex-shrink-0", children: [
       /* @__PURE__ */ jsx("div", { className: "flex flex-col items-end text-right", children: component !== "order" ? /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-base text-[var(--main)] line-clamp-1", children: formatCurrency(displayPrice * quantity) }) : /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-base text-[var(--main)] line-clamp-2", children: formatCurrency(displayPrice * quantity) }) }),
       component !== "order" && /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3", children: [
@@ -2001,17 +2860,6 @@ var AddressSelection = ({
     }
     updateCart(apiData);
   };
-  useEffect(() => {
-    if (!user) return;
-    const apiData = { id: cart?.id };
-    if (!isCartHaveBillingAddress && billingAddressId)
-      apiData.billing_address_id = billingAddressId;
-    if (!isCarthaveShippingAddress && shippingAddressId)
-      apiData.shipping_address_id = sameAsShipping ? billingAddressId : shippingAddressId;
-    if (apiData.billing_address_id || apiData.shipping_address_id) {
-      updateCart(apiData);
-    }
-  }, [address, shippingAddressId, billingAddressId]);
   return /* @__PURE__ */ jsxs("div", { className: "w-full flex justify-center", children: [
     /* @__PURE__ */ jsxs("div", { className: "w-full space-y-8", children: [
       /* @__PURE__ */ jsxs("div", { children: [
@@ -2051,7 +2899,7 @@ var AddressSelection = ({
         /* @__PURE__ */ jsxs(
           "div",
           {
-            className: `flex items-center justify-between mb-6 p-4 rounded-lg border cursor-pointer ${sameAsShipping ? "border-[var(--main)]" : "border-[var(--borders)]"}`,
+            className: `flex items-center justify-between mb-6 p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 ${sameAsShipping ? "border-[var(--core-primary)] bg-gray-50 shadow-sm" : "border-gray-200 hover:border-gray-300"}`,
             onClick: onSwitchChange,
             children: [
               /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-base text-[var(--main)]", children: "Same as Shipping address" }),
@@ -2160,7 +3008,7 @@ var AddressCard = ({
   return /* @__PURE__ */ jsx(
     "div",
     {
-      className: `w-full border p-[16px] transition-all duration-150 rounded-lg ${isPayment || isSelected ? "border-[var(--main)]" : "border-[var(--borders)]"} ${!isPayment ? "cursor-pointer" : ""}`,
+      className: `w-full border-2 p-[16px] transition-all duration-200 rounded-lg ${isSelected || isPayment ? "border-[var(--core-primary)] bg-gray-50 shadow-sm" : "border-gray-200 hover:border-gray-300"} ${!isPayment ? "cursor-pointer" : ""}`,
       onClick,
       children: isPayment ? /* @__PURE__ */ jsxs("div", { className: "flex flex-row items-center justify-between", children: [
         /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between", children: [
@@ -2202,7 +3050,8 @@ var AddressCard = ({
 var Checkout = ({ hasDeletedItems }) => {
   const { auth, config } = useCore();
   const { isSignedIn, isLoading } = auth || {};
-  if (isLoading) return /* @__PURE__ */ jsx("div", { className: "w-full h-[400px] flex items-center justify-center", children: /* @__PURE__ */ jsx("div", { className: "w-8 h-8 border-4 border-[var(--core-primary)] border-t-transparent rounded-full animate-spin" }) });
+  if (isLoading)
+    return /* @__PURE__ */ jsx("div", { className: "w-full h-[400px] flex items-center justify-center", children: /* @__PURE__ */ jsx("div", { className: "w-8 h-8 border-4 border-[var(--core-primary)] border-t-transparent rounded-full animate-spin" }) });
   return !isSignedIn ? /* @__PURE__ */ jsx(LoginPage, {}) : /* @__PURE__ */ jsx(OrderInfo, { user: auth.user, hasDeletedItems });
 };
 var LoginPage = () => {
@@ -2231,7 +3080,7 @@ var LoginPage = () => {
 var OrderInfo = ({ user, hasDeletedItems }) => {
   const router = useRouter();
   const { Razorpay } = useRazorpay();
-  const { cart, setCart, actions, config, auth, orgData, primaryColor } = useCore();
+  const { cart, setCart, actions, config, auth, orgData, primaryColor, toast } = useCore();
   const StripeCheckout = getPaymentGateway("stripe");
   const paymentConfig = orgData?.organization_setting?.payment ?? {};
   const paymentMode = paymentConfig?.mode ?? "razorpay";
@@ -2272,19 +3121,36 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
   }, [fetchAddresses]);
   useEffect(() => {
     setOrderType(cart?.order_type ?? "delivery");
-    const shippingId = cart?.shipping_address?.id ?? addresses?.[0]?.id;
-    const billingId = cart?.billing_address?.id ?? addresses?.[0]?.id;
+    const hasShipping = !!cart?.shipping_address?.id;
+    const hasBilling = !!cart?.billing_address?.id;
+    const defaultAddressId = addresses?.[0]?.id;
+    const shippingId = cart?.shipping_address?.id ?? defaultAddressId;
+    const billingId = cart?.billing_address?.id ?? defaultAddressId;
     setSelectedAddress({
       shippingAddressId: shippingId,
       billingAddressId: billingId
     });
     setSameAsShipping(billingId === shippingId);
-  }, [cart, addresses]);
+    if ((!hasShipping || !hasBilling) && defaultAddressId && cart?.id && actions?.updateCart) {
+      const apiData = { id: cart.id };
+      if (!hasShipping) apiData.shipping_address_id = defaultAddressId;
+      if (!hasBilling) apiData.billing_address_id = defaultAddressId;
+      actions.updateCart(cart.id, apiData).then((updatedCart) => {
+        if (updatedCart) setCart(updatedCart);
+      }).catch(
+        (err) => console.error("Failed to auto-set cart addresses:", err)
+      );
+    }
+  }, [
+    cart?.shipping_address?.id,
+    cart?.billing_address?.id,
+    addresses?.length
+  ]);
   const onUpdateOrderType = async (type) => {
     try {
       setOrderType(type);
       if (actions?.updateCart && cart?.id) {
-        await actions.updateCart({
+        await actions.updateCart(cart.id, {
           id: cart.id,
           order_type: type
         });
@@ -2292,6 +3158,12 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
       }
     } catch (err) {
       console.error("Failed to update order type:", err);
+      const errorMsg = err?.data?.error || err?.message;
+      if (errorMsg && typeof errorMsg === "string") {
+        toast?.error?.(errorMsg);
+      } else {
+        toast?.error?.("Failed to update order type");
+      }
     }
   };
   const onRazorPayHandler = (res) => {
@@ -2309,19 +3181,78 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
       handler: async (response) => {
         try {
           setIsProcessingPayment(true);
-          let order;
-          if (actions?.updateRazorPayment) {
-            order = await actions.updateRazorPayment(
-              res?.id,
-              response.razorpay_payment_id
-            );
+          const MAX_ATTEMPTS = 5;
+          const RETRY_DELAY_MS = 1e3;
+          let order = null;
+          let lastError = null;
+          for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+            try {
+              if (actions?.updateRazorPayment) {
+                const result = await actions.updateRazorPayment(
+                  res?.id,
+                  response.razorpay_payment_id
+                );
+                if (result?.serverError) {
+                  lastError = result.serverError;
+                  console.warn(
+                    `[Checkout] updateRazorPayment attempt ${attempt} failed:`,
+                    result.serverError
+                  );
+                } else if (result?.order_id) {
+                  order = result;
+                  break;
+                } else {
+                  lastError = "Payment update returned no order ID";
+                  console.warn(
+                    `[Checkout] updateRazorPayment attempt ${attempt}: no order_id`,
+                    result
+                  );
+                }
+              }
+            } catch (err) {
+              lastError = err?.data?.error || err?.message || "Payment update failed";
+              console.error(
+                `[Checkout] updateRazorPayment attempt ${attempt} threw:`,
+                err
+              );
+            }
+            if (attempt < MAX_ATTEMPTS) {
+              await new Promise(
+                (resolve) => setTimeout(resolve, RETRY_DELAY_MS)
+              );
+            }
           }
           if (order?.order_id) {
+            if (typeof window !== "undefined") {
+              localStorage.removeItem("cartid");
+            }
+            const userId = auth?.userId ?? auth?.user?.id ?? user?.id ?? null;
+            const currency = config?.currency ?? "INR";
+            trackPurchase({
+              userId,
+              transactionId: String(order.order_id),
+              cart,
+              currency,
+              metaOverrides: { source: "checkout" }
+            });
+            setCart(null);
             router.push(`/order/${order?.order_id}?show=true`);
+          } else {
+            setIsProcessingPayment(false);
+            const msg = typeof lastError === "string" ? lastError : "Payment could not be updated. Please contact support.";
+            toast?.error?.(msg);
           }
         } catch (err) {
-          console.error("Payment update failed:", err);
+          console.error("Payment handler error:", err);
           setIsProcessingPayment(false);
+          const errorMsg = err?.data?.error || err?.message;
+          if (errorMsg && typeof errorMsg === "string") {
+            toast?.error?.(errorMsg);
+          } else {
+            toast?.error?.(
+              "Payment could not be updated. Please contact support."
+            );
+          }
         }
       },
       prefill: {
@@ -2334,6 +3265,16 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
     const razorpay = new Razorpay(options);
     razorpay.on("payment.failed", (response) => {
       console.error("Razorpay payment failed:", response);
+      toast?.error?.(response?.error?.description || "Payment failed");
+      const userId = auth?.userId ?? auth?.user?.id ?? user?.id ?? null;
+      const currency = config?.currency ?? "INR";
+      trackPaymentFailed({
+        userId,
+        cart,
+        currency,
+        errorCode: response?.error?.code ?? "",
+        errorReason: response?.error?.reason ?? response?.error?.description ?? ""
+      });
     });
     razorpay.open();
   };
@@ -2347,10 +3288,39 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
       setIsPlacingOrder(true);
       if (actions?.createRazorOrder) {
         const orderResponse = await actions.createRazorOrder(cart.id);
+        const userId = auth?.userId ?? auth?.user?.id ?? user?.id ?? null;
+        const currency = config?.currency ?? "INR";
+        trackBeginCheckout({
+          userId,
+          cart,
+          currency,
+          transactionId: String(orderResponse?.id ?? ""),
+          metaOverrides: { source: "checkout" }
+        });
+        trackAddShippingInfo({
+          userId,
+          cart,
+          shippingTier: orderType === "pickup" ? "Pickup" : "Standard",
+          currency,
+          metaOverrides: { source: "checkout" }
+        });
+        trackAddPaymentInfo({
+          userId,
+          cart,
+          paymentType: "Razorpay",
+          currency,
+          metaOverrides: { source: "checkout" }
+        });
         onRazorPayHandler(orderResponse);
       }
     } catch (err) {
       console.error("Failed to create order:", err);
+      const errorMsg = err?.data?.error || err?.message;
+      if (errorMsg && typeof errorMsg === "string") {
+        toast?.error?.(errorMsg);
+      } else {
+        toast?.error?.("Failed to process payment");
+      }
     } finally {
       setIsPlacingOrder(false);
     }
@@ -2491,7 +3461,8 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
         ] }),
         /* @__PURE__ */ jsxs("div", { className: "space-y-2", children: [
           /* @__PURE__ */ jsxs("p", { className: "font-[Nunito-medium] text-[#2d2d2d] text-base", children: [
-            "We're finalizing your order with ",
+            "We're finalizing your order with",
+            " ",
             paymentMode === "stripe" ? "Stripe" : "Razorpay",
             "."
           ] }),
@@ -2522,7 +3493,7 @@ var CouponSection = () => {
   const [inputValue, setInputValue] = useState("");
   const [errorMessage, setErrorMessage] = useState(null);
   const [isApplying, setIsApplying] = useState(false);
-  const [removingCode, setRemovingCode] = useState(null);
+  const [removingId, setRemovingId] = useState(null);
   const [availableDiscounts, setAvailableDiscounts] = useState([]);
   const [discountsLoading, setDiscountsLoading] = useState(false);
   const triggerToast = {
@@ -2544,7 +3515,9 @@ var CouponSection = () => {
         const data = await actions.getAvailableDiscounts({
           token,
           cart_id: cart?.id,
-          region_id: config?.regionId
+          region_id: config?.regionId,
+          apiBaseUrl: config?.apiBaseUrl,
+          orgId: config?.storeId
         });
         if (isMounted) {
           setAvailableDiscounts(Array.isArray(data) ? data : []);
@@ -2562,10 +3535,17 @@ var CouponSection = () => {
       isMounted = false;
     };
   }, [actions, cart?.id, token, config?.regionId]);
-  const availableDiscountsWithCode = availableDiscounts?.filter((coupon) => coupon.code) || [];
-  const appliedDiscounts = (cart?.cart_detail_json?.discounts || cart?.cart_discounts || []).filter(
-    (coupon) => coupon.code
+  const availableDiscountsWithCode = availableDiscounts || [];
+  const rawDiscounts = cart?.cart_discounts || [];
+  const appliedDiscounts = rawDiscounts.filter(
+    (coupon) => coupon.code || coupon.id
   );
+  if (cart && rawDiscounts.length === 0) {
+    console.warn(
+      "[CouponSection] No discounts found on cart. Cart keys:",
+      Object.keys(cart)
+    );
+  }
   const firstAppliedDiscount = appliedDiscounts?.[0];
   const showInput = !firstAppliedDiscount || firstAppliedDiscount.stackable;
   const handleApply = async () => {
@@ -2584,10 +3564,18 @@ var CouponSection = () => {
         token,
         code: inputValue.trim(),
         source: "web",
-        region_id: config?.regionId
+        region_id: config?.regionId,
+        apiBaseUrl: config?.apiBaseUrl,
+        orgId: config?.storeId
       });
+      if (result?.serverError) {
+        setErrorMessage(result.serverError);
+        return;
+      }
       const updatedCart = result?.cart ?? result;
       setCart(updatedCart);
+      const userId = auth?.userId ?? auth?.user?.id ?? auth?.user?.userId ?? null;
+      const currency = config?.currency ?? "INR";
       setIsOpen(false);
       setInputValue("");
       setErrorMessage(null);
@@ -2607,30 +3595,83 @@ var CouponSection = () => {
       setIsApplying(false);
     }
   };
-  const handleRemove = async (code) => {
-    setRemovingCode(code);
-    console.log({ code });
+  const applyById = async (coupon) => {
+    if (!coupon?.id) return;
+    if (!token) {
+      setErrorMessage("Please sign in to apply a coupon");
+      return;
+    }
+    setIsApplying(true);
+    setErrorMessage(null);
     try {
-      if (!actions?.removeDiscount) {
+      if (!actions?.applyDiscount) {
+        throw new Error("applyDiscount action is not configured");
+      }
+      const result = await actions.applyDiscount({
+        token,
+        discount_id: coupon.id,
+        source: "web",
+        region_id: config?.regionId,
+        apiBaseUrl: config?.apiBaseUrl,
+        orgId: config?.storeId
+      });
+      if (result?.serverError) {
+        setErrorMessage(result.serverError);
+        return;
+      }
+      const updatedCart = result?.cart ?? result;
+      setCart(updatedCart);
+      const userId = auth?.userId ?? auth?.user?.id ?? auth?.user?.userId ?? null;
+      const currency = config?.currency ?? "INR";
+      setIsOpen(false);
+      setInputValue("");
+      setErrorMessage(null);
+    } catch (error) {
+      const msg = error?.data?.error || error?.message || "Failed to apply coupon";
+      setErrorMessage(msg);
+      if (msg.toLowerCase().includes("already applied") || msg.toLowerCase().includes("discount is already")) {
+        if (actions?.getCart && auth?.isSignedIn) {
+          const res = await actions.getCart(config?.regionId);
+          setCart(Array.isArray(res) ? res[0] : res);
+        } else if (actions?.getCartById && cart?.id) {
+          const res = await actions.getCartById(cart.id, config?.regionId);
+          setCart(res);
+        }
+      }
+    } finally {
+      setIsApplying(false);
+    }
+  };
+  const handleRemove = async ({ code, discount_id }) => {
+    setRemovingId(discount_id);
+    try {
+      if (!actions?.removeDiscountById && !actions?.removeDiscount) {
         throw new Error("removeDiscount action is not configured");
       }
-      const result = await actions.removeDiscount({
+      const removeFn = actions?.removeDiscountById || actions?.removeDiscount;
+      const result = await removeFn({
         token,
-        code,
-        region_id: config?.regionId
+        discount_id,
+        region_id: config?.regionId,
+        apiBaseUrl: config?.apiBaseUrl,
+        orgId: config?.storeId
       });
       const updatedCart = result?.cart ?? result;
       setCart(updatedCart);
       setIsOpen(true);
     } catch (error) {
-      triggerToast.error(`Failed to remove coupon ${code}`);
+      console.log({ error });
+      triggerToast.error(`Failed to remove coupon ${code || "discount"}`);
     } finally {
-      setRemovingCode(null);
+      setRemovingId(null);
     }
   };
   const getEligibility = (coupon) => {
     if (coupon.min_order_value > 0 && (cart?.item_total ?? 0) < coupon.min_order_value) {
-      return { eligible: false, reason: `Add ${coupon.display_min_order_value} more to apply` };
+      return {
+        eligible: false,
+        reason: `Add ${coupon.display_min_order_value} more to apply`
+      };
     }
     return { eligible: true, reason: null };
   };
@@ -2651,6 +3692,7 @@ var CouponSection = () => {
       /* @__PURE__ */ jsx("span", { className: "text-[var(--secondary)] text-[16px]", children: "\u25BE" })
     ] }) });
   }
+  console.log({ availableDiscountsWithCode });
   return /* @__PURE__ */ jsxs("div", { className: "my-4", children: [
     appliedDiscounts?.length > 0 && /* @__PURE__ */ jsx("div", { className: "flex flex-col gap-2 mb-3", children: appliedDiscounts?.map((coupon) => /* @__PURE__ */ jsxs(
       "div",
@@ -2659,23 +3701,29 @@ var CouponSection = () => {
         children: [
           /* @__PURE__ */ jsxs("div", { className: "flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0", children: [
             /* @__PURE__ */ jsx("span", { className: "text-base", children: "\u2705" }),
-            /* @__PURE__ */ jsx("span", { className: "font-[Nunito-bold] text-[#0f0f0f] text-[13px] tracking-wide", children: coupon.code }),
+            /* @__PURE__ */ jsx("span", { className: "font-[Nunito-bold] text-[#0f0f0f] text-[13px] tracking-wide", children: coupon.code ? coupon.code : coupon.display_action_value || "Discount" }),
             /* @__PURE__ */ jsx("span", { className: "font-[Nunito-regular] text-[#0f0f0f] text-[12px]", children: "applied" }),
             /* @__PURE__ */ jsx("span", { className: "text-[#0f0f0f] text-[12px] hidden sm:inline", children: "\xB7" }),
             /* @__PURE__ */ jsxs("span", { className: "text-[#00b300] text-[12px] font-[Nunito-bold]", children: [
-              "You save ",
-              formatCurrency(coupon.display_discount_amount || coupon.discount_amount / 100)
+              "You save",
+              " ",
+              formatCurrency(
+                coupon.display_discount_amount || coupon.discount_amount / 100
+              )
             ] })
           ] }),
           /* @__PURE__ */ jsx(
             "button",
             {
               type: "button",
-              onClick: () => handleRemove(coupon.code),
-              disabled: removingCode === coupon.code,
+              onClick: () => handleRemove({
+                code: coupon.code,
+                discount_id: coupon.discount_id ?? coupon.id
+              }),
+              disabled: removingId === (coupon.discount_id ?? coupon.id),
               className: "text-[#8e9194] text-lg bg-transparent border-0 cursor-pointer disabled:opacity-50",
-              "aria-label": `Remove coupon ${coupon.code}`,
-              children: removingCode === coupon.code ? "\u2026" : "\u2715"
+              "aria-label": `Remove coupon ${coupon.code || "discount"}`,
+              children: removingId === (coupon.discount_id ?? coupon.id) ? "\u2026" : "\u2715"
             }
           )
         ]
@@ -2729,24 +3777,37 @@ var CouponSection = () => {
             const conditionParts = [];
             if (endDate) conditionParts.push(`Ends ${endDate}`);
             const conditionText = conditionParts.join(" \xB7 ");
-            return /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-[2px]", children: [
-              /* @__PURE__ */ jsxs(
-                "button",
-                {
-                  type: "button",
-                  onClick: () => eligible && setInputValue(coupon.code),
-                  disabled: !eligible,
-                  className: `bg-[#fff5ee] border border-dashed border-[#FF6500] text-[#FF6500] text-[11px] font-[Nunito-bold] px-3 py-1 rounded ${!eligible ? "opacity-40 cursor-not-allowed" : ""}`,
-                  children: [
-                    coupon.code,
-                    " \u2014 ",
-                    coupon.display_action_value
-                  ]
-                }
-              ),
-              reason && /* @__PURE__ */ jsx("span", { className: "text-[11px] text-[#8e9194]", children: reason }),
-              !reason && conditionText && /* @__PURE__ */ jsx("span", { className: "text-[11px] text-[#8e9194]", children: conditionText })
-            ] }, coupon.code);
+            return /* @__PURE__ */ jsxs(
+              "div",
+              {
+                className: "flex flex-col gap-[2px]",
+                children: [
+                  /* @__PURE__ */ jsxs(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: () => {
+                        if (!eligible) return;
+                        if (!coupon.code) {
+                          applyById(coupon);
+                        } else {
+                          setInputValue(coupon.code);
+                        }
+                      },
+                      disabled: !eligible || isApplying,
+                      className: `bg-[#fff5ee] border border-dashed border-[#FF6500] text-[#FF6500] text-[11px] font-[Nunito-bold] px-3 py-1 rounded ${!eligible || isApplying ? "opacity-40 cursor-not-allowed" : ""}`,
+                      children: [
+                        coupon.code ? `${coupon.code} \u2014 ` : "",
+                        coupon.display_action_value || "Discount"
+                      ]
+                    }
+                  ),
+                  reason && /* @__PURE__ */ jsx("span", { className: "text-[11px] text-[#8e9194]", children: reason }),
+                  !reason && conditionText && /* @__PURE__ */ jsx("span", { className: "text-[11px] text-[#8e9194]", children: conditionText })
+                ]
+              },
+              coupon?.code || coupon?.id
+            );
           }) })
         ] })
       ] })
@@ -2755,6 +3816,7 @@ var CouponSection = () => {
 };
 var CouponSection_default = CouponSection;
 var ViewCart = () => {
+  const [discountOpen, setDiscountOpen] = useState(false);
   const { cart, cartItems } = useAddToCart();
   const { isCartLoading } = useCart();
   const { formatCurrency } = useCurrencyFormat();
@@ -2774,8 +3836,8 @@ var ViewCart = () => {
     (item) => !item?.line_itemable || item?.line_itemable_deleted
   );
   const hasDeletedItems = deletedItems.length > 0;
-  const appliedDiscounts = (cart?.cart_detail_json?.discounts || cart?.cart_discounts || []).filter(
-    (coupon) => coupon.code
+  const appliedDiscounts = (cart?.cart_discounts || []).filter(
+    (coupon) => coupon.code || coupon.display_action_value || coupon.id || coupon.discount_id
   );
   const activeDiscountId = appliedDiscounts?.[0]?.id || cart?.discount_id;
   useEffect(() => {
@@ -2807,17 +3869,19 @@ var ViewCart = () => {
     }
     prevDiscountIdRef.current = activeDiscountId;
   }, [activeDiscountId, items?.length, toast]);
-  return /* @__PURE__ */ jsx("div", { className: "mx-4 md:mx-[24px] my-[100px] flex justify-center", children: isLoading ? (
-    // <ScreenLoading />
-    /* @__PURE__ */ jsx(Fragment, { children: "Loading" })
-  ) : items.length === 0 ? (
-    // <EmptyScreen
-    //     icon={<ShoppingBagIcon />}
-    //     title={"Your Cart Feels a Little Empty"}
-    //     description="Add a touch of charm to your space and style. Browse our handcrafted collections and find something you love."
-    // />
-    /* @__PURE__ */ jsx(Fragment, { children: "Your Cart Feels a Little Empty" })
-  ) : /* @__PURE__ */ jsxs("div", { className: "flex flex-row flex-wrap gap-[16px] max-w-[1248px] w-full", children: [
+  console.log({ cart, appliedDiscounts });
+  return /* @__PURE__ */ jsx("div", { className: "mx-4 md:mx-[24px] my-[100px] flex justify-center", children: isLoading ? /* @__PURE__ */ jsx("div", { className: "flex justify-center items-center w-full h-[400px]", children: /* @__PURE__ */ jsx("div", { className: "animate-spin rounded-full h-10 w-10 border-t-2 border-b-2", style: { borderColor: "var(--core-primary)" } }) }) : items.length === 0 ? /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center justify-center p-12 bg-gray-50/50 border border-gray-100 rounded-2xl min-h-[400px] gap-y-6 max-w-[600px] w-full mx-auto", children: [
+    /* @__PURE__ */ jsx("div", { className: "p-4 bg-white rounded-full shadow-sm border border-gray-100", children: /* @__PURE__ */ jsxs("svg", { xmlns: "http://www.w3.org/2000/svg", width: "32", height: "32", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", style: { color: "var(--core-primary)" }, children: [
+      /* @__PURE__ */ jsx("path", { d: "M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" }),
+      /* @__PURE__ */ jsx("path", { d: "M3 6h18" }),
+      /* @__PURE__ */ jsx("path", { d: "M16 10a4 4 0 0 1-8 0" })
+    ] }) }),
+    /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center gap-2 text-center", children: [
+      /* @__PURE__ */ jsx("p", { className: "font-[Nunito-bold] text-[22px] text-gray-800", children: "Your cart is empty" }),
+      /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[15px] text-gray-500 max-w-[400px]", children: "Looks like you haven't added anything to your cart yet. Explore our collections and find something you love!" })
+    ] }),
+    /* @__PURE__ */ jsx("a", { href: "/", className: "mt-4 px-8 py-3 rounded-full text-white font-[Nunito-medium] transition-opacity hover:opacity-90", style: { backgroundColor: "var(--core-primary)" }, children: "Continue Shopping" })
+  ] }) : /* @__PURE__ */ jsxs("div", { className: "flex flex-row flex-wrap gap-[16px] max-w-[1248px] w-full", children: [
     /* @__PURE__ */ jsx("div", { className: "flex-1 mt-8 md:mt-0", children: /* @__PURE__ */ jsx(Checkout_default, { hasDeletedItems }) }),
     /* @__PURE__ */ jsx("div", { className: "border border-[var(--borders)] sticky hidden md:block" }),
     /* @__PURE__ */ jsxs("div", { className: "flex-1 md:sticky top-4 self-start mt-[18px] md:mt-0 order-first md:order-last", children: [
@@ -2844,22 +3908,136 @@ var ViewCart = () => {
               /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[14px] text-[var(--main)]", children: "Item total" }),
               /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[14px] text-[var(--main)]", children: display_item_total ? formatCurrency(display_item_total) : "\u2014" })
             ] }),
-            appliedDiscounts?.length > 0 ? appliedDiscounts?.map((coupon) => /* @__PURE__ */ jsxs("div", { className: "flex justify-between", children: [
-              /* @__PURE__ */ jsxs("p", { className: "font-[Nunito-regular] text-[14px] text-[#FF6500]", children: [
-                "Discount ",
-                coupon.code ? `(${coupon.code})` : ""
-              ] }),
-              /* @__PURE__ */ jsxs("p", { className: "font-[Nunito-regular] text-[14px] text-[#FF6500]", children: [
-                "-",
-                formatCurrency(coupon.display_discount_amount || coupon.discount_amount / 100)
-              ] })
-            ] }, coupon.code || coupon.id)) : cart?.promo_total > 0 || parseFloat(cart?.display_promo_total) > 0 ? /* @__PURE__ */ jsxs("div", { className: "flex justify-between", children: [
-              /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[14px] text-[#FF6500]", children: "Discount" }),
-              /* @__PURE__ */ jsxs("p", { className: "font-[Nunito-regular] text-[14px] text-[#FF6500]", children: [
-                "-",
-                formatCurrency(cart?.display_promo_total)
-              ] })
-            ] }) : null,
+            (appliedDiscounts?.length > 0 || cart?.promo_total > 0 || parseFloat(cart?.display_promo_total) > 0) && (() => {
+              const totalDiscount = appliedDiscounts?.length > 0 ? appliedDiscounts.reduce((sum, c) => {
+                const amt = c.display_discount_amount ?? (c.discount_amount != null ? c.discount_amount / 100 : 0);
+                return sum + parseFloat(amt || 0);
+              }, 0) : parseFloat(cart?.display_promo_total || 0);
+              return /* @__PURE__ */ jsxs("div", { children: [
+                /* @__PURE__ */ jsxs(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: () => setDiscountOpen((o) => !o),
+                    style: {
+                      display: "flex",
+                      width: "100%",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      background: "none",
+                      border: "none",
+                      padding: 0,
+                      cursor: appliedDiscounts?.length > 1 ? "pointer" : "default"
+                    },
+                    children: [
+                      /* @__PURE__ */ jsxs(
+                        "span",
+                        {
+                          style: {
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "4px",
+                            fontFamily: "Nunito-regular",
+                            fontSize: "14px",
+                            color: "#FF6500"
+                          },
+                          children: [
+                            appliedDiscounts?.length === 1 ? `Discount (${appliedDiscounts[0].code ? appliedDiscounts[0].code : appliedDiscounts[0].display_action_value || "Coupon"})` : "Discount",
+                            appliedDiscounts?.length > 1 && /* @__PURE__ */ jsx(
+                              "svg",
+                              {
+                                width: "12",
+                                height: "12",
+                                viewBox: "0 0 24 24",
+                                fill: "none",
+                                stroke: "#FF6500",
+                                strokeWidth: "2.5",
+                                strokeLinecap: "round",
+                                strokeLinejoin: "round",
+                                style: {
+                                  transition: "transform 0.25s",
+                                  transform: discountOpen ? "rotate(180deg)" : "rotate(0deg)"
+                                },
+                                children: /* @__PURE__ */ jsx("polyline", { points: "6 9 12 15 18 9" })
+                              }
+                            )
+                          ]
+                        }
+                      ),
+                      /* @__PURE__ */ jsxs(
+                        "span",
+                        {
+                          style: {
+                            fontFamily: "Nunito-regular",
+                            fontSize: "14px",
+                            color: "#FF6500"
+                          },
+                          children: [
+                            "-",
+                            formatCurrency(totalDiscount)
+                          ]
+                        }
+                      )
+                    ]
+                  }
+                ),
+                appliedDiscounts?.length > 1 && discountOpen && /* @__PURE__ */ jsx(
+                  "div",
+                  {
+                    style: {
+                      marginTop: "6px",
+                      paddingLeft: "8px",
+                      borderLeft: "2px solid #FF650033",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "4px"
+                    },
+                    children: appliedDiscounts.map((coupon) => {
+                      const amt = coupon.display_discount_amount ?? (coupon.discount_amount != null ? coupon.discount_amount / 100 : 0);
+                      return /* @__PURE__ */ jsxs(
+                        "div",
+                        {
+                          style: {
+                            display: "flex",
+                            justifyContent: "space-between"
+                          },
+                          children: [
+                            /* @__PURE__ */ jsx(
+                              "span",
+                              {
+                                style: {
+                                  fontFamily: "Nunito-regular",
+                                  fontSize: "13px",
+                                  color: "#FF6500",
+                                  opacity: 0.85
+                                },
+                                children: coupon.code ? `${coupon.code}` : coupon.display_action_value || "Coupon"
+                              }
+                            ),
+                            /* @__PURE__ */ jsxs(
+                              "span",
+                              {
+                                style: {
+                                  fontFamily: "Nunito-regular",
+                                  fontSize: "13px",
+                                  color: "#FF6500",
+                                  opacity: 0.85
+                                },
+                                children: [
+                                  "-",
+                                  formatCurrency(amt)
+                                ]
+                              }
+                            )
+                          ]
+                        },
+                        coupon.code || coupon.id
+                      );
+                    })
+                  }
+                )
+              ] });
+            })(),
             /* @__PURE__ */ jsxs("div", { className: "flex justify-between", children: [
               /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[14px] text-[var(--main)]", children: "Tax" }),
               /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[14px] text-[var(--main)]", children: display_tax_total ? formatCurrency(display_tax_total) : "\u2014" })
@@ -3001,13 +4179,13 @@ var AddressCard2 = ({ address, onEdit, onDelete }) => {
   ] });
 };
 var ProfileForm = ({ user, onSuccess, onCancel }) => {
-  const { actions, toast } = useCore();
+  const { actions, toast, config } = useCore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const userData = user?.attributes || user?.data?.attributes || user || {};
   const [formData, setFormData] = useState({
     firstName: userData.first_name || "",
     lastName: userData.last_name || "",
-    email: userData.email || ""
+    contactInfo: config?.authType === "own" ? userData.phone || userData.mobile || userData.phone_number || "" : userData.email || ""
   });
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -3021,7 +4199,7 @@ var ProfileForm = ({ user, onSuccess, onCancel }) => {
         await actions.updateUser(userData?.id, {
           first_name: formData.firstName,
           last_name: formData.lastName,
-          email: formData.email
+          ...config?.authType === "own" ? { phone: formData.contactInfo } : { email: formData.contactInfo }
         });
         toast?.success?.("Profile updated successfully!");
         onSuccess?.();
@@ -3071,15 +4249,15 @@ var ProfileForm = ({ user, onSuccess, onCancel }) => {
       ] })
     ] }),
     /* @__PURE__ */ jsxs("div", { className: "space-y-2", children: [
-      /* @__PURE__ */ jsx("label", { className: labelCls, children: "Email Address" }),
+      /* @__PURE__ */ jsx("label", { className: labelCls, children: config?.authType === "own" ? "Phone Number" : "Email Address" }),
       /* @__PURE__ */ jsx(
         "input",
         {
-          type: "email",
-          name: "email",
-          value: formData.email,
+          type: config?.authType === "own" ? "tel" : "email",
+          name: "contactInfo",
+          value: formData.contactInfo,
           onChange: handleChange,
-          placeholder: "Enter email address",
+          placeholder: `Enter ${config?.authType === "own" ? "phone number" : "email address"}`,
           required: true,
           className: inputCls
         }
@@ -3108,7 +4286,7 @@ var ProfileForm = ({ user, onSuccess, onCancel }) => {
   ] });
 };
 var UserInfo = ({ user, isLoading, refetch }) => {
-  const { actions } = useCore();
+  const { actions, config } = useCore();
   const [addresses, setAddresses] = useState([]);
   const [isAddrLoading, setIsAddrLoading] = useState(false);
   const [modalState, setModalState] = useState({ type: null, data: null });
@@ -3158,8 +4336,8 @@ var UserInfo = ({ user, isLoading, refetch }) => {
           /* @__PURE__ */ jsx("p", { className: "border-b border-gray-100 pb-2 text-[15px] font-[Nunito-medium] text-[var(--core-primary)]", children: userData.last_name || userData.lastName || "\u2014" })
         ] }),
         /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-1 md:col-span-2", children: [
-          /* @__PURE__ */ jsx("label", { className: "text-[12px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest", children: "Email address" }),
-          /* @__PURE__ */ jsx("p", { className: "border-b border-gray-100 pb-2 text-[15px] font-[Nunito-medium] text-[var(--core-primary)]", children: userData.email || userData.primaryEmailAddress?.emailAddress || "\u2014" })
+          /* @__PURE__ */ jsx("label", { className: "text-[12px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest", children: config?.authType === "own" ? "Phone number" : "Email address" }),
+          /* @__PURE__ */ jsx("p", { className: "border-b border-gray-100 pb-2 text-[15px] font-[Nunito-medium] text-[var(--core-primary)]", children: config?.authType === "own" ? userData.phone || userData.mobile || userData.phone_number || "\u2014" : userData.email || userData.primaryEmailAddress?.emailAddress || "\u2014" })
         ] })
       ] }) })
     ] }),
@@ -3244,7 +4422,7 @@ var OrdersList = ({ initialOrders }) => {
       setIsLoading(true);
       try {
         if (actions?.getOrders) {
-          const data = await actions.getOrders(config?.storeId);
+          const data = await actions.getOrders(config?.regionId);
           setOrders(data || []);
         }
       } catch (error) {
@@ -3254,7 +4432,7 @@ var OrdersList = ({ initialOrders }) => {
       }
     };
     fetchOrders();
-  }, [actions, config?.storeId, initialOrders]);
+  }, [actions, config?.regionId, initialOrders]);
   if (isLoading) {
     return /* @__PURE__ */ jsx("div", { className: "flex justify-center py-20", children: /* @__PURE__ */ jsx(Spinner, {}) });
   }
@@ -3758,6 +4936,6 @@ var Hello = () => {
   return /* @__PURE__ */ jsx("div", { children: isCartLoading ? "Loading..." : "Core Working \u2705" });
 };
 
-export { AccountPage, AddressCard2 as AddressCard, AddressForm, AuthManager, CartItem, CartPage, CartSummary, CoreProvider, CouponSection_default as CouponSection, CustomOTPAuth, EmptyState, Hello, Order, OrdersList, Popup, ProfileForm, Spinner, UserInfo, ViewCart, useAddToCart, useAuth, useCart, userCartInfo_default as useCartInfo, useCore, useCurrencyFormat, useLogout, useVariantSelection };
+export { AccountPage, AddressCard2 as AddressCard, AddressForm, AuthManager, CartItem, CartPage, CartSummary, CoreProvider, CouponSection_default as CouponSection, CustomOTPAuth, EmptyState, Hello, Order, OrdersList, Popup, ProfileForm, Spinner, UserInfo, ViewCart, buildItem, buildMeta, clearEcommerce, pushToDataLayer, trackAddPaymentInfo, trackAddShippingInfo, trackAddToCart, trackApplyCoupon, trackBeginCheckout, trackCustomEvent, trackPageView, trackPaymentFailed, trackPurchase, trackViewItem, useAddToCart, useAuth, useCart, userCartInfo_default as useCartInfo, useCore, useCurrencyFormat, useLogout, useVariantSelection };
 //# sourceMappingURL=index.js.map
 //# sourceMappingURL=index.js.map

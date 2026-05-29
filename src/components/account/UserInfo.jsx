@@ -15,7 +15,7 @@ import { EmptyState } from "../ui/EmptyState";
  * Displays the "MY PROFILE" section, including user details and a grid of addresses.
  */
 export const UserInfo = ({ user, isLoading, refetch }) => {
-  const { actions } = useCore();
+  const { actions, config } = useCore();
   const [addresses, setAddresses] = useState([]);
   const [isAddrLoading, setIsAddrLoading] = useState(false);
   const [modalState, setModalState] = useState({ type: null, data: null });
@@ -91,10 +91,13 @@ export const UserInfo = ({ user, isLoading, refetch }) => {
             </div>
             <div className="flex flex-col gap-1 md:col-span-2">
               <label className="text-[12px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest">
-                Email address
+                {config?.authType === "own" ? "Phone number" : "Email address"}
               </label>
               <p className="border-b border-gray-100 pb-2 text-[15px] font-[Nunito-medium] text-[var(--core-primary)]">
-                {userData.email || userData.primaryEmailAddress?.emailAddress || "—"}
+                {config?.authType === "own"
+                  ? (userData.phone || userData.mobile || userData.phone_number || "—")
+                  : (userData.email || userData.primaryEmailAddress?.emailAddress || "—")
+                }
               </p>
             </div>
           </div>

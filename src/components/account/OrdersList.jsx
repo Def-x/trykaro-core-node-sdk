@@ -26,7 +26,7 @@ export const OrdersList = ({ initialOrders }) => {
       setIsLoading(true);
       try {
         if (actions?.getOrders) {
-          const data = await actions.getOrders(config?.storeId);
+          const data = await actions.getOrders(config?.regionId);
           setOrders(data || []);
         }
       } catch (error) {
@@ -37,7 +37,7 @@ export const OrdersList = ({ initialOrders }) => {
     };
 
     fetchOrders();
-  }, [actions, config?.storeId, initialOrders]);
+  }, [actions, config?.regionId, initialOrders]);
 
   if (isLoading) {
     return (

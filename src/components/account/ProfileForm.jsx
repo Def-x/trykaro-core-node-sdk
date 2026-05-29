@@ -10,7 +10,7 @@ import { Spinner } from "../ui/Spinner";
  * A form to update user details (First Name, Last Name, Email).
  */
 export const ProfileForm = ({ user, onSuccess, onCancel }) => {
-  const { actions, toast } = useCore();
+  const { actions, toast, config } = useCore();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const userData = user?.attributes || user?.data?.attributes || user || {};
@@ -18,7 +18,9 @@ export const ProfileForm = ({ user, onSuccess, onCancel }) => {
   const [formData, setFormData] = useState({
     firstName: userData.first_name || "",
     lastName: userData.last_name || "",
-    email: userData.email || "",
+    contactInfo: config?.authType === "own" 
+      ? (userData.phone || userData.mobile || userData.phone_number || "") 
+      : (userData.email || ""),
   });
 
   const handleChange = (e) => {
@@ -35,7 +37,7 @@ export const ProfileForm = ({ user, onSuccess, onCancel }) => {
         await actions.updateUser(userData?.id, {
           first_name: formData.firstName,
           last_name: formData.lastName,
-          email: formData.email,
+          ...(config?.authType === "own" ? { phone: formData.contactInfo } : { email: formData.contactInfo }),
         });
         toast?.success?.("Profile updated successfully!");
         onSuccess?.();
@@ -83,13 +85,15 @@ export const ProfileForm = ({ user, onSuccess, onCancel }) => {
       </div>
 
       <div className="space-y-2">
-        <label className={labelCls}>Email Address</label>
+        <label className={labelCls}>
+          {config?.authType === "own" ? "Phone Number" : "Email Address"}
+        </label>
         <input
-          type="email"
-          name="email"
-          value={formData.email}
+          type={config?.authType === "own" ? "tel" : "email"}
+          name="contactInfo"
+          value={formData.contactInfo}
           onChange={handleChange}
-          placeholder="Enter email address"
+          placeholder={`Enter ${config?.authType === "own" ? "phone number" : "email address"}`}
           required
           className={inputCls}
         />
