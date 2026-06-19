@@ -60,3 +60,17 @@ export {
   trackPaymentFailed,
   trackCustomEvent,
 } from "./lib/gtm";
+
+// ─── Analytics (Meta Pixel) ──────────────────────────────────────────────────
+export {
+  initMetaPixelConfig,
+  trackMetaPageView,
+  trackMetaViewContent,
+  trackMetaSearch,
+  trackMetaAddToCart,
+  trackMetaInitiateCheckout,
+  trackMetaAddPaymentInfo,
+  trackMetaPurchase,
+  trackMetaCompleteRegistration,
+  trackMetaLead,
+} from "./lib/metaPixel";

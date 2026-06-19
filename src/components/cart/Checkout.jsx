@@ -20,6 +20,12 @@ import {
   trackAddShippingInfo,
   trackAddPaymentInfo,
 } from "../../lib/gtm";
+import {
+  trackMetaInitiateCheckout,
+  trackMetaPurchase,
+  trackMetaAddPaymentInfo,
+} from "../../lib/metaPixel";
+
 
 // ─── Top-level Checkout ────────────────────────────────────────────────────────
 const Checkout = ({ hasDeletedItems }) => {
@@ -273,6 +279,8 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
               currency,
               metaOverrides: { source: "checkout" },
             });
+            // ── Meta Pixel ──
+            trackMetaPurchase(cart);
             // ─────────────────────────────────────────────────────────────
 
             setCart(null);
@@ -354,6 +362,7 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
           transactionId: String(orderResponse?.id ?? ""),
           metaOverrides: { source: "checkout" },
         });
+        trackMetaInitiateCheckout(cart);
 
         // Step 2: add_shipping_info (address already set on cart at this point)
         trackAddShippingInfo({
@@ -372,6 +381,7 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
           currency,
           metaOverrides: { source: "checkout" },
         });
+        trackMetaAddPaymentInfo(cart);
         // ─────────────────────────────────────────────────────────────────
 
         onRazorPayHandler(orderResponse);

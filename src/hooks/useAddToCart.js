@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useCore } from "../context/CoreProvider";
 import { trackAddToCart, trackCustomEvent, buildItem } from "../lib/gtm";
+import { trackMetaAddToCart } from "../lib/metaPixel";
 
 /**
  * useAddToCart()
@@ -190,6 +191,9 @@ export function useAddToCart() {
       const currency = config?.currency ?? "INR";
       const qty = overrideQty !== null ? overrideQty : (quantity ?? 1);
       trackAddToCart({ userId, product, qty, currency });
+      // ───────────────────────────────────────────────────────────────
+      // ── Meta Pixel ────────────────────────────────────────────────
+      trackMetaAddToCart(product, qty);
       // ───────────────────────────────────────────────────────────────
 
       toast?.success?.(`${product?.name || "Item"} added to cart`);

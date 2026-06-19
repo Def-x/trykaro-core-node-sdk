@@ -932,6 +932,119 @@ function trackCustomEvent(eventName, userId, ecommerce = {}, metaOverrides = {})
   });
 }
 
+// src/lib/metaPixel.js
+var metaPixelConfig = {
+  enabled: false,
+  pixelId: null,
+  enabledEvents: []
+  // Array of enabled event IDs, e.g., ["PageView", "Purchase"]
+};
+function initMetaPixelConfig(config) {
+  if (config) {
+    metaPixelConfig = {
+      ...metaPixelConfig,
+      ...config
+    };
+  }
+}
+function isEventEnabled(eventName) {
+  return metaPixelConfig.enabled && metaPixelConfig.pixelId && metaPixelConfig.enabledEvents.includes(eventName);
+}
+function fbq(...args) {
+  if (typeof window !== "undefined" && typeof window.fbq === "function") {
+    window.fbq(...args);
+  }
+}
+function trackMetaPageView() {
+  if (!isEventEnabled("PageView")) return;
+  fbq("track", "PageView");
+}
+function trackMetaViewContent(product) {
+  if (!isEventEnabled("ViewContent")) return;
+  if (!product) return;
+  fbq("track", "ViewContent", {
+    content_ids: [product.id || product.sku || ""],
+    content_name: product.name || "",
+    content_type: "product",
+    value: Number(product.display_price || product.price || 0),
+    currency: "INR"
+    // TODO: Make dynamic if necessary
+  });
+}
+function trackMetaSearch(searchQuery) {
+  if (!isEventEnabled("Search")) return;
+  if (!searchQuery) return;
+  fbq("track", "Search", {
+    search_string: searchQuery
+  });
+}
+function trackMetaAddToCart(product, qty = 1) {
+  if (!isEventEnabled("AddToCart")) return;
+  if (!product) return;
+  fbq("track", "AddToCart", {
+    content_ids: [product.id || product.sku || ""],
+    content_name: product.name || "",
+    content_type: "product",
+    value: Number(product.display_price || product.price || 0) * Number(qty),
+    currency: "INR",
+    contents: [
+      {
+        id: product.id || product.sku || "",
+        quantity: Number(qty)
+      }
+    ]
+  });
+}
+function trackMetaInitiateCheckout(cart) {
+  if (!isEventEnabled("InitiateCheckout")) return;
+  if (!cart) return;
+  const contentIds = cart.line_items?.map((item) => item.variant_id || item.id) || [];
+  const contents = cart.line_items?.map((item) => ({
+    id: item.variant_id || item.id,
+    quantity: item.quantity
+  })) || [];
+  fbq("track", "InitiateCheckout", {
+    content_ids: contentIds,
+    contents,
+    value: Number(cart.display_total || cart.total || 0),
+    currency: "INR",
+    num_items: cart.item_count || cart.line_items?.length || 0
+  });
+}
+function trackMetaAddPaymentInfo(cart) {
+  if (!isEventEnabled("AddPaymentInfo")) return;
+  fbq("track", "AddPaymentInfo", {
+    value: Number(cart?.display_total || cart?.total || 0),
+    currency: "INR"
+  });
+}
+function trackMetaPurchase(order) {
+  if (!isEventEnabled("Purchase")) return;
+  if (!order) return;
+  const contentIds = order.line_items?.map((item) => item.variant_id || item.id) || [];
+  const contents = order.line_items?.map((item) => ({
+    id: item.variant_id || item.id,
+    quantity: item.quantity
+  })) || [];
+  fbq("track", "Purchase", {
+    content_ids: contentIds,
+    contents,
+    value: Number(order.display_total || order.total || 0),
+    currency: "INR",
+    num_items: order.item_count || order.line_items?.length || 0
+  });
+}
+function trackMetaCompleteRegistration() {
+  if (!isEventEnabled("CompleteRegistration")) return;
+  fbq("track", "CompleteRegistration", {
+    status: "completed"
+  });
+}
+function trackMetaLead() {
+  if (!isEventEnabled("Lead")) return;
+  fbq("track", "Lead");
+}
+
 // src/hooks/useAddToCart.js
 function useAddToCart() {
   const { cart, setCart, actions, toast, auth, config } = useCore();
@@ -1046,6 +1159,7 @@ function useAddToCart() {
       const currency = config?.currency ?? "INR";
       const qty = overrideQty !== null ? overrideQty : quantity ?? 1;
       trackAddToCart({ userId, product, qty, currency });
+      trackMetaAddToCart(product, qty);
       toast?.success?.(`${product?.name || "Item"} added to cart`);
     } catch (err) {
       console.error("[useAddToCart] handleAddToCart error:", err);
@@ -3235,6 +3349,7 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
               currency,
               metaOverrides: { source: "checkout" }
             });
+            trackMetaPurchase(cart);
             setCart(null);
             router.push(`/order/${order?.order_id}?show=true`);
           } else {
@@ -3297,6 +3412,7 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
           transactionId: String(orderResponse?.id ?? ""),
           metaOverrides: { source: "checkout" }
         });
+        trackMetaInitiateCheckout(cart);
         trackAddShippingInfo({
           userId,
           cart,
@@ -3311,6 +3427,7 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
           currency,
           metaOverrides: { source: "checkout" }
         });
+        trackMetaAddPaymentInfo(cart);
         onRazorPayHandler(orderResponse);
       }
     } catch (err) {
@@ -4936,6 +5053,6 @@ var Hello = () => {
   return /* @__PURE__ */ jsx("div", { children: isCartLoading ? "Loading..." : "Core Working \u2705" });
 };
 
-export { AccountPage, AddressCard2 as AddressCard, AddressForm, AuthManager, CartItem, CartPage, CartSummary, CoreProvider, CouponSection_default as CouponSection, CustomOTPAuth, EmptyState, Hello, Order, OrdersList, Popup, ProfileForm, Spinner, UserInfo, ViewCart, buildItem, buildMeta, clearEcommerce, pushToDataLayer, trackAddPaymentInfo, trackAddShippingInfo, trackAddToCart, trackApplyCoupon, trackBeginCheckout, trackCustomEvent, trackPageView, trackPaymentFailed, trackPurchase, trackViewItem, useAddToCart, useAuth, useCart, userCartInfo_default as useCartInfo, useCore, useCurrencyFormat, useLogout, useVariantSelection };
+export { AccountPage, AddressCard2 as AddressCard, AddressForm, AuthManager, CartItem, CartPage, CartSummary, CoreProvider, CouponSection_default as CouponSection, CustomOTPAuth, EmptyState, Hello, Order, OrdersList, Popup, ProfileForm, Spinner, UserInfo, ViewCart, buildItem, buildMeta, clearEcommerce, initMetaPixelConfig, pushToDataLayer, trackAddPaymentInfo, trackAddShippingInfo, trackAddToCart, trackApplyCoupon, trackBeginCheckout, trackCustomEvent, trackMetaAddPaymentInfo, trackMetaAddToCart, trackMetaCompleteRegistration, trackMetaInitiateCheckout, trackMetaLead, trackMetaPageView, trackMetaPurchase, trackMetaSearch, trackMetaViewContent, trackPageView, trackPaymentFailed, trackPurchase, trackViewItem, useAddToCart, useAuth, useCart, userCartInfo_default as useCartInfo, useCore, useCurrencyFormat, useLogout, useVariantSelection };
 //# sourceMappingURL=index.js.map
 //# sourceMappingURL=index.js.map
