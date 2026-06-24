@@ -59,7 +59,7 @@ export function trackMetaPageView() {
 export function trackMetaViewContent(product) {
   if (!isEventEnabled("ViewContent")) return;
   if (!product) return;
-  
+
   fbq("track", "ViewContent", {
     content_ids: [product.id || product.sku || ""],
     content_name: product.name || "",
@@ -110,11 +110,13 @@ export function trackMetaInitiateCheckout(cart) {
   if (!isEventEnabled("InitiateCheckout")) return;
   if (!cart) return;
 
-  const contentIds = cart.line_items?.map((item) => item.variant_id || item.id) || [];
-  const contents = cart.line_items?.map((item) => ({
-    id: item.variant_id || item.id,
-    quantity: item.quantity,
-  })) || [];
+  const contentIds =
+    cart.line_items?.map((item) => item.variant_id || item.id) || [];
+  const contents =
+    cart.line_items?.map((item) => ({
+      id: item.variant_id || item.id,
+      quantity: item.quantity,
+    })) || [];
 
   fbq("track", "InitiateCheckout", {
     content_ids: contentIds,
@@ -130,7 +132,7 @@ export function trackMetaInitiateCheckout(cart) {
  */
 export function trackMetaAddPaymentInfo(cart) {
   if (!isEventEnabled("AddPaymentInfo")) return;
-  
+
   fbq("track", "AddPaymentInfo", {
     value: Number(cart?.total ? cart.total / 100 : 0),
     currency: "INR",
@@ -144,11 +146,13 @@ export function trackMetaPurchase(order) {
   if (!isEventEnabled("Purchase")) return;
   if (!order) return;
 
-  const contentIds = order.line_items?.map((item) => item.variant_id || item.id) || [];
-  const contents = order.line_items?.map((item) => ({
-    id: item.variant_id || item.id,
-    quantity: item.quantity,
-  })) || [];
+  const contentIds =
+    order.line_items?.map((item) => item.variant_id || item.id) || [];
+  const contents =
+    order.line_items?.map((item) => ({
+      id: item.variant_id || item.id,
+      quantity: item.quantity,
+    })) || [];
 
   fbq("track", "Purchase", {
     content_ids: contentIds,
@@ -164,7 +168,7 @@ export function trackMetaPurchase(order) {
  */
 export function trackMetaCompleteRegistration() {
   if (!isEventEnabled("CompleteRegistration")) return;
-  
+
   fbq("track", "CompleteRegistration", {
     status: "completed",
   });
@@ -175,6 +179,6 @@ export function trackMetaCompleteRegistration() {
  */
 export function trackMetaLead() {
   if (!isEventEnabled("Lead")) return;
-  
+
   fbq("track", "Lead");
 }
