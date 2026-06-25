@@ -45,11 +45,13 @@ export { Hello } from "./components/hello";
 
 // ─── Analytics (GTM / GA4) ────────────────────────────────────────────────────
 export {
+  initGtmConfig,
   pushToDataLayer,
   clearEcommerce,
   buildMeta,
   buildItem,
   trackPageView,
+  trackSearch,
   trackViewItem,
   trackAddToCart,
   trackBeginCheckout,

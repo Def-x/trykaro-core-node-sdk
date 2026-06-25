@@ -11,9 +11,24 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-const isGtmEnabled =
-  process.env.NODE_ENV === "production" &&
-  Boolean(process.env.NEXT_PUBLIC_GTM_ID?.trim());
+let gtmConfig = {
+  enabled: false,
+  gtmContainerId: null,
+  ga4MeasurementId: null,
+};
+
+/**
+ * Initialize GTM config dynamically from the frontend application.
+ * @param {Object} config
+ */
+export function initGtmConfig(config) {
+  if (config) {
+    gtmConfig = {
+      ...gtmConfig,
+      ...config,
+    };
+  }
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -23,7 +38,7 @@ const isGtmEnabled =
  * @param {Object} payload
  */
 export function pushToDataLayer(payload) {
-  if (!isGtmEnabled || typeof window === "undefined") return;
+  if (!gtmConfig.enabled || typeof window === "undefined") return;
   window.dataLayer = window.dataLayer || [];
   window.dataLayer.push(payload);
 }
@@ -93,6 +108,25 @@ export function trackPageView(userId, metaOverrides = {}) {
   pushToDataLayer({
     event: "page_view",
     user_id: userId ?? null,
+    ecommerce: null,
+    meta: buildMeta(metaOverrides),
+  });
+}
+
+/**
+ * search
+ * Fired when a user performs a search.
+ *
+ * @param {string} userId
+ * @param {string} searchTerm
+ * @param {Object} [metaOverrides]
+ */
+export function trackSearch(userId, searchTerm, metaOverrides = {}) {
+  clearEcommerce();
+  pushToDataLayer({
+    event: "search",
+    user_id: userId ?? null,
+    search_term: searchTerm,
     ecommerce: null,
     meta: buildMeta(metaOverrides),
   });

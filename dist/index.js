@@ -651,9 +651,21 @@ var useCart = () => {
 };
 
 // src/lib/gtm.js
-var isGtmEnabled = process.env.NODE_ENV === "production" && Boolean(process.env.NEXT_PUBLIC_GTM_ID?.trim());
+var gtmConfig = {
+  enabled: false,
+  gtmContainerId: null,
+  ga4MeasurementId: null
+};
+function initGtmConfig(config) {
+  if (config) {
+    gtmConfig = {
+      ...gtmConfig,
+      ...config
+    };
+  }
+}
 function pushToDataLayer(payload) {
-  if (!isGtmEnabled || typeof window === "undefined") return;
+  if (!gtmConfig.enabled || typeof window === "undefined") return;
   window.dataLayer = window.dataLayer || [];
   window.dataLayer.push(payload);
 }
@@ -686,6 +698,16 @@ function trackPageView(userId, metaOverrides = {}) {
   pushToDataLayer({
     event: "page_view",
     user_id: userId ?? null,
+    ecommerce: null,
+    meta: buildMeta(metaOverrides)
+  });
+}
+function trackSearch(userId, searchTerm, metaOverrides = {}) {
+  clearEcommerce();
+  pushToDataLayer({
+    event: "search",
+    user_id: userId ?? null,
+    search_term: searchTerm,
     ecommerce: null,
     meta: buildMeta(metaOverrides)
   });
@@ -966,9 +988,8 @@ function trackMetaViewContent(product) {
     content_ids: [product.id || product.sku || ""],
     content_name: product.name || "",
     content_type: "product",
-    value: Number(product.display_price || product.price || 0),
+    value: Number(product.price ? product.price / 100 : 0),
     currency: "INR"
-    // TODO: Make dynamic if necessary
   });
 }
 function trackMetaSearch(searchQuery) {
@@ -985,7 +1006,7 @@ function trackMetaAddToCart(product, qty = 1) {
     content_ids: [product.id || product.sku || ""],
     content_name: product.name || "",
     content_type: "product",
-    value: Number(product.display_price || product.price || 0) * Number(qty),
+    value: Number(product.price ? product.price / 100 : 0) * Number(qty),
     currency: "INR",
     contents: [
       {
@@ -1006,7 +1027,7 @@ function trackMetaInitiateCheckout(cart) {
   fbq("track", "InitiateCheckout", {
     content_ids: contentIds,
     contents,
-    value: Number(cart.display_total || cart.total || 0),
+    value: Number(cart.total ? cart.total / 100 : 0),
     currency: "INR",
     num_items: cart.item_count || cart.line_items?.length || 0
   });
@@ -1014,7 +1035,7 @@ function trackMetaInitiateCheckout(cart) {
 function trackMetaAddPaymentInfo(cart) {
   if (!isEventEnabled("AddPaymentInfo")) return;
   fbq("track", "AddPaymentInfo", {
-    value: Number(cart?.display_total || cart?.total || 0),
+    value: Number(cart?.total ? cart.total / 100 : 0),
     currency: "INR"
   });
 }
@@ -1029,7 +1050,7 @@ function trackMetaPurchase(order) {
   fbq("track", "Purchase", {
     content_ids: contentIds,
     contents,
-    value: Number(order.display_total || order.total || 0),
+    value: Number(order.total ? order.total / 100 : 0),
     currency: "INR",
     num_items: order.item_count || order.line_items?.length || 0
   });
@@ -5053,6 +5074,6 @@ var Hello = () => {
   return /* @__PURE__ */ jsx("div", { children: isCartLoading ? "Loading..." : "Core Working \u2705" });
 };
 
-export { AccountPage, AddressCard2 as AddressCard, AddressForm, AuthManager, CartItem, CartPage, CartSummary, CoreProvider, CouponSection_default as CouponSection, CustomOTPAuth, EmptyState, Hello, Order, OrdersList, Popup, ProfileForm, Spinner, UserInfo, ViewCart, buildItem, buildMeta, clearEcommerce, initMetaPixelConfig, pushToDataLayer, trackAddPaymentInfo, trackAddShippingInfo, trackAddToCart, trackApplyCoupon, trackBeginCheckout, trackCustomEvent, trackMetaAddPaymentInfo, trackMetaAddToCart, trackMetaCompleteRegistration, trackMetaInitiateCheckout, trackMetaLead, trackMetaPageView, trackMetaPurchase, trackMetaSearch, trackMetaViewContent, trackPageView, trackPaymentFailed, trackPurchase, trackViewItem, useAddToCart, useAuth, useCart, userCartInfo_default as useCartInfo, useCore, useCurrencyFormat, useLogout, useVariantSelection };
+export { AccountPage, AddressCard2 as AddressCard, AddressForm, AuthManager, CartItem, CartPage, CartSummary, CoreProvider, CouponSection_default as CouponSection, CustomOTPAuth, EmptyState, Hello, Order, OrdersList, Popup, ProfileForm, Spinner, UserInfo, ViewCart, buildItem, buildMeta, clearEcommerce, initGtmConfig, initMetaPixelConfig, pushToDataLayer, trackAddPaymentInfo, trackAddShippingInfo, trackAddToCart, trackApplyCoupon, trackBeginCheckout, trackCustomEvent, trackMetaAddPaymentInfo, trackMetaAddToCart, trackMetaCompleteRegistration, trackMetaInitiateCheckout, trackMetaLead, trackMetaPageView, trackMetaPurchase, trackMetaSearch, trackMetaViewContent, trackPageView, trackPaymentFailed, trackPurchase, trackSearch, trackViewItem, useAddToCart, useAuth, useCart, userCartInfo_default as useCartInfo, useCore, useCurrencyFormat, useLogout, useVariantSelection };
 //# sourceMappingURL=index.js.map
 //# sourceMappingURL=index.js.map
