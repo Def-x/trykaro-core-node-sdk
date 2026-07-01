@@ -1,5 +1,5 @@
 import { getPaymentGateway } from './chunk-UP7U6KB6.js';
-import React8, { createContext, useState, useMemo, useEffect, useCallback, useContext, useRef } from 'react';
+import React8, { createContext, useMemo, useState, useEffect, useCallback, useContext, useRef } from 'react';
 import { jsx, jsxs, Fragment } from 'react/jsx-runtime';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import Cookies from 'js-cookie';
@@ -481,8 +481,21 @@ var CoreProvider = ({
   auth: injectedAuth = null,
   orgData
 }) => {
-  const primaryColor = config?.primaryColor ?? "#00214c";
-  const secondaryColor = config?.secondaryColor ?? "#c8a95a";
+  const isRegionBased = config?.isRegion === true;
+  const resolvedRegion = isRegionBased ? config?.activeRegion ?? config?.region ?? null : null;
+  const resolvedRegionId = isRegionBased ? config?.regionId ?? resolvedRegion?.id ?? null : null;
+  const resolvedConfig = useMemo(
+    () => ({
+      ...config,
+      isRegion: isRegionBased,
+      region: resolvedRegion,
+      activeRegion: resolvedRegion,
+      regionId: resolvedRegionId
+    }),
+    [config, isRegionBased, resolvedRegion, resolvedRegionId]
+  );
+  const primaryColor = resolvedConfig?.primaryColor ?? "#00214c";
+  const secondaryColor = resolvedConfig?.secondaryColor ?? "#c8a95a";
   const [cart, setCart] = useState();
   const resolvedActions = useMemo(() => {
     const merged = { ...actions };
@@ -494,9 +507,9 @@ var CoreProvider = ({
     return merged;
   }, [actions]);
   const [isCartLoading, setIsCartLoading] = useState(true);
-  const [region, setRegion] = useState(config?.region ?? null);
+  const [region, setRegion] = useState(resolvedConfig?.region ?? null);
   const [authState, setAuthState] = useState(() => injectedAuth ?? {});
-  const authType = config?.authType ?? "clerk";
+  const authType = resolvedConfig?.authType ?? "clerk";
   useEffect(() => {
     if (!injectedAuth) return;
     setAuthState((prev) => ({
@@ -553,14 +566,14 @@ var CoreProvider = ({
         let resolvedCart = null;
         const isSignedIn = auth?.isSignedIn ?? false;
         if (isSignedIn) {
-          const data = await resolvedActions.getCart(config?.regionId);
+          const data = await resolvedActions.getCart(resolvedConfig?.regionId);
           resolvedCart = Array.isArray(data) ? data[0] : data;
         } else {
           const storedCartId = typeof window !== "undefined" ? localStorage.getItem("cartid") : null;
           if (storedCartId && resolvedActions?.getCartById) {
             resolvedCart = await resolvedActions.getCartById(
               storedCartId,
-              config?.regionId
+              resolvedConfig?.regionId
             );
           }
         }
@@ -572,7 +585,7 @@ var CoreProvider = ({
       }
     };
     loadCart();
-  }, [config?.regionId, auth?.isSignedIn]);
+  }, [resolvedConfig?.regionId, auth?.isSignedIn]);
   useEffect(() => {
     if (typeof document === "undefined") return;
     const root = document.documentElement;
@@ -603,7 +616,7 @@ var CoreProvider = ({
       actions: resolvedActions,
       toast,
       auth,
-      config,
+      resolvedConfig,
       orgData,
       primaryColor,
       secondaryColor
@@ -622,7 +635,7 @@ var CoreProvider = ({
       secondaryColor
     ]
   );
-  console.log({ auth, config });
+  console.log({ auth, config: resolvedConfig });
   return /* @__PURE__ */ jsx(CoreContext.Provider, { value, children: /* @__PURE__ */ jsx(
     "div",
     {

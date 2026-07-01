@@ -106,10 +106,26 @@ export const CoreProvider = ({
   orgData,
 }) => {
   // ── Theme colors ────────────────────────────────────────────────────────────
-  const primaryColor = config?.primaryColor ?? "#00214c";
-  const secondaryColor = config?.secondaryColor ?? "#c8a95a";
+  const isRegionBased = config?.isRegion === true;
+  const resolvedRegion = isRegionBased
+    ? (config?.activeRegion ?? config?.region ?? null)
+    : null;
+  const resolvedRegionId = isRegionBased
+    ? (config?.regionId ?? resolvedRegion?.id ?? null)
+    : null;
+  const resolvedConfig = useMemo(
+    () => ({
+      ...config,
+      isRegion: isRegionBased,
+      region: resolvedRegion,
+      activeRegion: resolvedRegion,
+      regionId: resolvedRegionId,
+    }),
+    [config, isRegionBased, resolvedRegion, resolvedRegionId],
+  );
+  const primaryColor = resolvedConfig?.primaryColor ?? "#00214c";
+  const secondaryColor = resolvedConfig?.secondaryColor ?? "#c8a95a";
   const [cart, setCart] = useState();
-
   const resolvedActions = useMemo(() => {
     const merged = { ...actions };
     Object.entries(inbuiltActions).forEach(([key, fn]) => {
@@ -120,10 +136,9 @@ export const CoreProvider = ({
     return merged;
   }, [actions]);
   const [isCartLoading, setIsCartLoading] = useState(true);
-  const [region, setRegion] = useState(config?.region ?? null);
+  const [region, setRegion] = useState(resolvedConfig?.region ?? null);
   const [authState, setAuthState] = useState(() => injectedAuth ?? {});
-
-  const authType = config?.authType ?? "clerk";
+  const authType = resolvedConfig?.authType ?? "clerk";
 
   useEffect(() => {
     if (!injectedAuth) return;
@@ -195,7 +210,7 @@ export const CoreProvider = ({
         const isSignedIn = auth?.isSignedIn ?? false;
 
         if (isSignedIn) {
-          const data = await resolvedActions.getCart(config?.regionId);
+          const data = await resolvedActions.getCart(resolvedConfig?.regionId);
           resolvedCart = Array.isArray(data) ? data[0] : data;
         } else {
           const storedCartId =
@@ -206,7 +221,7 @@ export const CoreProvider = ({
           if (storedCartId && resolvedActions?.getCartById) {
             resolvedCart = await resolvedActions.getCartById(
               storedCartId,
-              config?.regionId,
+              resolvedConfig?.regionId,
             );
           }
         }
@@ -221,7 +236,7 @@ export const CoreProvider = ({
 
     loadCart();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [config?.regionId, auth?.isSignedIn]);
+  }, [resolvedConfig?.regionId, auth?.isSignedIn]);
 
   useEffect(() => {
     if (typeof document === "undefined") return;
@@ -258,7 +273,7 @@ export const CoreProvider = ({
       actions: resolvedActions,
       toast,
       auth,
-      config,
+      resolvedConfig,
       orgData,
       primaryColor,
       secondaryColor,
@@ -278,7 +293,7 @@ export const CoreProvider = ({
     ],
   );
 
-  console.log({ auth, config });
+  console.log({ auth, config: resolvedConfig });
   return (
     <CoreContext.Provider value={value}>
       <div
