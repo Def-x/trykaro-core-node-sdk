@@ -402,7 +402,7 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
   return (
     <div>
       {/* ── ORDER TYPE ── */}
-      <h1 className="font-[Nunito-medium] text-[20px] text-[var(--main)] leading-[24px]">
+      <h1 className="font-[var(--font-medium)] text-[20px] text-[var(--main)] leading-[24px]">
         ORDER TYPE
       </h1>
       <div className="mt-[16px] flex flex-col gap-y-[16px]">
@@ -419,7 +419,7 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
       {orderType !== "pickup" && (
         <div className="mt-[32px]">
           {isAddressLoading ? (
-            <div className="flex items-center gap-2 text-[var(--secondary)] text-sm font-[Nunito-regular]">
+            <div className="flex items-center gap-2 text-[var(--secondary)] text-sm font-[var(--font-regular)]">
               <div className="w-4 h-4 border-2 border-[var(--core-primary)] border-t-transparent rounded-full animate-spin" />
               Loading addresses…
             </div>
@@ -446,10 +446,10 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
 
       {/* ── PAYMENT ── */}
       <div className="mt-[32px]">
-        <h1 className="font-[Nunito-medium] text-[20px] text-[var(--main)]">
+        <h1 className="font-[var(--font-medium)] text-[20px] text-[var(--main)]">
           PAYMENT
         </h1>
-        <p className="font-[Nunito-regular] text-[14px] text-[var(--secondary)]">
+        <p className="font-[var(--font-regular)] text-[14px] text-[var(--secondary)]">
           All transactions are secure and encrypted.
         </p>
         <div className="mt-[16px]">
@@ -504,7 +504,7 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
           <button
             onClick={onPlaceOrder}
             disabled={hasDeletedItems || isPlacingOrder || isAddressLoading}
-            className={`px-5 py-3 w-full rounded-lg cursor-pointer font-[Nunito-medium] text-[15px] transition-all duration-300 ${
+            className={`px-5 py-3 w-full rounded-lg cursor-pointer font-[var(--font-medium)] text-[15px] transition-all duration-300 ${
               hasDeletedItems || isPlacingOrder || isAddressLoading
                 ? "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none"
                 : "bg-[var(--core-primary)] text-white hover:opacity-90 hover:shadow-lg transform active:scale-[0.98]"
@@ -521,7 +521,7 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
 
           {/* Policy Links */}
           <div className="mt-4 text-center">
-            <p className="text-[11px] text-[#8c92a4] font-[Nunito-regular] leading-relaxed">
+            <p className="text-[11px] text-[#8c92a4] font-[var(--font-regular)] leading-relaxed">
               By placing your order, you agree to our{" "}
               <Link
                 href="/terms-and-conditions"
@@ -549,7 +549,7 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
           </div>
 
           {hasDeletedItems && (
-            <p className="text-xs text-red-600 mt-2 font-[Nunito-regular]">
+            <p className="text-xs text-red-600 mt-2 font-[var(--font-regular)]">
               Please remove unavailable items before proceeding to checkout.
             </p>
           )}
@@ -577,11 +577,11 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
               </div>
 
               <div className="space-y-2">
-                <p className="font-[Nunito-medium] text-[#2d2d2d] text-base">
+                <p className="font-[var(--font-medium)] text-[#2d2d2d] text-base">
                   We're finalizing your order with{" "}
                   {paymentMode === "stripe" ? "Stripe" : "Razorpay"}.
                 </p>
-                <p className="font-[Nunito-regular] text-[#8c92a4] text-sm leading-relaxed">
+                <p className="font-[var(--font-regular)] text-[#8c92a4] text-sm leading-relaxed">
                   Please do not refresh the page or close this window. <br />
                   This will only take a moment.
                 </p>

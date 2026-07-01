@@ -49,7 +49,7 @@ export const OrdersList = ({ initialOrders }) => {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <h1 className="font-[Nunito-regular] text-[32px] text-[var(--core-primary)] mb-10 tracking-tight uppercase">
+      <h1 className="font-[var(--font-regular)] text-[32px] text-[var(--core-primary)] mb-10 tracking-tight uppercase">
         MY ORDERS
       </h1>
 
@@ -65,7 +65,7 @@ export const OrdersList = ({ initialOrders }) => {
           title="No Orders Found"
           description="It looks like you haven't placed any orders yet. Once you do, they will appear here."
           action={
-            <button className="mt-4 px-8 py-3 bg-[var(--core-primary)] text-white font-[Nunito-bold] text-[13px] uppercase tracking-widest hover:opacity-90 transition-colors rounded-none">
+            <button className="mt-4 px-8 py-3 bg-[var(--core-primary)] text-white font-[var(--font-bold)] text-[13px] uppercase tracking-widest hover:opacity-90 transition-colors rounded-none">
               Start Shopping
             </button>
           }
@@ -116,11 +116,11 @@ const OrderCard = ({ order, formatCurrency }) => {
         {/* Left side */}
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-3">
-            <span className="font-[Nunito-bold] text-[16px] text-[var(--core-primary)]">
+            <span className="font-[var(--font-bold)] text-[16px] text-[var(--core-primary)]">
               {order_number || cartNumber || id}
             </span>
             <span
-              className="text-[10px] font-[Nunito-bold] uppercase tracking-wider"
+              className="text-[10px] font-[var(--font-bold)] uppercase tracking-wider"
               style={{
                 padding: '3px 10px',
                 borderRadius: '999px',
@@ -132,19 +132,19 @@ const OrderCard = ({ order, formatCurrency }) => {
               {order_status || "Processing"}
             </span>
           </div>
-          <p className="text-[13px] font-[Nunito-medium] text-gray-500">
+          <p className="text-[13px] font-[var(--font-medium)] text-gray-500">
             Placed on <span className="text-gray-700">{dateStr}</span>
           </p>
         </div>
 
         {/* Right side */}
         <div className="flex flex-col items-start md:items-end gap-1.5 w-full md:w-auto">
-          <span className="font-[Nunito-bold] text-[18px] text-[var(--core-primary)]">
+          <span className="font-[var(--font-bold)] text-[18px] text-[var(--core-primary)]">
             {display_total ? formatCurrency(display_total) : "—"}
           </span>
-          <p className="text-[12px] font-[Nunito-medium] flex items-center gap-1.5">
-            <span className="text-gray-400 uppercase tracking-wider text-[10px] font-[Nunito-bold]">Payment:</span>
-            <span className={`uppercase font-[Nunito-bold] tracking-tight ${payment_status === 'received' || payment_status === 'paid' ? 'text-green-600' : 'text-orange-500'
+          <p className="text-[12px] font-[var(--font-medium)] flex items-center gap-1.5">
+            <span className="text-gray-400 uppercase tracking-wider text-[10px] font-[var(--font-bold)]">Payment:</span>
+            <span className={`uppercase font-[var(--font-bold)] tracking-tight ${payment_status === 'received' || payment_status === 'paid' ? 'text-green-600' : 'text-orange-500'
               }`}>
               {payment_status || "Pending"}
             </span>
@@ -172,7 +172,7 @@ const OrderCard = ({ order, formatCurrency }) => {
                 ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center text-gray-300">
                     <span className="text-[20px] mb-1">📦</span>
-                    <span className="text-[9px] uppercase tracking-wider font-[Nunito-medium]">No Image</span>
+                    <span className="text-[9px] uppercase tracking-wider font-[var(--font-medium)]">No Image</span>
                   </div>
                 )}
               </div>
@@ -185,7 +185,7 @@ const OrderCard = ({ order, formatCurrency }) => {
         {line_items.length === 0 && <p className="text-gray-400 italic text-sm py-4">No items info</p>}
 
         {/* Subtle view details indicator */}
-        <div className="absolute right-5 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 hidden md:flex items-center text-[var(--core-primary)] text-[13px] font-[Nunito-bold] bg-white/90 backdrop-blur-sm py-2 px-4 rounded-full shadow-sm border border-gray-200 pointer-events-none">
+        <div className="absolute right-5 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 hidden md:flex items-center text-[var(--core-primary)] text-[13px] font-[var(--font-bold)] bg-white/90 backdrop-blur-sm py-2 px-4 rounded-full shadow-sm border border-gray-200 pointer-events-none">
           View Details &rarr;
         </div>
       </div>

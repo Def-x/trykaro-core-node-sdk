@@ -74,8 +74,8 @@ export const AddressForm = ({
     }
   };
 
-  const inputCls = "w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--core-primary)] font-[Nunito-regular]";
-  const labelCls = "text-sm font-[Nunito-bold] text-[var(--core-primary)]";
+  const inputCls = "w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--core-primary)] font-[var(--font-regular)]";
+  const labelCls = "text-sm font-[var(--font-bold)] text-[var(--core-primary)]";
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -215,7 +215,7 @@ export const AddressForm = ({
         <button
           type="submit"
           disabled={isSubmitting}
-          className={`w-full py-3 bg-[var(--core-primary)] text-white rounded-md font-[Nunito-bold] transition-colors flex items-center justify-center gap-2 uppercase tracking-widest text-[12px] shadow-lg shadow-blue-100 ${isSubmitting ? "opacity-70 cursor-not-allowed" : "hover:opacity-90"
+          className={`w-full py-3 bg-[var(--core-primary)] text-white rounded-md font-[var(--font-bold)] transition-colors flex items-center justify-center gap-2 uppercase tracking-widest text-[12px] shadow-lg shadow-blue-100 ${isSubmitting ? "opacity-70 cursor-not-allowed" : "hover:opacity-90"
             }`}
         >
           {isSubmitting && (
@@ -229,7 +229,7 @@ export const AddressForm = ({
             <button
               type="button"
               onClick={onCancel}
-              className="flex-1 py-3 border border-gray-100 rounded-md text-[var(--core-primary)] font-[Nunito-bold] hover:bg-gray-50 transition-colors uppercase tracking-widest text-[12px]"
+              className="flex-1 py-3 border border-gray-100 rounded-md text-[var(--core-primary)] font-[var(--font-bold)] hover:bg-gray-50 transition-colors uppercase tracking-widest text-[12px]"
             >
               Cancel
             </button>
@@ -253,7 +253,7 @@ export const AddressForm = ({
                   }
                 }
               }}
-              className="flex-1 py-3 border border-red-100 text-red-500 rounded-md font-[Nunito-bold] hover:bg-red-50 transition-colors uppercase tracking-widest text-[12px]"
+              className="flex-1 py-3 border border-red-100 text-red-500 rounded-md font-[var(--font-bold)] hover:bg-red-50 transition-colors uppercase tracking-widest text-[12px]"
             >
               Delete Address
             </button>

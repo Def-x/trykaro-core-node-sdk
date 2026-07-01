@@ -96,14 +96,14 @@ export const ViewCart = () => {
             </svg>
           </div>
           <div className="flex flex-col items-center gap-2 text-center">
-            <p className="font-[Nunito-bold] text-[22px] text-gray-800">
+            <p className="font-[var(--font-bold)] text-[22px] text-gray-800">
               Your cart is empty
             </p>
-            <p className="font-[Nunito-regular] text-[15px] text-gray-500 max-w-[400px]">
+            <p className="font-[var(--font-regular)] text-[15px] text-gray-500 max-w-[400px]">
               Looks like you haven't added anything to your cart yet. Explore our collections and find something you love!
             </p>
           </div>
-          <a href="/" className="mt-4 px-8 py-3 rounded-full text-white font-[Nunito-medium] transition-opacity hover:opacity-90" style={{ backgroundColor: "var(--core-primary)" }}>
+          <a href="/" className="mt-4 px-8 py-3 rounded-full text-white font-[var(--font-medium)] transition-opacity hover:opacity-90" style={{ backgroundColor: "var(--core-primary)" }}>
             Continue Shopping
           </a>
         </div>
@@ -121,7 +121,7 @@ export const ViewCart = () => {
           <div className="flex-1 md:sticky top-4 self-start mt-[18px] md:mt-0 order-first md:order-last">
             {hasDeletedItems && (
               <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 mb-4">
-                <p className="text-sm text-yellow-800 font-[Nunito-medium]">
+                <p className="text-sm text-yellow-800 font-[var(--font-medium)]">
                   ⚠️ Some items in your cart are no longer available. Please
                   remove them before checkout.
                 </p>
@@ -130,7 +130,7 @@ export const ViewCart = () => {
 
             {/* Order items */}
             <div>
-              <div className="font-[Nunito-medium] text-[20px] text-[var(--main)]">
+              <div className="font-[var(--font-medium)] text-[20px] text-[var(--main)]">
                 ORDER ITEMS ({items.length})
               </div>
 
@@ -152,16 +152,16 @@ export const ViewCart = () => {
 
               {/* Bill Summary */}
               <div className="mt-8">
-                <p className="font-[Nunito-medium] text-[20px] text-[var(--main)]">
+                <p className="font-[var(--font-medium)] text-[20px] text-[var(--main)]">
                   Bill summary
                 </p>
 
                 <div className="mt-[24px] space-y-[8px]">
                   <div className="flex justify-between">
-                    <p className="font-[Nunito-regular] text-[14px] text-[var(--main)]">
+                    <p className="font-[var(--font-regular)] text-[14px] text-[var(--main)]">
                       Item total
                     </p>
-                    <p className="font-[Nunito-regular] text-[14px] text-[var(--main)]">
+                    <p className="font-[var(--font-regular)] text-[14px] text-[var(--main)]">
                       {display_item_total
                         ? formatCurrency(display_item_total)
                         : "—"}
@@ -207,7 +207,7 @@ export const ViewCart = () => {
                                 display: "flex",
                                 alignItems: "center",
                                 gap: "4px",
-                                fontFamily: "Nunito-regular",
+                                fontFamily: "var(--font-regular)",
                                 fontSize: "14px",
                                 color: "#FF6500",
                               }}
@@ -238,7 +238,7 @@ export const ViewCart = () => {
                             </span>
                             <span
                               style={{
-                                fontFamily: "Nunito-regular",
+                                fontFamily: "var(--font-regular)",
                                 fontSize: "14px",
                                 color: "#FF6500",
                               }}
@@ -275,7 +275,7 @@ export const ViewCart = () => {
                                   >
                                     <span
                                       style={{
-                                        fontFamily: "Nunito-regular",
+                                        fontFamily: "var(--font-regular)",
                                         fontSize: "13px",
                                         color: "#FF6500",
                                         opacity: 0.85,
@@ -285,7 +285,7 @@ export const ViewCart = () => {
                                     </span>
                                     <span
                                       style={{
-                                        fontFamily: "Nunito-regular",
+                                        fontFamily: "var(--font-regular)",
                                         fontSize: "13px",
                                         color: "#FF6500",
                                         opacity: 0.85,
@@ -305,10 +305,10 @@ export const ViewCart = () => {
                     })()}
 
                   <div className="flex justify-between">
-                    <p className="font-[Nunito-regular] text-[14px] text-[var(--main)]">
+                    <p className="font-[var(--font-regular)] text-[14px] text-[var(--main)]">
                       Tax
                     </p>
-                    <p className="font-[Nunito-regular] text-[14px] text-[var(--main)]">
+                    <p className="font-[var(--font-regular)] text-[14px] text-[var(--main)]">
                       {display_tax_total
                         ? formatCurrency(display_tax_total)
                         : "—"}
@@ -317,10 +317,10 @@ export const ViewCart = () => {
 
                   {order_type !== "pickup" && (
                     <div className="flex justify-between">
-                      <p className="font-[Nunito-regular] text-[14px] text-[var(--main)]">
+                      <p className="font-[var(--font-regular)] text-[14px] text-[var(--main)]">
                         Shipping
                       </p>
-                      <p className="font-[Nunito-regular] text-[14px] text-[var(--main)]">
+                      <p className="font-[var(--font-regular)] text-[14px] text-[var(--main)]">
                         {display_ship_total === "0.00" ||
                           display_ship_total === 0
                           ? "Free"
@@ -333,16 +333,16 @@ export const ViewCart = () => {
 
                   <div className="pt-[16px] border-t border-[var(--borders)]">
                     <div className="flex justify-between">
-                      <p className="font-[Nunito-medium] text-[16px] text-[var(--main)]">
+                      <p className="font-[var(--font-medium)] text-[16px] text-[var(--main)]">
                         Total payment
                       </p>
-                      <p className="font-[Nunito-bold] text-[16px] text-[var(--main)]">
+                      <p className="font-[var(--font-bold)] text-[16px] text-[var(--main)]">
                         {display_total ? formatCurrency(display_total) : "—"}
                       </p>
                     </div>
                     {(cart?.promo_total > 0 ||
                       parseFloat(cart?.display_promo_total) > 0) && (
-                        <p className="text-[13px] font-[Nunito-bold] text-[#00b300] mt-[6px] text-right">
+                        <p className="text-[13px] font-[var(--font-bold)] text-[#00b300] mt-[6px] text-right">
                           You save {formatCurrency(cart?.display_promo_total)} on
                           this order 🎉
                         </p>

@@ -131,7 +131,7 @@ const ProductlistCard = ({ product, component, orderType }) => {
               onError={handleImageError}
             />
             <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-lg">
-              <span className="text-white text-xs font-[Nunito-bold] text-center">
+              <span className="text-white text-xs font-[var(--font-bold)] text-center">
                 UNAVAILABLE
               </span>
             </div>
@@ -141,16 +141,16 @@ const ProductlistCard = ({ product, component, orderType }) => {
           <div className="flex flex-col justify-between h-[124px] flex-1 min-w-0">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <p className="font-[Nunito-medium] text-base text-[var(--main)] line-clamp-1">
+                <p className="font-[var(--font-medium)] text-base text-[var(--main)] line-clamp-1">
                   {name}
                 </p>
-                <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded font-[Nunito-medium] flex-shrink-0">
+                <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded font-[var(--font-medium)] flex-shrink-0">
                   Deleted
                 </span>
               </div>
             </div>
             <div>
-              <p className="font-[Nunito-medium] text-base text-[var(--main)]">
+              <p className="font-[var(--font-medium)] text-base text-[var(--main)]">
                 {quantity} x {formatCurrency(displayPrice)}
               </p>
             </div>
@@ -160,7 +160,7 @@ const ProductlistCard = ({ product, component, orderType }) => {
         {/* Right section */}
         <div className="flex flex-col justify-between items-end h-[124px] flex-shrink-0">
           <div className="flex flex-col items-end text-right opacity-50">
-            <p className="font-[Nunito-medium] text-base text-[var(--main)] line-clamp-2">
+            <p className="font-[var(--font-medium)] text-base text-[var(--main)] line-clamp-2">
               {formatCurrency(displayPrice * quantity)}
             </p>
           </div>
@@ -197,11 +197,11 @@ const ProductlistCard = ({ product, component, orderType }) => {
         <div className="flex flex-col justify-between h-[124px] flex-1 min-w-0">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <p className="font-[Nunito-medium] text-base text-[var(--main)] line-clamp-1 hover:underline">
+              <p className="font-[var(--font-medium)] text-base text-[var(--main)] line-clamp-1 hover:underline">
                 {name}
               </p>
               {product?.bogo_benefit?.benefit_type === "free" && (
-                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-[Nunito-medium] flex-shrink-0 whitespace-nowrap">
+                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-[var(--font-medium)] flex-shrink-0 whitespace-nowrap">
                   FREE
                 </span>
               )}
@@ -213,7 +213,7 @@ const ProductlistCard = ({ product, component, orderType }) => {
                 {variantOptions.map((vo, i) => (
                   <span
                     key={i}
-                    className="text-[11px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-[Nunito-medium]"
+                    className="text-[11px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-[var(--font-medium)]"
                   >
                     {vo?.option_type?.presentation ?? vo?.option_type?.name}:{" "}
                     {vo?.option_value?.presentation ?? vo?.option_value?.name}
@@ -249,7 +249,7 @@ const ProductlistCard = ({ product, component, orderType }) => {
             )}
           </div>
           <div>
-            <p className="font-[Nunito-medium] text-base text-[var(--main)]">
+            <p className="font-[var(--font-medium)] text-base text-[var(--main)]">
               {quantity} x {formatCurrency(displayPrice)}
             </p>
           </div>
@@ -260,11 +260,11 @@ const ProductlistCard = ({ product, component, orderType }) => {
       <div className="flex flex-col justify-between items-end h-[124px] flex-shrink-0">
         <div className="flex flex-col items-end text-right">
           {component !== "order" ? (
-            <p className="font-[Nunito-medium] text-base text-[var(--main)] line-clamp-1">
+            <p className="font-[var(--font-medium)] text-base text-[var(--main)] line-clamp-1">
               {formatCurrency(displayPrice * quantity)}
             </p>
           ) : (
-            <p className="font-[Nunito-medium] text-base text-[var(--main)] line-clamp-2">
+            <p className="font-[var(--font-medium)] text-base text-[var(--main)] line-clamp-2">
               {formatCurrency(displayPrice * quantity)}
             </p>
           )}

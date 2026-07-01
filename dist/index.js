@@ -1,4 +1,4 @@
-import { getPaymentGateway } from './chunk-ICFWQ2RM.js';
+import { getPaymentGateway } from './chunk-UP7U6KB6.js';
 import React8, { createContext, useState, useMemo, useEffect, useCallback, useContext, useRef } from 'react';
 import { jsx, jsxs, Fragment } from 'react/jsx-runtime';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
@@ -1645,8 +1645,8 @@ var CustomOTPAuth = ({ mode = "sign-in", onLoginSuccess }) => {
   };
   return /* @__PURE__ */ jsxs("div", { className: "w-full max-w-[400px] mx-auto p-6 bg-white rounded-2xl shadow-xl border border-gray-100", children: [
     /* @__PURE__ */ jsxs("div", { className: "text-center mb-8", children: [
-      /* @__PURE__ */ jsx("h2", { className: "text-2xl font-[Nunito-bold] text-[var(--core-primary)]", children: step === "phone" ? isSignup ? "Create Your Account" : "Welcome Back" : "Verify OTP" }),
-      /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-500 mt-2 font-[Nunito-regular]", children: step === "phone" ? isSignup ? "Enter your details to create an account" : "Enter your mobile number to sign in" : `Enter the ${otpLength}-digit code sent to ${countryCode} ${phone}` })
+      /* @__PURE__ */ jsx("h2", { className: "text-2xl font-[var(--font-bold)] text-[var(--core-primary)]", children: step === "phone" ? isSignup ? "Create Your Account" : "Welcome Back" : "Verify OTP" }),
+      /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-500 mt-2 font-[var(--font-regular)]", children: step === "phone" ? isSignup ? "Enter your details to create an account" : "Enter your mobile number to sign in" : `Enter the ${otpLength}-digit code sent to ${countryCode} ${phone}` })
     ] }),
     step === "phone" ? /* @__PURE__ */ jsxs("form", { onSubmit: handleSendOtp, className: "space-y-6", children: [
       isSignup && /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-1 gap-4 sm:grid-cols-2", children: [
@@ -1657,7 +1657,7 @@ var CustomOTPAuth = ({ mode = "sign-in", onLoginSuccess }) => {
             value: firstName,
             onChange: (event) => setFirstName(event.target.value),
             placeholder: "First Name",
-            className: "w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[var(--core-primary)]/20 focus:border-[var(--core-primary)] outline-none transition-all font-[Nunito-medium]",
+            className: "w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[var(--core-primary)]/20 focus:border-[var(--core-primary)] outline-none transition-all font-[var(--font-medium)]",
             required: true
           }
         ),
@@ -1668,13 +1668,13 @@ var CustomOTPAuth = ({ mode = "sign-in", onLoginSuccess }) => {
             value: lastName,
             onChange: (event) => setLastName(event.target.value),
             placeholder: "Last Name",
-            className: "w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[var(--core-primary)]/20 focus:border-[var(--core-primary)] outline-none transition-all font-[Nunito-medium]",
+            className: "w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[var(--core-primary)]/20 focus:border-[var(--core-primary)] outline-none transition-all font-[var(--font-medium)]",
             required: true
           }
         )
       ] }),
       /* @__PURE__ */ jsxs("div", { className: "relative", children: [
-        /* @__PURE__ */ jsx("span", { className: "absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-[Nunito-medium]", children: countryCode }),
+        /* @__PURE__ */ jsx("span", { className: "absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-[var(--font-medium)]", children: countryCode }),
         /* @__PURE__ */ jsx(
           "input",
           {
@@ -1682,7 +1682,7 @@ var CustomOTPAuth = ({ mode = "sign-in", onLoginSuccess }) => {
             value: phone,
             onChange: (event) => setPhone(event.target.value.replace(/\D/g, "").slice(0, 10)),
             placeholder: "Mobile Number",
-            className: "w-full pl-14 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[var(--core-primary)]/20 focus:border-[var(--core-primary)] outline-none transition-all font-[Nunito-medium]",
+            className: "w-full pl-14 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[var(--core-primary)]/20 focus:border-[var(--core-primary)] outline-none transition-all font-[var(--font-medium)]",
             required: true
           }
         )
@@ -1692,14 +1692,14 @@ var CustomOTPAuth = ({ mode = "sign-in", onLoginSuccess }) => {
         {
           type: "submit",
           disabled: isLoading || phone.length < 10,
-          className: `w-full py-3 rounded-xl font-[Nunito-bold] text-white transition-all ${isLoading || phone.length < 10 ? "bg-gray-300 cursor-not-allowed" : "bg-[var(--core-primary)] hover:bg-[var(--core-primary)] active:scale-[0.98]"}`,
+          className: `w-full py-3 rounded-xl font-[var(--font-bold)] text-white transition-all ${isLoading || phone.length < 10 ? "bg-gray-300 cursor-not-allowed" : "bg-[var(--core-primary)] hover:bg-[var(--core-primary)] active:scale-[0.98]"}`,
           children: isLoading ? /* @__PURE__ */ jsxs("span", { className: "flex items-center justify-center gap-2", children: [
             /* @__PURE__ */ jsx("div", { className: "w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" }),
             "Sending..."
           ] }) : "Get OTP"
         }
       ),
-      /* @__PURE__ */ jsxs("p", { className: "text-sm text-center text-gray-500 font-[Nunito-medium]", children: [
+      /* @__PURE__ */ jsxs("p", { className: "text-sm text-center text-gray-500 font-[var(--font-medium)]", children: [
         isSignup ? "Already have an account?" : "New here?",
         " ",
         /* @__PURE__ */ jsx(
@@ -1707,7 +1707,7 @@ var CustomOTPAuth = ({ mode = "sign-in", onLoginSuccess }) => {
           {
             type: "button",
             onClick: () => switchMode(isSignup ? "signin" : "signup"),
-            className: "text-[var(--core-primary)] font-[Nunito-bold] hover:underline",
+            className: "text-[var(--core-primary)] font-[var(--font-bold)] hover:underline",
             children: isSignup ? "Sign In" : "Create Account"
           }
         )
@@ -1724,13 +1724,13 @@ var CustomOTPAuth = ({ mode = "sign-in", onLoginSuccess }) => {
           value: digit,
           onChange: (event) => handleOtpChange(index, event.target.value),
           onKeyDown: (event) => handleKeyDown(index, event),
-          className: "w-12 h-14 text-center text-xl font-[Nunito-bold] bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[var(--core-primary)]/20 focus:border-[var(--core-primary)] outline-none transition-all"
+          className: "w-12 h-14 text-center text-xl font-[var(--font-bold)] bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[var(--core-primary)]/20 focus:border-[var(--core-primary)] outline-none transition-all"
         },
         index
       )) }),
-      /* @__PURE__ */ jsx("div", { className: "text-center", children: timer > 0 ? /* @__PURE__ */ jsxs("p", { className: "text-xs text-gray-500 font-[Nunito-regular]", children: [
+      /* @__PURE__ */ jsx("div", { className: "text-center", children: timer > 0 ? /* @__PURE__ */ jsxs("p", { className: "text-xs text-gray-500 font-[var(--font-regular)]", children: [
         "Resend OTP in ",
-        /* @__PURE__ */ jsxs("span", { className: "font-[Nunito-bold]", children: [
+        /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-bold)]", children: [
           timer,
           "s"
         ] })
@@ -1739,7 +1739,7 @@ var CustomOTPAuth = ({ mode = "sign-in", onLoginSuccess }) => {
         {
           type: "button",
           onClick: handleSendOtp,
-          className: "text-xs text-[var(--core-primary)] font-[Nunito-bold] hover:underline",
+          className: "text-xs text-[var(--core-primary)] font-[var(--font-bold)] hover:underline",
           children: "Resend OTP"
         }
       ) }),
@@ -1748,7 +1748,7 @@ var CustomOTPAuth = ({ mode = "sign-in", onLoginSuccess }) => {
         {
           type: "submit",
           disabled: isLoading || otpValue.length < otpLength,
-          className: `w-full py-3 rounded-xl font-[Nunito-bold] text-white transition-all ${isLoading || otpValue.length < otpLength ? "bg-gray-300 cursor-not-allowed" : "bg-[var(--core-primary)] hover:bg-[var(--core-primary)] active:scale-[0.98]"}`,
+          className: `w-full py-3 rounded-xl font-[var(--font-bold)] text-white transition-all ${isLoading || otpValue.length < otpLength ? "bg-gray-300 cursor-not-allowed" : "bg-[var(--core-primary)] hover:bg-[var(--core-primary)] active:scale-[0.98]"}`,
           children: isLoading ? /* @__PURE__ */ jsxs("span", { className: "flex items-center justify-center gap-2", children: [
             /* @__PURE__ */ jsx("div", { className: "w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" }),
             "Verifying..."
@@ -1760,7 +1760,7 @@ var CustomOTPAuth = ({ mode = "sign-in", onLoginSuccess }) => {
         {
           type: "button",
           onClick: resetOtpStep,
-          className: "w-full text-sm text-gray-500 font-[Nunito-medium] hover:text-[var(--core-primary)] transition-colors",
+          className: "w-full text-sm text-gray-500 font-[var(--font-medium)] hover:text-[var(--core-primary)] transition-colors",
           children: "Change Details"
         }
       )
@@ -1772,13 +1772,13 @@ var AuthManager = ({ mode = "sign-in", onLoginSuccess }) => {
   const authType = config?.authType ?? "clerk";
   if (authType === "clerk") {
     return /* @__PURE__ */ jsxs("div", { className: "w-full text-center py-8", children: [
-      /* @__PURE__ */ jsx("h2", { className: "text-2xl font-[Nunito-bold] text-[var(--core-primary)] mb-6", children: "Sign in to continue" }),
+      /* @__PURE__ */ jsx("h2", { className: "text-2xl font-[var(--font-bold)] text-[var(--core-primary)] mb-6", children: "Sign in to continue" }),
       /* @__PURE__ */ jsxs("div", { className: "space-y-4", children: [
         /* @__PURE__ */ jsx(
           "button",
           {
             onClick: () => auth?.openSignIn?.(),
-            className: "w-full py-3 bg-[var(--core-primary)] text-white rounded-xl font-[Nunito-bold] hover:opacity-90 transition-all",
+            className: "w-full py-3 bg-[var(--core-primary)] text-white rounded-xl font-[var(--font-bold)] hover:opacity-90 transition-all",
             children: "Sign In"
           }
         ),
@@ -1786,7 +1786,7 @@ var AuthManager = ({ mode = "sign-in", onLoginSuccess }) => {
           "button",
           {
             onClick: () => auth?.openSignUp?.(),
-            className: "w-full py-3 border border-[var(--core-primary)] text-[var(--core-primary)] rounded-xl font-[Nunito-bold] hover:bg-gray-50 transition-all",
+            className: "w-full py-3 border border-[var(--core-primary)] text-[var(--core-primary)] rounded-xl font-[var(--font-bold)] hover:bg-gray-50 transition-all",
             children: "Create Account"
           }
         )
@@ -2193,13 +2193,13 @@ var CustomizationModal = ({
   };
   if (!isOpen) return null;
   return /* @__PURE__ */ jsx("div", { className: "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50", children: /* @__PURE__ */ jsxs("div", { className: "bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4", children: [
-    /* @__PURE__ */ jsxs("h2", { className: "text-xl font-[Nunito-bold] text-[var(--main)] mb-4", children: [
+    /* @__PURE__ */ jsxs("h2", { className: "text-xl font-[var(--font-bold)] text-[var(--main)] mb-4", children: [
       isEditMode ? "Edit" : "Customize",
       " ",
       product?.name
     ] }),
     /* @__PURE__ */ jsx("div", { className: "space-y-4 mb-6 max-h-[400px] overflow-y-auto", children: customizationsList.map((customization) => /* @__PURE__ */ jsxs("div", { children: [
-      /* @__PURE__ */ jsx("label", { className: "block text-sm font-[Nunito-medium] text-[var(--main)] mb-2", children: customization.name }),
+      /* @__PURE__ */ jsx("label", { className: "block text-sm font-[var(--font-medium)] text-[var(--main)] mb-2", children: customization.name }),
       customization.customization_type === "select" ? /* @__PURE__ */ jsxs(
         "select",
         {
@@ -2223,7 +2223,7 @@ var CustomizationModal = ({
       )
     ] }, customization.id)) }),
     /* @__PURE__ */ jsxs("div", { className: "mb-6", children: [
-      /* @__PURE__ */ jsx("label", { className: "block text-sm font-[Nunito-medium] text-[var(--main)] mb-2", children: "Quantity" }),
+      /* @__PURE__ */ jsx("label", { className: "block text-sm font-[var(--font-medium)] text-[var(--main)] mb-2", children: "Quantity" }),
       /* @__PURE__ */ jsxs("div", { className: "flex items-center border border-[#e8e5df] rounded-md w-fit", children: [
         /* @__PURE__ */ jsx(
           "button",
@@ -2252,7 +2252,7 @@ var CustomizationModal = ({
         {
           onClick: onClose,
           disabled: isAddToCartLoading,
-          className: "flex-1 px-4 py-2 border border-[#e8e5df] rounded-md text-sm font-[Nunito-medium] hover:bg-gray-50 disabled:opacity-50",
+          className: "flex-1 px-4 py-2 border border-[#e8e5df] rounded-md text-sm font-[var(--font-medium)] hover:bg-gray-50 disabled:opacity-50",
           children: "Cancel"
         }
       ),
@@ -2261,7 +2261,7 @@ var CustomizationModal = ({
         {
           onClick: handleConfirm,
           disabled: isAddToCartLoading,
-          className: "flex-1 px-4 py-2 bg-[var(--core-primary)] text-white rounded-md text-sm font-[Nunito-medium] hover:bg-[var(--core-primary)] disabled:opacity-50",
+          className: "flex-1 px-4 py-2 bg-[var(--core-primary)] text-white rounded-md text-sm font-[var(--font-medium)] hover:bg-[var(--core-primary)] disabled:opacity-50",
           children: isAddToCartLoading ? "Loading..." : isEditMode ? "Update" : "Add to Cart"
         }
       )
@@ -2277,7 +2277,7 @@ var ViewCustomizationModal = ({
 }) => {
   if (!isOpen) return null;
   return /* @__PURE__ */ jsx("div", { className: "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50", children: /* @__PURE__ */ jsxs("div", { className: "bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4", children: [
-    /* @__PURE__ */ jsxs("h2", { className: "text-xl font-[Nunito-bold] text-[var(--main)] mb-4", children: [
+    /* @__PURE__ */ jsxs("h2", { className: "text-xl font-[var(--font-bold)] text-[var(--main)] mb-4", children: [
       "Customizations for ",
       productName
     ] }),
@@ -2286,7 +2286,7 @@ var ViewCustomizationModal = ({
       {
         className: "border border-[#e8e5df] rounded-md p-3",
         children: [
-          /* @__PURE__ */ jsx("p", { className: "text-sm font-[Nunito-medium] text-[var(--main)]", children: customization.name || `Custom ${index + 1}` }),
+          /* @__PURE__ */ jsx("p", { className: "text-sm font-[var(--font-medium)] text-[var(--main)]", children: customization.name || `Custom ${index + 1}` }),
           /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-600 mt-1", children: customization.value })
         ]
       },
@@ -2296,7 +2296,7 @@ var ViewCustomizationModal = ({
       "button",
       {
         onClick: onClose,
-        className: "w-full px-4 py-2 bg-[var(--core-primary)] text-white rounded-md text-sm font-[Nunito-medium] hover:bg-[var(--core-primary)]",
+        className: "w-full px-4 py-2 bg-[var(--core-primary)] text-white rounded-md text-sm font-[var(--font-medium)] hover:bg-[var(--core-primary)]",
         children: "Close"
       }
     )
@@ -2402,14 +2402,14 @@ var ProductlistCard = ({ product, component, orderType }) => {
               onError: handleImageError
             }
           ),
-          /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-lg", children: /* @__PURE__ */ jsx("span", { className: "text-white text-xs font-[Nunito-bold] text-center", children: "UNAVAILABLE" }) })
+          /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-lg", children: /* @__PURE__ */ jsx("span", { className: "text-white text-xs font-[var(--font-bold)] text-center", children: "UNAVAILABLE" }) })
         ] }),
         /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between h-[124px] flex-1 min-w-0", children: [
           /* @__PURE__ */ jsx("div", { className: "min-w-0", children: /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
-            /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-base text-[var(--main)] line-clamp-1", children: name }),
-            /* @__PURE__ */ jsx("span", { className: "text-xs bg-red-100 text-red-700 px-2 py-1 rounded font-[Nunito-medium] flex-shrink-0", children: "Deleted" })
+            /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)] line-clamp-1", children: name }),
+            /* @__PURE__ */ jsx("span", { className: "text-xs bg-red-100 text-red-700 px-2 py-1 rounded font-[var(--font-medium)] flex-shrink-0", children: "Deleted" })
           ] }) }),
-          /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsxs("p", { className: "font-[Nunito-medium] text-base text-[var(--main)]", children: [
+          /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)]", children: [
             quantity,
             " x ",
             formatCurrency(displayPrice)
@@ -2417,7 +2417,7 @@ var ProductlistCard = ({ product, component, orderType }) => {
         ] })
       ] }),
       /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between items-end h-[124px] flex-shrink-0", children: [
-        /* @__PURE__ */ jsx("div", { className: "flex flex-col items-end text-right opacity-50", children: /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-base text-[var(--main)] line-clamp-2", children: formatCurrency(displayPrice * quantity) }) }),
+        /* @__PURE__ */ jsx("div", { className: "flex flex-col items-end text-right opacity-50", children: /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)] line-clamp-2", children: formatCurrency(displayPrice * quantity) }) }),
         component !== "order" && /* @__PURE__ */ jsx(
           DeleteIcon,
           {
@@ -2449,13 +2449,13 @@ var ProductlistCard = ({ product, component, orderType }) => {
           /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between h-[124px] flex-1 min-w-0", children: [
             /* @__PURE__ */ jsxs("div", { className: "min-w-0", children: [
               /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
-                /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-base text-[var(--main)] line-clamp-1 hover:underline", children: name }),
-                product?.bogo_benefit?.benefit_type === "free" && /* @__PURE__ */ jsx("span", { className: "text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-[Nunito-medium] flex-shrink-0 whitespace-nowrap", children: "FREE" })
+                /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)] line-clamp-1 hover:underline", children: name }),
+                product?.bogo_benefit?.benefit_type === "free" && /* @__PURE__ */ jsx("span", { className: "text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-[var(--font-medium)] flex-shrink-0 whitespace-nowrap", children: "FREE" })
               ] }),
               variantOptions.length > 0 && /* @__PURE__ */ jsx("div", { className: "mt-1 flex flex-wrap gap-1", children: variantOptions.map((vo, i) => /* @__PURE__ */ jsxs(
                 "span",
                 {
-                  className: "text-[11px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-[Nunito-medium]",
+                  className: "text-[11px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-[var(--font-medium)]",
                   children: [
                     vo?.option_type?.presentation ?? vo?.option_type?.name,
                     ":",
@@ -2491,7 +2491,7 @@ var ProductlistCard = ({ product, component, orderType }) => {
                 c.product_customization_id
               )) })
             ] }),
-            /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsxs("p", { className: "font-[Nunito-medium] text-base text-[var(--main)]", children: [
+            /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)]", children: [
               quantity,
               " x ",
               formatCurrency(displayPrice)
@@ -2501,7 +2501,7 @@ var ProductlistCard = ({ product, component, orderType }) => {
       }
     ),
     /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between items-end h-[124px] flex-shrink-0", children: [
-      /* @__PURE__ */ jsx("div", { className: "flex flex-col items-end text-right", children: component !== "order" ? /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-base text-[var(--main)] line-clamp-1", children: formatCurrency(displayPrice * quantity) }) : /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-base text-[var(--main)] line-clamp-2", children: formatCurrency(displayPrice * quantity) }) }),
+      /* @__PURE__ */ jsx("div", { className: "flex flex-col items-end text-right", children: component !== "order" ? /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)] line-clamp-1", children: formatCurrency(displayPrice * quantity) }) : /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)] line-clamp-2", children: formatCurrency(displayPrice * quantity) }) }),
       component !== "order" && /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3", children: [
         !isSellingQty ? /* @__PURE__ */ jsxs("div", { className: "flex items-center border border-[#e8e5df] rounded-md h-[28px] bg-[#f9f9f9]", children: [
           /* @__PURE__ */ jsx(
@@ -2604,7 +2604,7 @@ var Popup = ({
           style,
           children: [
             (title || onClose) && /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center p-6 border-b border-gray-100 bg-white sticky top-0 z-10", children: [
-              title && /* @__PURE__ */ jsx("h2", { className: "text-[20px] font-[Nunito-bold] text-[var(--core-primary)] uppercase tracking-wide", children: title }),
+              title && /* @__PURE__ */ jsx("h2", { className: "text-[20px] font-[var(--font-bold)] text-[var(--core-primary)] uppercase tracking-wide", children: title }),
               onClose && /* @__PURE__ */ jsx(
                 "button",
                 {
@@ -2695,8 +2695,8 @@ var AddressForm = ({
       setIsSubmitting(false);
     }
   };
-  const inputCls = "w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--core-primary)] font-[Nunito-regular]";
-  const labelCls = "text-sm font-[Nunito-bold] text-[var(--core-primary)]";
+  const inputCls = "w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--core-primary)] font-[var(--font-regular)]";
+  const labelCls = "text-sm font-[var(--font-bold)] text-[var(--core-primary)]";
   return /* @__PURE__ */ jsxs("form", { onSubmit: handleSubmit, className: "space-y-4", children: [
     /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
       /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
@@ -2858,7 +2858,7 @@ var AddressForm = ({
         {
           type: "submit",
           disabled: isSubmitting,
-          className: `w-full py-3 bg-[var(--core-primary)] text-white rounded-md font-[Nunito-bold] transition-colors flex items-center justify-center gap-2 uppercase tracking-widest text-[12px] shadow-lg shadow-blue-100 ${isSubmitting ? "opacity-70 cursor-not-allowed" : "hover:opacity-90"}`,
+          className: `w-full py-3 bg-[var(--core-primary)] text-white rounded-md font-[var(--font-bold)] transition-colors flex items-center justify-center gap-2 uppercase tracking-widest text-[12px] shadow-lg shadow-blue-100 ${isSubmitting ? "opacity-70 cursor-not-allowed" : "hover:opacity-90"}`,
           children: [
             isSubmitting && /* @__PURE__ */ jsx("div", { className: "w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" }),
             isSubmitting ? "Saving..." : submitLabel
@@ -2871,7 +2871,7 @@ var AddressForm = ({
           {
             type: "button",
             onClick: onCancel,
-            className: "flex-1 py-3 border border-gray-100 rounded-md text-[var(--core-primary)] font-[Nunito-bold] hover:bg-gray-50 transition-colors uppercase tracking-widest text-[12px]",
+            className: "flex-1 py-3 border border-gray-100 rounded-md text-[var(--core-primary)] font-[var(--font-bold)] hover:bg-gray-50 transition-colors uppercase tracking-widest text-[12px]",
             children: "Cancel"
           }
         ),
@@ -2894,7 +2894,7 @@ var AddressForm = ({
                 }
               }
             },
-            className: "flex-1 py-3 border border-red-100 text-red-500 rounded-md font-[Nunito-bold] hover:bg-red-50 transition-colors uppercase tracking-widest text-[12px]",
+            className: "flex-1 py-3 border border-red-100 text-red-500 rounded-md font-[var(--font-bold)] hover:bg-red-50 transition-colors uppercase tracking-widest text-[12px]",
             children: "Delete Address"
           }
         )
@@ -2905,12 +2905,12 @@ var AddressForm = ({
 var AddressFormInline = ({ refetch }) => {
   const [isOpen, setIsOpen] = useState(false);
   return /* @__PURE__ */ jsxs("div", { children: [
-    /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[14px] text-[var(--secondary)] mb-3", children: "No addresses saved yet." }),
+    /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[14px] text-[var(--secondary)] mb-3", children: "No addresses saved yet." }),
     /* @__PURE__ */ jsx(
       "button",
       {
         onClick: () => setIsOpen(true),
-        className: "font-[Nunito-medium] text-[var(--main)] underline text-sm",
+        className: "font-[var(--font-medium)] text-[var(--main)] underline text-sm",
         children: "+ Add your first address"
       }
     ),
@@ -2999,11 +2999,11 @@ var AddressSelection = ({
     /* @__PURE__ */ jsxs("div", { className: "w-full space-y-8", children: [
       /* @__PURE__ */ jsxs("div", { children: [
         /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center mb-4", children: [
-          /* @__PURE__ */ jsx("h2", { className: "font-[Nunito-medium] text-[20px] text-[var(--main)] tracking-wide", children: "SHIPPING ADDRESS" }),
+          /* @__PURE__ */ jsx("h2", { className: "font-[var(--font-medium)] text-[20px] text-[var(--main)] tracking-wide", children: "SHIPPING ADDRESS" }),
           /* @__PURE__ */ jsx(
             "button",
             {
-              className: "text-base font-[Nunito-medium] text-[var(--main)] hover:underline",
+              className: "text-base font-[var(--font-medium)] text-[var(--main)] hover:underline",
               onClick: () => setIsOpenAddAddress(true),
               children: "Add new address"
             }
@@ -3021,11 +3021,11 @@ var AddressSelection = ({
       ] }),
       /* @__PURE__ */ jsxs("div", { children: [
         /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center mb-4", children: [
-          /* @__PURE__ */ jsx("h2", { className: "font-[Nunito-medium] text-[20px] text-[var(--main)] tracking-wide", children: "BILLING ADDRESS" }),
+          /* @__PURE__ */ jsx("h2", { className: "font-[var(--font-medium)] text-[20px] text-[var(--main)] tracking-wide", children: "BILLING ADDRESS" }),
           /* @__PURE__ */ jsx(
             "button",
             {
-              className: "text-base font-[Nunito-medium] text-[var(--main)] hover:underline",
+              className: "text-base font-[var(--font-medium)] text-[var(--main)] hover:underline",
               onClick: () => setIsOpenAddAddress(true),
               children: "Add new address"
             }
@@ -3037,7 +3037,7 @@ var AddressSelection = ({
             className: `flex items-center justify-between mb-6 p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 ${sameAsShipping ? "border-[var(--core-primary)] bg-gray-50 shadow-sm" : "border-gray-200 hover:border-gray-300"}`,
             onClick: onSwitchChange,
             children: [
-              /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-base text-[var(--main)]", children: "Same as Shipping address" }),
+              /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)]", children: "Same as Shipping address" }),
               /* @__PURE__ */ jsxs("div", { className: "relative w-12 h-6 flex items-center", children: [
                 /* @__PURE__ */ jsx(
                   "div",
@@ -3105,12 +3105,12 @@ var AddressSelectionCard = ({
       onClick,
       className: `w-full flex flex-col border-2 cursor-pointer transition-all duration-200 rounded-lg p-[16px] gap-y-[8px] ${isSelected ? "border-[var(--core-primary)] bg-gray-50 shadow-sm" : "border-gray-200 hover:border-gray-300"}`,
       children: [
-        /* @__PURE__ */ jsxs("p", { className: "font-[Nunito-medium] text-[var(--main)] text-base truncate", children: [
+        /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-medium)] text-[var(--main)] text-base truncate", children: [
           label,
-          isShippingAddress && /* @__PURE__ */ jsx("span", { className: "font-[Nunito-regular] text-[14px] text-[var(--secondary)] ml-1", children: "(Current shipping address)" })
+          isShippingAddress && /* @__PURE__ */ jsx("span", { className: "font-[var(--font-regular)] text-[14px] text-[var(--secondary)] ml-1", children: "(Current shipping address)" })
         ] }),
         /* @__PURE__ */ jsx("div", { className: "border-t border-[var(--borders)]" }),
-        /* @__PURE__ */ jsxs("p", { className: "font-[Nunito-regular] text-[14px] text-[var(--main)] break-words", children: [
+        /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-regular)] text-[14px] text-[var(--main)] break-words", children: [
           fullName,
           " | ",
           phone
@@ -3119,7 +3119,7 @@ var AddressSelectionCard = ({
         /* @__PURE__ */ jsx(
           "p",
           {
-            className: "font-[Nunito-regular] text-[14px] text-[var(--main)] w-full break-words overflow-hidden text-ellipsis",
+            className: "font-[var(--font-regular)] text-[14px] text-[var(--main)] w-full break-words overflow-hidden text-ellipsis",
             style: {
               display: "-webkit-box",
               WebkitLineClamp: 2,
@@ -3147,11 +3147,11 @@ var AddressCard = ({
       onClick,
       children: isPayment ? /* @__PURE__ */ jsxs("div", { className: "flex flex-row items-center justify-between", children: [
         /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between", children: [
-          /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-base text-[var(--main)]", children: addressType }),
+          /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)]", children: addressType }),
           /* @__PURE__ */ jsx(
             "p",
             {
-              className: "font-[Nunito-regular] text-[var(--main)] text-[14px] mt-[8px] break-words",
+              className: "font-[var(--font-regular)] text-[var(--main)] text-[14px] mt-[8px] break-words",
               style: {
                 display: "-webkit-box",
                 WebkitLineClamp: 2,
@@ -3162,13 +3162,13 @@ var AddressCard = ({
             }
           )
         ] }),
-        /* @__PURE__ */ jsx("div", { className: "ml-4 flex-shrink-0", children: /* @__PURE__ */ jsx("div", { className: "w-[60px] h-[30px] bg-[var(--secondaryBg)] border border-[var(--borders)] rounded flex items-center justify-center", children: /* @__PURE__ */ jsx("span", { className: "text-[10px] font-[Nunito-bold] text-[var(--main)]", children: "Razorpay" }) }) })
+        /* @__PURE__ */ jsx("div", { className: "ml-4 flex-shrink-0", children: /* @__PURE__ */ jsx("div", { className: "w-[60px] h-[30px] bg-[var(--secondaryBg)] border border-[var(--borders)] rounded flex items-center justify-center", children: /* @__PURE__ */ jsx("span", { className: "text-[10px] font-[var(--font-bold)] text-[var(--main)]", children: "Razorpay" }) }) })
       ] }) : /* @__PURE__ */ jsxs("div", { children: [
-        /* @__PURE__ */ jsx("div", { className: "flex flex-row justify-between items-center", children: /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-base text-[var(--main)]", children: addressType }) }),
+        /* @__PURE__ */ jsx("div", { className: "flex flex-row justify-between items-center", children: /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)]", children: addressType }) }),
         /* @__PURE__ */ jsx(
           "p",
           {
-            className: "font-[Nunito-regular] text-[var(--main)] text-[14px] mt-[8px] break-words",
+            className: "font-[var(--font-regular)] text-[var(--main)] text-[14px] mt-[8px] break-words",
             style: {
               display: "-webkit-box",
               WebkitLineClamp: 2,
@@ -3464,7 +3464,7 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
     }
   };
   return /* @__PURE__ */ jsxs("div", { children: [
-    /* @__PURE__ */ jsx("h1", { className: "font-[Nunito-medium] text-[20px] text-[var(--main)] leading-[24px]", children: "ORDER TYPE" }),
+    /* @__PURE__ */ jsx("h1", { className: "font-[var(--font-medium)] text-[20px] text-[var(--main)] leading-[24px]", children: "ORDER TYPE" }),
     /* @__PURE__ */ jsx("div", { className: "mt-[16px] flex flex-col gap-y-[16px]", children: /* @__PURE__ */ jsx(
       AddressCard,
       {
@@ -3475,7 +3475,7 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
         type: "delivery"
       }
     ) }),
-    orderType !== "pickup" && /* @__PURE__ */ jsx("div", { className: "mt-[32px]", children: isAddressLoading ? /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2 text-[var(--secondary)] text-sm font-[Nunito-regular]", children: [
+    orderType !== "pickup" && /* @__PURE__ */ jsx("div", { className: "mt-[32px]", children: isAddressLoading ? /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2 text-[var(--secondary)] text-sm font-[var(--font-regular)]", children: [
       /* @__PURE__ */ jsx("div", { className: "w-4 h-4 border-2 border-[var(--core-primary)] border-t-transparent rounded-full animate-spin" }),
       "Loading addresses\u2026"
     ] }) : addresses.length > 0 ? /* @__PURE__ */ jsx(
@@ -3496,8 +3496,8 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
       }
     ) : /* @__PURE__ */ jsx(AddressFormInline, { refetch: fetchAddresses }) }),
     /* @__PURE__ */ jsxs("div", { className: "mt-[32px]", children: [
-      /* @__PURE__ */ jsx("h1", { className: "font-[Nunito-medium] text-[20px] text-[var(--main)]", children: "PAYMENT" }),
-      /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[14px] text-[var(--secondary)]", children: "All transactions are secure and encrypted." }),
+      /* @__PURE__ */ jsx("h1", { className: "font-[var(--font-medium)] text-[20px] text-[var(--main)]", children: "PAYMENT" }),
+      /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[14px] text-[var(--secondary)]", children: "All transactions are secure and encrypted." }),
       /* @__PURE__ */ jsx("div", { className: "mt-[16px]", children: paymentMode === "stripe" ? /* @__PURE__ */ jsxs(Fragment, { children: [
         /* @__PURE__ */ jsx(
           AddressCard,
@@ -3546,12 +3546,12 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
         {
           onClick: onPlaceOrder,
           disabled: hasDeletedItems || isPlacingOrder || isAddressLoading,
-          className: `px-5 py-3 w-full rounded-lg cursor-pointer font-[Nunito-medium] text-[15px] transition-all duration-300 ${hasDeletedItems || isPlacingOrder || isAddressLoading ? "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none" : "bg-[var(--core-primary)] text-white hover:opacity-90 hover:shadow-lg transform active:scale-[0.98]"}`,
+          className: `px-5 py-3 w-full rounded-lg cursor-pointer font-[var(--font-medium)] text-[15px] transition-all duration-300 ${hasDeletedItems || isPlacingOrder || isAddressLoading ? "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none" : "bg-[var(--core-primary)] text-white hover:opacity-90 hover:shadow-lg transform active:scale-[0.98]"}`,
           children: isPlacingOrder ? "Processing\u2026" : hasDeletedItems ? "Remove Deleted Items to Checkout" : paymentMode === "stripe" ? "Proceed to Card Payment" : "Checkout"
         }
       ),
       /* @__PURE__ */ jsxs("div", { className: "mt-4 text-center", children: [
-        /* @__PURE__ */ jsxs("p", { className: "text-[11px] text-[#8c92a4] font-[Nunito-regular] leading-relaxed", children: [
+        /* @__PURE__ */ jsxs("p", { className: "text-[11px] text-[#8c92a4] font-[var(--font-regular)] leading-relaxed", children: [
           "By placing your order, you agree to our",
           " ",
           /* @__PURE__ */ jsx(
@@ -3584,7 +3584,7 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
           }
         ) })
       ] }),
-      hasDeletedItems && /* @__PURE__ */ jsx("p", { className: "text-xs text-red-600 mt-2 font-[Nunito-regular]", children: "Please remove unavailable items before proceeding to checkout." })
+      hasDeletedItems && /* @__PURE__ */ jsx("p", { className: "text-xs text-red-600 mt-2 font-[var(--font-regular)]", children: "Please remove unavailable items before proceeding to checkout." })
     ] }),
     isProcessingPayment && /* @__PURE__ */ jsx("div", { className: "fixed inset-0 z-[200] flex flex-col items-center justify-center bg-white/95 backdrop-blur-md animate-fadeIn", children: /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center gap-8 max-w-md w-full px-6", children: [
       /* @__PURE__ */ jsxs("div", { className: "relative", children: [
@@ -3598,13 +3598,13 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
           /* @__PURE__ */ jsx("div", { className: "w-12 h-[1px] bg-[var(--core-secondary)] mx-auto opacity-50" })
         ] }),
         /* @__PURE__ */ jsxs("div", { className: "space-y-2", children: [
-          /* @__PURE__ */ jsxs("p", { className: "font-[Nunito-medium] text-[#2d2d2d] text-base", children: [
+          /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-medium)] text-[#2d2d2d] text-base", children: [
             "We're finalizing your order with",
             " ",
             paymentMode === "stripe" ? "Stripe" : "Razorpay",
             "."
           ] }),
-          /* @__PURE__ */ jsxs("p", { className: "font-[Nunito-regular] text-[#8c92a4] text-sm leading-relaxed", children: [
+          /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-regular)] text-[#8c92a4] text-sm leading-relaxed", children: [
             "Please do not refresh the page or close this window. ",
             /* @__PURE__ */ jsx("br", {}),
             "This will only take a moment."
@@ -3822,10 +3822,10 @@ var CouponSection = () => {
   };
   if (!token) {
     return /* @__PURE__ */ jsx("div", { className: "my-4", children: /* @__PURE__ */ jsxs("div", { className: "w-full flex items-center justify-between border-t border-b border-[var(--borders)] px-1 py-3", children: [
-      /* @__PURE__ */ jsxs("span", { className: "font-[Nunito-medium] text-[14px] text-[var(--secondary)]", children: [
+      /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-medium)] text-[14px] text-[var(--secondary)]", children: [
         "\u{1F3F7} Have a coupon code?",
         " ",
-        /* @__PURE__ */ jsx("span", { className: "text-[#FF6500] text-[12px] font-[Nunito-regular]", children: "Sign in to apply" })
+        /* @__PURE__ */ jsx("span", { className: "text-[#FF6500] text-[12px] font-[var(--font-regular)]", children: "Sign in to apply" })
       ] }),
       /* @__PURE__ */ jsx("span", { className: "text-[var(--secondary)] text-[16px]", children: "\u25BE" })
     ] }) });
@@ -3839,10 +3839,10 @@ var CouponSection = () => {
         children: [
           /* @__PURE__ */ jsxs("div", { className: "flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0", children: [
             /* @__PURE__ */ jsx("span", { className: "text-base", children: "\u2705" }),
-            /* @__PURE__ */ jsx("span", { className: "font-[Nunito-bold] text-[#0f0f0f] text-[13px] tracking-wide", children: coupon.code ? coupon.code : coupon.display_action_value || "Discount" }),
-            /* @__PURE__ */ jsx("span", { className: "font-[Nunito-regular] text-[#0f0f0f] text-[12px]", children: "applied" }),
+            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-bold)] text-[#0f0f0f] text-[13px] tracking-wide", children: coupon.code ? coupon.code : coupon.display_action_value || "Discount" }),
+            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-regular)] text-[#0f0f0f] text-[12px]", children: "applied" }),
             /* @__PURE__ */ jsx("span", { className: "text-[#0f0f0f] text-[12px] hidden sm:inline", children: "\xB7" }),
-            /* @__PURE__ */ jsxs("span", { className: "text-[#00b300] text-[12px] font-[Nunito-bold]", children: [
+            /* @__PURE__ */ jsxs("span", { className: "text-[#00b300] text-[12px] font-[var(--font-bold)]", children: [
               "You save",
               " ",
               formatCurrency(
@@ -3877,7 +3877,7 @@ var CouponSection = () => {
           "aria-expanded": isOpen,
           className: "w-full flex items-center justify-between border-t border-b border-[var(--borders)] px-1 py-3 cursor-pointer",
           children: [
-            /* @__PURE__ */ jsx("span", { className: "font-[Nunito-medium] text-[14px] text-[var(--main)]", children: "\u{1F3F7} Have a coupon code?" }),
+            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-medium)] text-[14px] text-[var(--main)]", children: "\u{1F3F7} Have a coupon code?" }),
             /* @__PURE__ */ jsx("span", { className: "text-[var(--main)] text-[16px]", children: isOpen ? "\u25B4" : "\u25BE" })
           ]
         }
@@ -3893,7 +3893,7 @@ var CouponSection = () => {
               onChange: (e) => setInputValue(e.target.value),
               onKeyDown: (e) => e.key === "Enter" && handleApply(),
               placeholder: "ENTER CODE",
-              className: "border border-[var(--borders)] rounded-lg px-3 py-2 text-[13px] text-[var(--main)] font-[Nunito-regular] uppercase tracking-widest outline-none flex-1"
+              className: "border border-[var(--borders)] rounded-lg px-3 py-2 text-[13px] text-[var(--main)] font-[var(--font-regular)] uppercase tracking-widest outline-none flex-1"
             }
           ),
           /* @__PURE__ */ jsx(
@@ -3901,14 +3901,14 @@ var CouponSection = () => {
             {
               onClick: handleApply,
               disabled: isApplying || !inputValue.trim(),
-              className: "bg-[#FF6500] text-white text-[12px] font-[Nunito-bold] px-4 py-2 rounded-lg border-none cursor-pointer tracking-wide disabled:opacity-60 shrink-0",
+              className: "bg-[#FF6500] text-white text-[12px] font-[var(--font-bold)] px-4 py-2 rounded-lg border-none cursor-pointer tracking-wide disabled:opacity-60 shrink-0",
               children: isApplying ? "APPLYING..." : "APPLY"
             }
           )
         ] }),
-        errorMessage && /* @__PURE__ */ jsx("p", { className: "text-red-600 text-[12px] font-[Nunito-regular]", children: errorMessage }),
+        errorMessage && /* @__PURE__ */ jsx("p", { className: "text-red-600 text-[12px] font-[var(--font-regular)]", children: errorMessage }),
         !discountsLoading && availableDiscountsWithCode.length > 0 && /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-2 mt-1", children: [
-          /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-[12px] text-[var(--secondary)]", children: "Available coupons" }),
+          /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-[12px] text-[var(--secondary)]", children: "Available coupons" }),
           /* @__PURE__ */ jsx("div", { className: "flex flex-wrap gap-2", children: availableDiscountsWithCode.map((coupon) => {
             const endDate = formatEndDate(coupon.end_at);
             const { eligible, reason } = getEligibility(coupon);
@@ -3933,7 +3933,7 @@ var CouponSection = () => {
                         }
                       },
                       disabled: !eligible || isApplying,
-                      className: `bg-[#fff5ee] border border-dashed border-[#FF6500] text-[#FF6500] text-[11px] font-[Nunito-bold] px-3 py-1 rounded ${!eligible || isApplying ? "opacity-40 cursor-not-allowed" : ""}`,
+                      className: `bg-[#fff5ee] border border-dashed border-[#FF6500] text-[#FF6500] text-[11px] font-[var(--font-bold)] px-3 py-1 rounded ${!eligible || isApplying ? "opacity-40 cursor-not-allowed" : ""}`,
                       children: [
                         coupon.code ? `${coupon.code} \u2014 ` : "",
                         coupon.display_action_value || "Discount"
@@ -4015,17 +4015,17 @@ var ViewCart = () => {
       /* @__PURE__ */ jsx("path", { d: "M16 10a4 4 0 0 1-8 0" })
     ] }) }),
     /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center gap-2 text-center", children: [
-      /* @__PURE__ */ jsx("p", { className: "font-[Nunito-bold] text-[22px] text-gray-800", children: "Your cart is empty" }),
-      /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[15px] text-gray-500 max-w-[400px]", children: "Looks like you haven't added anything to your cart yet. Explore our collections and find something you love!" })
+      /* @__PURE__ */ jsx("p", { className: "font-[var(--font-bold)] text-[22px] text-gray-800", children: "Your cart is empty" }),
+      /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[15px] text-gray-500 max-w-[400px]", children: "Looks like you haven't added anything to your cart yet. Explore our collections and find something you love!" })
     ] }),
-    /* @__PURE__ */ jsx("a", { href: "/", className: "mt-4 px-8 py-3 rounded-full text-white font-[Nunito-medium] transition-opacity hover:opacity-90", style: { backgroundColor: "var(--core-primary)" }, children: "Continue Shopping" })
+    /* @__PURE__ */ jsx("a", { href: "/", className: "mt-4 px-8 py-3 rounded-full text-white font-[var(--font-medium)] transition-opacity hover:opacity-90", style: { backgroundColor: "var(--core-primary)" }, children: "Continue Shopping" })
   ] }) : /* @__PURE__ */ jsxs("div", { className: "flex flex-row flex-wrap gap-[16px] max-w-[1248px] w-full", children: [
     /* @__PURE__ */ jsx("div", { className: "flex-1 mt-8 md:mt-0", children: /* @__PURE__ */ jsx(Checkout_default, { hasDeletedItems }) }),
     /* @__PURE__ */ jsx("div", { className: "border border-[var(--borders)] sticky hidden md:block" }),
     /* @__PURE__ */ jsxs("div", { className: "flex-1 md:sticky top-4 self-start mt-[18px] md:mt-0 order-first md:order-last", children: [
-      hasDeletedItems && /* @__PURE__ */ jsx("div", { className: "bg-yellow-50 border border-yellow-200 rounded-md p-3 mb-4", children: /* @__PURE__ */ jsx("p", { className: "text-sm text-yellow-800 font-[Nunito-medium]", children: "\u26A0\uFE0F Some items in your cart are no longer available. Please remove them before checkout." }) }),
+      hasDeletedItems && /* @__PURE__ */ jsx("div", { className: "bg-yellow-50 border border-yellow-200 rounded-md p-3 mb-4", children: /* @__PURE__ */ jsx("p", { className: "text-sm text-yellow-800 font-[var(--font-medium)]", children: "\u26A0\uFE0F Some items in your cart are no longer available. Please remove them before checkout." }) }),
       /* @__PURE__ */ jsxs("div", { children: [
-        /* @__PURE__ */ jsxs("div", { className: "font-[Nunito-medium] text-[20px] text-[var(--main)]", children: [
+        /* @__PURE__ */ jsxs("div", { className: "font-[var(--font-medium)] text-[20px] text-[var(--main)]", children: [
           "ORDER ITEMS (",
           items.length,
           ")"
@@ -4040,11 +4040,11 @@ var ViewCart = () => {
         )) }) }),
         /* @__PURE__ */ jsx("div", { className: "mt-4", children: /* @__PURE__ */ jsx(CouponSection_default, {}) }),
         /* @__PURE__ */ jsxs("div", { className: "mt-8", children: [
-          /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-[20px] text-[var(--main)]", children: "Bill summary" }),
+          /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-[20px] text-[var(--main)]", children: "Bill summary" }),
           /* @__PURE__ */ jsxs("div", { className: "mt-[24px] space-y-[8px]", children: [
             /* @__PURE__ */ jsxs("div", { className: "flex justify-between", children: [
-              /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[14px] text-[var(--main)]", children: "Item total" }),
-              /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[14px] text-[var(--main)]", children: display_item_total ? formatCurrency(display_item_total) : "\u2014" })
+              /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[14px] text-[var(--main)]", children: "Item total" }),
+              /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[14px] text-[var(--main)]", children: display_item_total ? formatCurrency(display_item_total) : "\u2014" })
             ] }),
             (appliedDiscounts?.length > 0 || cart?.promo_total > 0 || parseFloat(cart?.display_promo_total) > 0) && (() => {
               const totalDiscount = appliedDiscounts?.length > 0 ? appliedDiscounts.reduce((sum, c) => {
@@ -4075,7 +4075,7 @@ var ViewCart = () => {
                             display: "flex",
                             alignItems: "center",
                             gap: "4px",
-                            fontFamily: "Nunito-regular",
+                            fontFamily: "var(--font-regular)",
                             fontSize: "14px",
                             color: "#FF6500"
                           },
@@ -4106,7 +4106,7 @@ var ViewCart = () => {
                         "span",
                         {
                           style: {
-                            fontFamily: "Nunito-regular",
+                            fontFamily: "var(--font-regular)",
                             fontSize: "14px",
                             color: "#FF6500"
                           },
@@ -4144,7 +4144,7 @@ var ViewCart = () => {
                               "span",
                               {
                                 style: {
-                                  fontFamily: "Nunito-regular",
+                                  fontFamily: "var(--font-regular)",
                                   fontSize: "13px",
                                   color: "#FF6500",
                                   opacity: 0.85
@@ -4156,7 +4156,7 @@ var ViewCart = () => {
                               "span",
                               {
                                 style: {
-                                  fontFamily: "Nunito-regular",
+                                  fontFamily: "var(--font-regular)",
                                   fontSize: "13px",
                                   color: "#FF6500",
                                   opacity: 0.85
@@ -4177,19 +4177,19 @@ var ViewCart = () => {
               ] });
             })(),
             /* @__PURE__ */ jsxs("div", { className: "flex justify-between", children: [
-              /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[14px] text-[var(--main)]", children: "Tax" }),
-              /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[14px] text-[var(--main)]", children: display_tax_total ? formatCurrency(display_tax_total) : "\u2014" })
+              /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[14px] text-[var(--main)]", children: "Tax" }),
+              /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[14px] text-[var(--main)]", children: display_tax_total ? formatCurrency(display_tax_total) : "\u2014" })
             ] }),
             order_type !== "pickup" && /* @__PURE__ */ jsxs("div", { className: "flex justify-between", children: [
-              /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[14px] text-[var(--main)]", children: "Shipping" }),
-              /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[14px] text-[var(--main)]", children: display_ship_total === "0.00" || display_ship_total === 0 ? "Free" : display_ship_total ? formatCurrency(display_ship_total) : "\u2014" })
+              /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[14px] text-[var(--main)]", children: "Shipping" }),
+              /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[14px] text-[var(--main)]", children: display_ship_total === "0.00" || display_ship_total === 0 ? "Free" : display_ship_total ? formatCurrency(display_ship_total) : "\u2014" })
             ] }),
             /* @__PURE__ */ jsxs("div", { className: "pt-[16px] border-t border-[var(--borders)]", children: [
               /* @__PURE__ */ jsxs("div", { className: "flex justify-between", children: [
-                /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-[16px] text-[var(--main)]", children: "Total payment" }),
-                /* @__PURE__ */ jsx("p", { className: "font-[Nunito-bold] text-[16px] text-[var(--main)]", children: display_total ? formatCurrency(display_total) : "\u2014" })
+                /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-[16px] text-[var(--main)]", children: "Total payment" }),
+                /* @__PURE__ */ jsx("p", { className: "font-[var(--font-bold)] text-[16px] text-[var(--main)]", children: display_total ? formatCurrency(display_total) : "\u2014" })
               ] }),
-              (cart?.promo_total > 0 || parseFloat(cart?.display_promo_total) > 0) && /* @__PURE__ */ jsxs("p", { className: "text-[13px] font-[Nunito-bold] text-[#00b300] mt-[6px] text-right", children: [
+              (cart?.promo_total > 0 || parseFloat(cart?.display_promo_total) > 0) && /* @__PURE__ */ jsxs("p", { className: "text-[13px] font-[var(--font-bold)] text-[#00b300] mt-[6px] text-right", children: [
                 "You save ",
                 formatCurrency(cart?.display_promo_total),
                 " on this order \u{1F389}"
@@ -4239,12 +4239,12 @@ var AddressCard2 = ({ address, onEdit, onDelete }) => {
   return /* @__PURE__ */ jsxs(Fragment, { children: [
     /* @__PURE__ */ jsxs("div", { className: "border border-gray-100 p-6 flex flex-col gap-y-4 hover:border-[var(--core-primary)] transition-all duration-300 bg-white shadow-sm hover:shadow-md group", children: [
       /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
-        /* @__PURE__ */ jsx("h3", { className: "font-[Nunito-bold] text-[13px] text-[var(--core-primary)] uppercase tracking-widest bg-gray-50 px-2 py-1", children: label || "Address" }),
+        /* @__PURE__ */ jsx("h3", { className: "font-[var(--font-bold)] text-[13px] text-[var(--core-primary)] uppercase tracking-widest bg-gray-50 px-2 py-1", children: label || "Address" }),
         /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3", children: [
           /* @__PURE__ */ jsxs(
             "button",
             {
-              className: "flex items-center gap-1.5 font-[Nunito-medium] text-[12px] text-[#2563EB] hover:text-[#1d4ed8] transition-colors uppercase tracking-widest",
+              className: "flex items-center gap-1.5 font-[var(--font-medium)] text-[12px] text-[#2563EB] hover:text-[#1d4ed8] transition-colors uppercase tracking-widest",
               onClick: onEdit,
               children: [
                 /* @__PURE__ */ jsx("svg", { className: "w-3.5 h-3.5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" }) }),
@@ -4256,7 +4256,7 @@ var AddressCard2 = ({ address, onEdit, onDelete }) => {
           /* @__PURE__ */ jsxs(
             "button",
             {
-              className: "flex items-center gap-1.5 font-[Nunito-medium] text-[12px] text-red-500 hover:text-red-700 transition-colors uppercase tracking-widest",
+              className: "flex items-center gap-1.5 font-[var(--font-medium)] text-[12px] text-red-500 hover:text-red-700 transition-colors uppercase tracking-widest",
               onClick: () => setShowConfirm(true),
               children: [
                 /* @__PURE__ */ jsx("svg", { className: "w-3.5 h-3.5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" }) }),
@@ -4268,10 +4268,10 @@ var AddressCard2 = ({ address, onEdit, onDelete }) => {
       ] }),
       /* @__PURE__ */ jsx("div", { className: "border-t border-gray-50" }),
       /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
-        /* @__PURE__ */ jsx("p", { className: "font-[Nunito-bold] text-[14px] text-[#2d2d2d] uppercase", children: fullName }),
-        /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-[13px] text-gray-500", children: phone })
+        /* @__PURE__ */ jsx("p", { className: "font-[var(--font-bold)] text-[14px] text-[#2d2d2d] uppercase", children: fullName }),
+        /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-[13px] text-gray-500", children: phone })
       ] }),
-      /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[13px] text-gray-400 leading-relaxed line-clamp-2", children: fullAddress })
+      /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[13px] text-gray-400 leading-relaxed line-clamp-2", children: fullAddress })
     ] }),
     /* @__PURE__ */ jsx(
       Popup,
@@ -4282,9 +4282,9 @@ var AddressCard2 = ({ address, onEdit, onDelete }) => {
         maxWidth: "max-w-[400px]",
         style: { maxWidth: "400px" },
         children: /* @__PURE__ */ jsxs("div", { className: "text-center py-4", children: [
-          /* @__PURE__ */ jsxs("p", { className: "font-[Nunito-regular] text-[15px] text-gray-600 mb-8", children: [
+          /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-regular)] text-[15px] text-gray-600 mb-8", children: [
             "Are you sure you want to delete ",
-            /* @__PURE__ */ jsxs("span", { className: "font-[Nunito-bold] text-[var(--core-primary)]", children: [
+            /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-bold)] text-[var(--core-primary)]", children: [
               '"',
               label || "this address",
               '"'
@@ -4297,7 +4297,7 @@ var AddressCard2 = ({ address, onEdit, onDelete }) => {
               {
                 onClick: () => setShowConfirm(false),
                 disabled: isDeleting,
-                className: "flex-1 h-[48px] text-[14px] font-[Nunito-bold] border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors uppercase tracking-widest",
+                className: "flex-1 h-[48px] text-[14px] font-[var(--font-bold)] border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors uppercase tracking-widest",
                 children: "Cancel"
               }
             ),
@@ -4306,7 +4306,7 @@ var AddressCard2 = ({ address, onEdit, onDelete }) => {
               {
                 onClick: handleDelete,
                 disabled: isDeleting,
-                className: "flex-1 h-[48px] text-[14px] font-[Nunito-bold] bg-red-600 text-white hover:bg-red-700 transition-colors flex items-center justify-center gap-2 uppercase tracking-widest shadow-lg shadow-red-100",
+                className: "flex-1 h-[48px] text-[14px] font-[var(--font-bold)] bg-red-600 text-white hover:bg-red-700 transition-colors flex items-center justify-center gap-2 uppercase tracking-widest shadow-lg shadow-red-100",
                 children: isDeleting ? /* @__PURE__ */ jsx(Spinner, { size: "sm", color: "white" }) : "Delete"
               }
             )
@@ -4351,8 +4351,8 @@ var ProfileForm = ({ user, onSuccess, onCancel }) => {
       setIsSubmitting(false);
     }
   };
-  const inputCls = "w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--core-primary)] font-[Nunito-regular]";
-  const labelCls = "text-sm font-[Nunito-bold] text-[var(--core-primary)] uppercase tracking-widest text-[11px]";
+  const inputCls = "w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--core-primary)] font-[var(--font-regular)]";
+  const labelCls = "text-sm font-[var(--font-bold)] text-[var(--core-primary)] uppercase tracking-widest text-[11px]";
   return /* @__PURE__ */ jsxs("form", { onSubmit: handleSubmit, className: "space-y-6", children: [
     /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-6", children: [
       /* @__PURE__ */ jsxs("div", { className: "space-y-2", children: [
@@ -4407,7 +4407,7 @@ var ProfileForm = ({ user, onSuccess, onCancel }) => {
         {
           type: "button",
           onClick: onCancel,
-          className: "flex-1 py-3 border border-gray-300 rounded-md text-[var(--core-primary)] font-[Nunito-bold] hover:bg-gray-50 transition-colors uppercase tracking-widest text-[12px]",
+          className: "flex-1 py-3 border border-gray-300 rounded-md text-[var(--core-primary)] font-[var(--font-bold)] hover:bg-gray-50 transition-colors uppercase tracking-widest text-[12px]",
           children: "Cancel"
         }
       ),
@@ -4416,7 +4416,7 @@ var ProfileForm = ({ user, onSuccess, onCancel }) => {
         {
           type: "submit",
           disabled: isSubmitting,
-          className: `flex-1 py-3 bg-[var(--core-primary)] text-white rounded-md font-[Nunito-bold] transition-colors flex items-center justify-center gap-2 uppercase tracking-widest text-[12px] shadow-lg shadow-blue-100 ${isSubmitting ? "opacity-70 cursor-not-allowed" : "hover:opacity-90"}`,
+          className: `flex-1 py-3 bg-[var(--core-primary)] text-white rounded-md font-[var(--font-bold)] transition-colors flex items-center justify-center gap-2 uppercase tracking-widest text-[12px] shadow-lg shadow-blue-100 ${isSubmitting ? "opacity-70 cursor-not-allowed" : "hover:opacity-90"}`,
           children: isSubmitting ? /* @__PURE__ */ jsx(Spinner, { size: "sm", color: "white" }) : "Save Changes"
         }
       )
@@ -4451,42 +4451,42 @@ var UserInfo = ({ user, isLoading, refetch }) => {
   }
   const userData = user || {};
   return /* @__PURE__ */ jsxs("div", { className: "animate-in fade-in slide-in-from-bottom-4 duration-500", children: [
-    /* @__PURE__ */ jsx("h1", { className: "font-[Nunito-regular] text-[32px] text-[var(--core-primary)] mb-10 tracking-tight", children: "MY PROFILE" }),
+    /* @__PURE__ */ jsx("h1", { className: "font-[var(--font-regular)] text-[32px] text-[var(--core-primary)] mb-10 tracking-tight", children: "MY PROFILE" }),
     /* @__PURE__ */ jsxs("section", { className: "mb-12", children: [
       /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-end mb-4", children: [
-        /* @__PURE__ */ jsx("h2", { className: "font-[Nunito-medium] text-[20px] text-[#2d2d2d] uppercase tracking-wider", children: "Profile" }),
+        /* @__PURE__ */ jsx("h2", { className: "font-[var(--font-medium)] text-[20px] text-[#2d2d2d] uppercase tracking-wider", children: "Profile" }),
         /* @__PURE__ */ jsx(
           "button",
           {
             onClick: () => setModalState({ type: "profile", data: user }),
-            className: "text-[14px] font-[Nunito-medium] text-[#2563EB] hover:underline uppercase tracking-widest transition-all",
+            className: "text-[14px] font-[var(--font-medium)] text-[#2563EB] hover:underline uppercase tracking-widest transition-all",
             children: "Edit"
           }
         )
       ] }),
       /* @__PURE__ */ jsx("div", { className: "border border-gray-100 p-8 shadow-sm bg-white hover:shadow-md transition-shadow duration-300", children: /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6", children: [
         /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-1", children: [
-          /* @__PURE__ */ jsx("label", { className: "text-[12px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest", children: "First name" }),
-          /* @__PURE__ */ jsx("p", { className: "border-b border-gray-100 pb-2 text-[15px] font-[Nunito-medium] text-[var(--core-primary)]", children: userData.first_name || userData.firstName || "\u2014" })
+          /* @__PURE__ */ jsx("label", { className: "text-[12px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "First name" }),
+          /* @__PURE__ */ jsx("p", { className: "border-b border-gray-100 pb-2 text-[15px] font-[var(--font-medium)] text-[var(--core-primary)]", children: userData.first_name || userData.firstName || "\u2014" })
         ] }),
         /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-1", children: [
-          /* @__PURE__ */ jsx("label", { className: "text-[12px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest", children: "Last name" }),
-          /* @__PURE__ */ jsx("p", { className: "border-b border-gray-100 pb-2 text-[15px] font-[Nunito-medium] text-[var(--core-primary)]", children: userData.last_name || userData.lastName || "\u2014" })
+          /* @__PURE__ */ jsx("label", { className: "text-[12px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Last name" }),
+          /* @__PURE__ */ jsx("p", { className: "border-b border-gray-100 pb-2 text-[15px] font-[var(--font-medium)] text-[var(--core-primary)]", children: userData.last_name || userData.lastName || "\u2014" })
         ] }),
         /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-1 md:col-span-2", children: [
-          /* @__PURE__ */ jsx("label", { className: "text-[12px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest", children: config?.authType === "own" ? "Phone number" : "Email address" }),
-          /* @__PURE__ */ jsx("p", { className: "border-b border-gray-100 pb-2 text-[15px] font-[Nunito-medium] text-[var(--core-primary)]", children: config?.authType === "own" ? userData.phone || userData.mobile || userData.phone_number || "\u2014" : userData.email || userData.primaryEmailAddress?.emailAddress || "\u2014" })
+          /* @__PURE__ */ jsx("label", { className: "text-[12px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: config?.authType === "own" ? "Phone number" : "Email address" }),
+          /* @__PURE__ */ jsx("p", { className: "border-b border-gray-100 pb-2 text-[15px] font-[var(--font-medium)] text-[var(--core-primary)]", children: config?.authType === "own" ? userData.phone || userData.mobile || userData.phone_number || "\u2014" : userData.email || userData.primaryEmailAddress?.emailAddress || "\u2014" })
         ] })
       ] }) })
     ] }),
     /* @__PURE__ */ jsxs("section", { children: [
       /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-end mb-4", children: [
-        /* @__PURE__ */ jsx("h2", { className: "font-[Nunito-medium] text-[20px] text-[#2d2d2d] uppercase tracking-wider", children: "Addresses" }),
+        /* @__PURE__ */ jsx("h2", { className: "font-[var(--font-medium)] text-[20px] text-[#2d2d2d] uppercase tracking-wider", children: "Addresses" }),
         /* @__PURE__ */ jsx(
           "button",
           {
             onClick: () => setModalState({ type: "new_address", data: null }),
-            className: "text-[14px] font-[Nunito-medium] text-[#2563EB] hover:underline uppercase tracking-widest transition-all",
+            className: "text-[14px] font-[var(--font-medium)] text-[#2563EB] hover:underline uppercase tracking-widest transition-all",
             children: "Add new address"
           }
         )
@@ -4509,7 +4509,7 @@ var UserInfo = ({ user, isLoading, refetch }) => {
             "button",
             {
               onClick: () => setModalState({ type: "new_address", data: null }),
-              className: "mt-4 px-8 py-3 bg-[var(--core-primary)] text-white font-[Nunito-bold] text-[13px] uppercase tracking-widest hover:opacity-90 transition-colors",
+              className: "mt-4 px-8 py-3 bg-[var(--core-primary)] text-white font-[var(--font-bold)] text-[13px] uppercase tracking-widest hover:opacity-90 transition-colors",
               children: "Add Your First Address"
             }
           ),
@@ -4575,14 +4575,14 @@ var OrdersList = ({ initialOrders }) => {
     return /* @__PURE__ */ jsx("div", { className: "flex justify-center py-20", children: /* @__PURE__ */ jsx(Spinner, {}) });
   }
   return /* @__PURE__ */ jsxs("div", { className: "animate-in fade-in slide-in-from-bottom-4 duration-500", children: [
-    /* @__PURE__ */ jsx("h1", { className: "font-[Nunito-regular] text-[32px] text-[var(--core-primary)] mb-10 tracking-tight uppercase", children: "MY ORDERS" }),
+    /* @__PURE__ */ jsx("h1", { className: "font-[var(--font-regular)] text-[32px] text-[var(--core-primary)] mb-10 tracking-tight uppercase", children: "MY ORDERS" }),
     orders.length > 0 ? /* @__PURE__ */ jsx("div", { className: "space-y-6", children: orders.map((order) => /* @__PURE__ */ jsx(OrderCard, { order, formatCurrency }, order.id)) }) : /* @__PURE__ */ jsx(
       EmptyState,
       {
         icon: "\u{1F4E6}",
         title: "No Orders Found",
         description: "It looks like you haven't placed any orders yet. Once you do, they will appear here.",
-        action: /* @__PURE__ */ jsx("button", { className: "mt-4 px-8 py-3 bg-[var(--core-primary)] text-white font-[Nunito-bold] text-[13px] uppercase tracking-widest hover:opacity-90 transition-colors rounded-none", children: "Start Shopping" }),
+        action: /* @__PURE__ */ jsx("button", { className: "mt-4 px-8 py-3 bg-[var(--core-primary)] text-white font-[var(--font-bold)] text-[13px] uppercase tracking-widest hover:opacity-90 transition-colors rounded-none", children: "Start Shopping" }),
         className: "border border-dashed border-gray-200 bg-gray-50/30"
       }
     )
@@ -4617,11 +4617,11 @@ var OrderCard = ({ order, formatCurrency }) => {
         /* @__PURE__ */ jsxs("div", { className: "flex flex-col md:flex-row justify-between items-start md:items-center bg-gray-50/80 p-5 border-b border-gray-100 gap-4", children: [
           /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-1.5", children: [
             /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3", children: [
-              /* @__PURE__ */ jsx("span", { className: "font-[Nunito-bold] text-[16px] text-[var(--core-primary)]", children: order_number || cartNumber || id }),
+              /* @__PURE__ */ jsx("span", { className: "font-[var(--font-bold)] text-[16px] text-[var(--core-primary)]", children: order_number || cartNumber || id }),
               /* @__PURE__ */ jsx(
                 "span",
                 {
-                  className: "text-[10px] font-[Nunito-bold] uppercase tracking-wider",
+                  className: "text-[10px] font-[var(--font-bold)] uppercase tracking-wider",
                   style: {
                     padding: "3px 10px",
                     borderRadius: "999px",
@@ -4633,16 +4633,16 @@ var OrderCard = ({ order, formatCurrency }) => {
                 }
               )
             ] }),
-            /* @__PURE__ */ jsxs("p", { className: "text-[13px] font-[Nunito-medium] text-gray-500", children: [
+            /* @__PURE__ */ jsxs("p", { className: "text-[13px] font-[var(--font-medium)] text-gray-500", children: [
               "Placed on ",
               /* @__PURE__ */ jsx("span", { className: "text-gray-700", children: dateStr })
             ] })
           ] }),
           /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-start md:items-end gap-1.5 w-full md:w-auto", children: [
-            /* @__PURE__ */ jsx("span", { className: "font-[Nunito-bold] text-[18px] text-[var(--core-primary)]", children: display_total ? formatCurrency(display_total) : "\u2014" }),
-            /* @__PURE__ */ jsxs("p", { className: "text-[12px] font-[Nunito-medium] flex items-center gap-1.5", children: [
-              /* @__PURE__ */ jsx("span", { className: "text-gray-400 uppercase tracking-wider text-[10px] font-[Nunito-bold]", children: "Payment:" }),
-              /* @__PURE__ */ jsx("span", { className: `uppercase font-[Nunito-bold] tracking-tight ${payment_status === "received" || payment_status === "paid" ? "text-green-600" : "text-orange-500"}`, children: payment_status || "Pending" })
+            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-bold)] text-[18px] text-[var(--core-primary)]", children: display_total ? formatCurrency(display_total) : "\u2014" }),
+            /* @__PURE__ */ jsxs("p", { className: "text-[12px] font-[var(--font-medium)] flex items-center gap-1.5", children: [
+              /* @__PURE__ */ jsx("span", { className: "text-gray-400 uppercase tracking-wider text-[10px] font-[var(--font-bold)]", children: "Payment:" }),
+              /* @__PURE__ */ jsx("span", { className: `uppercase font-[var(--font-bold)] tracking-tight ${payment_status === "received" || payment_status === "paid" ? "text-green-600" : "text-orange-500"}`, children: payment_status || "Pending" })
             ] })
           ] })
         ] }),
@@ -4661,13 +4661,13 @@ var OrderCard = ({ order, formatCurrency }) => {
                 }
               ) : /* @__PURE__ */ jsxs("div", { className: "w-full h-full flex flex-col items-center justify-center text-gray-300", children: [
                 /* @__PURE__ */ jsx("span", { className: "text-[20px] mb-1", children: "\u{1F4E6}" }),
-                /* @__PURE__ */ jsx("span", { className: "text-[9px] uppercase tracking-wider font-[Nunito-medium]", children: "No Image" })
+                /* @__PURE__ */ jsx("span", { className: "text-[9px] uppercase tracking-wider font-[var(--font-medium)]", children: "No Image" })
               ] }) }),
               /* @__PURE__ */ jsx("span", { className: "absolute top-0 right-0 -translate-y-1/3 translate-x-1/3 bg-[var(--core-primary)] text-white text-[11px] font-bold w-6 h-6 flex items-center justify-center rounded-full border-2 border-white shadow-sm z-10", children: item.quantity })
             ] }, idx);
           }),
           line_items.length === 0 && /* @__PURE__ */ jsx("p", { className: "text-gray-400 italic text-sm py-4", children: "No items info" }),
-          /* @__PURE__ */ jsx("div", { className: "absolute right-5 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 hidden md:flex items-center text-[var(--core-primary)] text-[13px] font-[Nunito-bold] bg-white/90 backdrop-blur-sm py-2 px-4 rounded-full shadow-sm border border-gray-200 pointer-events-none", children: "View Details \u2192" })
+          /* @__PURE__ */ jsx("div", { className: "absolute right-5 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 hidden md:flex items-center text-[var(--core-primary)] text-[13px] font-[var(--font-bold)] bg-white/90 backdrop-blur-sm py-2 px-4 rounded-full shadow-sm border border-gray-200 pointer-events-none", children: "View Details \u2192" })
         ] })
       ]
     }
@@ -4705,8 +4705,8 @@ var AccountPage = ({ initialTab = "profile" }) => {
   console.log({ userData });
   return /* @__PURE__ */ jsx("div", { className: "min-h-screen bg-white", children: /* @__PURE__ */ jsxs("div", { className: "px-4 md:px-8 lg:px-[32px] py-[40px] md:py-[100px] flex flex-col md:flex-row items-start justify-between gap-8 w-full", children: [
     /* @__PURE__ */ jsxs("aside", { className: "w-full md:w-[280px] lg:w-[320px] md:sticky top-[40px]", children: [
-      /* @__PURE__ */ jsx("h1", { className: "font-[Nunito-Regular] text-[40px] md:text-[48px] leading-[1.05] text-[var(--core-primary)] mb-8 tracking-tight uppercase", children: "MY ACCOUNT" }),
-      /* @__PURE__ */ jsx("nav", { children: /* @__PURE__ */ jsxs("ul", { className: "space-y-1 font-[Nunito-Medium]", children: [
+      /* @__PURE__ */ jsx("h1", { className: "font-[var(--font-regular)] text-[40px] md:text-[48px] leading-[1.05] text-[var(--core-primary)] mb-8 tracking-tight uppercase", children: "MY ACCOUNT" }),
+      /* @__PURE__ */ jsx("nav", { children: /* @__PURE__ */ jsxs("ul", { className: "space-y-1 font-[var(--font-medium)]", children: [
         navItems.map((item) => /* @__PURE__ */ jsx("li", { children: /* @__PURE__ */ jsx(
           "button",
           {
@@ -4852,10 +4852,10 @@ var Order = (props) => {
           children: [
             /* @__PURE__ */ jsx("div", { className: "mt-0.5 shrink-0", style: { color: "var(--core-secondary)" }, children: /* @__PURE__ */ jsx(OrderConfirmationIcon, {}) }),
             /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-1", children: [
-              /* @__PURE__ */ jsx("p", { className: "font-[Nunito-bold] text-[16px] text-[var(--core-primary)] uppercase tracking-wide", children: "Thank you. Your order has been received" }),
-              /* @__PURE__ */ jsxs("p", { className: "font-[Nunito-regular] text-[13px] text-gray-500", children: [
+              /* @__PURE__ */ jsx("p", { className: "font-[var(--font-bold)] text-[16px] text-[var(--core-primary)] uppercase tracking-wide", children: "Thank you. Your order has been received" }),
+              /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-regular)] text-[13px] text-gray-500", children: [
                 "Order\xA0",
-                /* @__PURE__ */ jsxs("span", { className: "font-[Nunito-bold] text-[var(--core-primary)]", children: [
+                /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-bold)] text-[var(--core-primary)]", children: [
                   "#",
                   order_number
                 ] }),
@@ -4867,11 +4867,11 @@ var Order = (props) => {
       ),
       /* @__PURE__ */ jsxs("div", { children: [
         /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center mb-4", children: [
-          /* @__PURE__ */ jsx("h3", { className: "font-[Nunito-bold] text-[18px] text-[var(--core-primary)] uppercase tracking-wider", children: "Order Details" }),
+          /* @__PURE__ */ jsx("h3", { className: "font-[var(--font-bold)] text-[18px] text-[var(--core-primary)] uppercase tracking-wider", children: "Order Details" }),
           /* @__PURE__ */ jsx(
             "button",
             {
-              className: "flex items-center gap-1.5 px-3 py-2 rounded font-[Nunito-bold] text-[13px] text-white transition-opacity hover:opacity-85 disabled:opacity-60 cursor-pointer",
+              className: "flex items-center gap-1.5 px-3 py-2 rounded font-[var(--font-bold)] text-[13px] text-white transition-opacity hover:opacity-85 disabled:opacity-60 cursor-pointer",
               style: { background: "var(--core-primary)" },
               onClick: onDownloadReceipt,
               disabled: isFetchingInvoice,
@@ -4885,15 +4885,15 @@ var Order = (props) => {
         /* @__PURE__ */ jsxs("div", { className: "border rounded-lg overflow-hidden", style: { borderColor: "color-mix(in srgb, var(--core-primary) 20%, #e8e5df)" }, children: [
           /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-2 divide-x", style: { divideColor: "color-mix(in srgb, var(--core-primary) 15%, #e8e5df)" }, children: [
             /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-1", children: [
-              /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest", children: "Order Number" }),
-              /* @__PURE__ */ jsx("p", { className: "font-[Nunito-bold] text-[14px] text-[var(--core-primary)]", children: order_number || "\u2014" })
+              /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Order Number" }),
+              /* @__PURE__ */ jsx("p", { className: "font-[var(--font-bold)] text-[14px] text-[var(--core-primary)]", children: order_number || "\u2014" })
             ] }),
             /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-1", children: [
-              /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest", children: "Order Status" }),
+              /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Order Status" }),
               /* @__PURE__ */ jsx(
                 "span",
                 {
-                  className: "inline-flex self-start font-[Nunito-bold] text-[12px] px-2.5 py-0.5 rounded-full uppercase tracking-wide",
+                  className: "inline-flex self-start font-[var(--font-bold)] text-[12px] px-2.5 py-0.5 rounded-full uppercase tracking-wide",
                   style: {
                     background: "color-mix(in srgb, var(--core-secondary) 15%, white)",
                     color: "var(--core-primary)",
@@ -4907,15 +4907,15 @@ var Order = (props) => {
           /* @__PURE__ */ jsx("div", { className: "border-t", style: { borderColor: "color-mix(in srgb, var(--core-primary) 12%, #e8e5df)" } }),
           /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-2 divide-x", style: { divideColor: "color-mix(in srgb, var(--core-primary) 15%, #e8e5df)" }, children: [
             /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-1", children: [
-              /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest", children: "Order Date" }),
-              /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-[14px] text-[var(--core-primary)]", children: orderDate || "\u2014" })
+              /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Order Date" }),
+              /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-[14px] text-[var(--core-primary)]", children: orderDate || "\u2014" })
             ] }),
             /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-1", children: [
-              /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest", children: "Payment Status" }),
+              /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Payment Status" }),
               /* @__PURE__ */ jsx(
                 "p",
                 {
-                  className: "font-[Nunito-bold] text-[13px] uppercase",
+                  className: "font-[var(--font-bold)] text-[13px] uppercase",
                   style: { color: payment_status === "paid" || payment_status === "received" ? "#16a34a" : "var(--core-secondary)" },
                   children: payment_status || "Pending"
                 }
@@ -4924,15 +4924,15 @@ var Order = (props) => {
           ] }),
           /* @__PURE__ */ jsx("div", { className: "border-t", style: { borderColor: "color-mix(in srgb, var(--core-primary) 12%, #e8e5df)" } }),
           order_type === "pickup" ? /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-1", children: [
-            /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest", children: "Pickup Address" }),
-            /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-[14px] text-[var(--core-primary)]", children: storePickUpAddress || "\u2014" })
+            /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Pickup Address" }),
+            /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-[14px] text-[var(--core-primary)]", children: storePickUpAddress || "\u2014" })
           ] }) : /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x", style: { borderColor: "color-mix(in srgb, var(--core-primary) 12%, #e8e5df)" }, children: [
             /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-2", children: [
-              /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest", children: "Delivery Address" }),
+              /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Delivery Address" }),
               shipping_address?.label && /* @__PURE__ */ jsx(
                 "span",
                 {
-                  className: "self-start text-[10px] font-[Nunito-bold] px-2 py-0.5 rounded-full uppercase tracking-widest",
+                  className: "self-start text-[10px] font-[var(--font-bold)] px-2 py-0.5 rounded-full uppercase tracking-widest",
                   style: {
                     background: "color-mix(in srgb, var(--core-primary) 10%, white)",
                     color: "var(--core-primary)"
@@ -4941,22 +4941,22 @@ var Order = (props) => {
                 }
               ),
               /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-0.5", children: [
-                /* @__PURE__ */ jsxs("p", { className: "font-[Nunito-bold] text-[13px] text-[var(--core-primary)]", children: [
+                /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-bold)] text-[13px] text-[var(--core-primary)]", children: [
                   `${shipping_address?.firstname ?? ""} ${shipping_address?.lastname ?? ""}`.trim(),
-                  shipping_address?.phone && /* @__PURE__ */ jsxs("span", { className: "font-[Nunito-regular] text-gray-500", children: [
+                  shipping_address?.phone && /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-regular)] text-gray-500", children: [
                     " \xB7 ",
                     shipping_address.phone
                   ] })
                 ] }),
-                /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[13px] text-gray-500 leading-relaxed", children: fullShippingAddress })
+                /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[13px] text-gray-500 leading-relaxed", children: fullShippingAddress })
               ] })
             ] }),
             /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-2", children: [
-              /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest", children: "Billing Address" }),
+              /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Billing Address" }),
               billing_address?.label && /* @__PURE__ */ jsx(
                 "span",
                 {
-                  className: "self-start text-[10px] font-[Nunito-bold] px-2 py-0.5 rounded-full uppercase tracking-widest",
+                  className: "self-start text-[10px] font-[var(--font-bold)] px-2 py-0.5 rounded-full uppercase tracking-widest",
                   style: {
                     background: "color-mix(in srgb, var(--core-primary) 10%, white)",
                     color: "var(--core-primary)"
@@ -4965,14 +4965,14 @@ var Order = (props) => {
                 }
               ),
               /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-0.5", children: [
-                /* @__PURE__ */ jsxs("p", { className: "font-[Nunito-bold] text-[13px] text-[var(--core-primary)]", children: [
+                /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-bold)] text-[13px] text-[var(--core-primary)]", children: [
                   `${billing_address?.firstname ?? ""} ${billing_address?.lastname ?? ""}`.trim(),
-                  billing_address?.phone && /* @__PURE__ */ jsxs("span", { className: "font-[Nunito-regular] text-gray-500", children: [
+                  billing_address?.phone && /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-regular)] text-gray-500", children: [
                     " \xB7 ",
                     billing_address.phone
                   ] })
                 ] }),
-                /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[13px] text-gray-500 leading-relaxed", children: fullBillingAddress })
+                /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[13px] text-gray-500 leading-relaxed", children: fullBillingAddress })
               ] })
             ] })
           ] })
@@ -4981,7 +4981,7 @@ var Order = (props) => {
       /* @__PURE__ */ jsx(
         "button",
         {
-          className: "text-white py-3 hidden md:block transition cursor-pointer font-[Nunito-bold] text-[14px] uppercase tracking-widest hover:opacity-85",
+          className: "text-white py-3 hidden md:block transition cursor-pointer font-[var(--font-bold)] text-[14px] uppercase tracking-widest hover:opacity-85",
           style: { background: "var(--core-primary)" },
           onClick: () => router.push("/"),
           children: "Continue Shopping"
@@ -4991,7 +4991,7 @@ var Order = (props) => {
     /* @__PURE__ */ jsx("div", { className: "border border-[#e8e5df] hidden md:block" }),
     /* @__PURE__ */ jsxs("div", { className: "flex-1 flex flex-col gap-8 mt-[32px] md:mt-0", children: [
       /* @__PURE__ */ jsxs("div", { children: [
-        /* @__PURE__ */ jsxs("h3", { className: "font-[Nunito-bold] text-[18px] text-[var(--core-primary)] uppercase tracking-wider mb-6", children: [
+        /* @__PURE__ */ jsxs("h3", { className: "font-[var(--font-bold)] text-[18px] text-[var(--core-primary)] uppercase tracking-wider mb-6", children: [
           "Ordered Items (",
           line_items?.length || 0,
           ")"
@@ -5014,42 +5014,42 @@ var Order = (props) => {
         }) })
       ] }),
       /* @__PURE__ */ jsxs("div", { className: "border rounded-lg overflow-hidden", style: { borderColor: "color-mix(in srgb, var(--core-primary) 20%, #e8e5df)" }, children: [
-        /* @__PURE__ */ jsx("div", { className: "px-4 py-3", style: { background: "color-mix(in srgb, var(--core-primary) 6%, white)" }, children: /* @__PURE__ */ jsx("h3", { className: "font-[Nunito-bold] text-[15px] text-[var(--core-primary)] uppercase tracking-wider", children: "Bill Summary" }) }),
+        /* @__PURE__ */ jsx("div", { className: "px-4 py-3", style: { background: "color-mix(in srgb, var(--core-primary) 6%, white)" }, children: /* @__PURE__ */ jsx("h3", { className: "font-[var(--font-bold)] text-[15px] text-[var(--core-primary)] uppercase tracking-wider", children: "Bill Summary" }) }),
         /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-3", children: [
           /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
-            /* @__PURE__ */ jsx("span", { className: "font-[Nunito-regular] text-[14px] text-gray-500", children: "Item Total" }),
-            /* @__PURE__ */ jsx("span", { className: "font-[Nunito-medium] text-[14px] text-[var(--core-primary)]", children: formatCurrency(display_item_total) })
+            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-regular)] text-[14px] text-gray-500", children: "Item Total" }),
+            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-medium)] text-[14px] text-[var(--core-primary)]", children: formatCurrency(display_item_total) })
           ] }),
           appliedDiscounts?.length > 0 ? appliedDiscounts?.map((coupon) => /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
-            /* @__PURE__ */ jsxs("span", { className: "font-[Nunito-medium] text-[14px] text-[#FF6500]", children: [
+            /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-medium)] text-[14px] text-[#FF6500]", children: [
               "Discount ",
               coupon.code ? `(${coupon.code})` : ""
             ] }),
-            /* @__PURE__ */ jsxs("span", { className: "font-[Nunito-medium] text-[14px] text-[#FF6500]", children: [
+            /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-medium)] text-[14px] text-[#FF6500]", children: [
               "-",
               formatCurrency(coupon.display_discount_amount || coupon.discount_amount / 100)
             ] })
           ] }, coupon.code || coupon.id)) : display_promo_total && display_promo_total !== "0.00" && display_promo_total !== 0 && display_promo_total !== "0" ? /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
-            /* @__PURE__ */ jsx("span", { className: "font-[Nunito-medium] text-[14px] text-[#FF6500]", children: "Discount" }),
-            /* @__PURE__ */ jsxs("span", { className: "font-[Nunito-medium] text-[14px] text-[#FF6500]", children: [
+            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-medium)] text-[14px] text-[#FF6500]", children: "Discount" }),
+            /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-medium)] text-[14px] text-[#FF6500]", children: [
               "-",
               formatCurrency(display_promo_total)
             ] })
           ] }) : null,
           /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
-            /* @__PURE__ */ jsx("span", { className: "font-[Nunito-regular] text-[14px] text-gray-500", children: "Tax" }),
-            /* @__PURE__ */ jsx("span", { className: "font-[Nunito-medium] text-[14px] text-[var(--core-primary)]", children: formatCurrency(display_tax_total) })
+            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-regular)] text-[14px] text-gray-500", children: "Tax" }),
+            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-medium)] text-[14px] text-[var(--core-primary)]", children: formatCurrency(display_tax_total) })
           ] }),
           order_type !== "pickup" && /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
-            /* @__PURE__ */ jsx("span", { className: "font-[Nunito-regular] text-[14px] text-gray-500", children: "Shipping" }),
-            /* @__PURE__ */ jsx("span", { className: "font-[Nunito-medium] text-[14px] text-[var(--core-primary)]", children: display_ship_total === "0.00" || display_ship_total === 0 || display_ship_total === "0" ? /* @__PURE__ */ jsx("span", { style: { color: "#16a34a" }, className: "font-[Nunito-bold]", children: "Free" }) : formatCurrency(display_ship_total) })
+            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-regular)] text-[14px] text-gray-500", children: "Shipping" }),
+            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-medium)] text-[14px] text-[var(--core-primary)]", children: display_ship_total === "0.00" || display_ship_total === 0 || display_ship_total === "0" ? /* @__PURE__ */ jsx("span", { style: { color: "#16a34a" }, className: "font-[var(--font-bold)]", children: "Free" }) : formatCurrency(display_ship_total) })
           ] }),
           /* @__PURE__ */ jsx("div", { className: "h-px my-1", style: { background: "color-mix(in srgb, var(--core-secondary) 35%, #e8e5df)" } }),
           /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
-            /* @__PURE__ */ jsx("span", { className: "font-[Nunito-bold] text-[15px] text-[var(--core-primary)]", children: "Total" }),
-            /* @__PURE__ */ jsx("span", { className: "font-[Nunito-bold] text-[17px] text-[var(--core-primary)]", children: formatCurrency(display_total) })
+            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-bold)] text-[15px] text-[var(--core-primary)]", children: "Total" }),
+            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-bold)] text-[17px] text-[var(--core-primary)]", children: formatCurrency(display_total) })
           ] }),
-          (appliedDiscounts?.length > 0 || display_promo_total && display_promo_total !== "0.00" && display_promo_total !== 0 && display_promo_total !== "0") && /* @__PURE__ */ jsxs("p", { className: "text-[13px] font-[Nunito-bold] text-[#16a34a] mt-[6px] text-right", children: [
+          (appliedDiscounts?.length > 0 || display_promo_total && display_promo_total !== "0.00" && display_promo_total !== 0 && display_promo_total !== "0") && /* @__PURE__ */ jsxs("p", { className: "text-[13px] font-[var(--font-bold)] text-[#16a34a] mt-[6px] text-right", children: [
             "You save ",
             formatCurrency(display_promo_total),
             " on this order \u{1F389}"
@@ -5060,7 +5060,7 @@ var Order = (props) => {
     /* @__PURE__ */ jsx(
       "button",
       {
-        className: "text-white py-3 mt-8 block md:hidden transition cursor-pointer font-[Nunito-bold] text-[14px] uppercase tracking-widest hover:opacity-85",
+        className: "text-white py-3 mt-8 block md:hidden transition cursor-pointer font-[var(--font-bold)] text-[14px] uppercase tracking-widest hover:opacity-85",
         style: { background: "var(--core-primary)" },
         onClick: () => router.push("/"),
         children: "Continue Shopping"

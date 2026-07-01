@@ -56,12 +56,12 @@ export const AddressCard = ({ address, onEdit, onDelete }) => {
       <div className="border border-gray-100 p-6 flex flex-col gap-y-4 hover:border-[var(--core-primary)] transition-all duration-300 bg-white shadow-sm hover:shadow-md group">
         {/* Label + actions */}
         <div className="flex justify-between items-center">
-          <h3 className="font-[Nunito-bold] text-[13px] text-[var(--core-primary)] uppercase tracking-widest bg-gray-50 px-2 py-1">
+          <h3 className="font-[var(--font-bold)] text-[13px] text-[var(--core-primary)] uppercase tracking-widest bg-gray-50 px-2 py-1">
             {label || "Address"}
           </h3>
           <div className="flex items-center gap-3">
             <button
-              className="flex items-center gap-1.5 font-[Nunito-medium] text-[12px] text-[#2563EB] hover:text-[#1d4ed8] transition-colors uppercase tracking-widest"
+              className="flex items-center gap-1.5 font-[var(--font-medium)] text-[12px] text-[#2563EB] hover:text-[#1d4ed8] transition-colors uppercase tracking-widest"
               onClick={onEdit}
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -71,7 +71,7 @@ export const AddressCard = ({ address, onEdit, onDelete }) => {
             </button>
             <span className="text-gray-200 text-[10px]">|</span>
             <button
-              className="flex items-center gap-1.5 font-[Nunito-medium] text-[12px] text-red-500 hover:text-red-700 transition-colors uppercase tracking-widest"
+              className="flex items-center gap-1.5 font-[var(--font-medium)] text-[12px] text-red-500 hover:text-red-700 transition-colors uppercase tracking-widest"
               onClick={() => setShowConfirm(true)}
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -87,16 +87,16 @@ export const AddressCard = ({ address, onEdit, onDelete }) => {
 
         {/* Name | phone */}
         <div className="space-y-1">
-            <p className="font-[Nunito-bold] text-[14px] text-[#2d2d2d] uppercase">
+            <p className="font-[var(--font-bold)] text-[14px] text-[#2d2d2d] uppercase">
             {fullName}
             </p>
-            <p className="font-[Nunito-medium] text-[13px] text-gray-500">
+            <p className="font-[var(--font-medium)] text-[13px] text-gray-500">
             {phone}
             </p>
         </div>
 
         {/* Full address */}
-        <p className="font-[Nunito-regular] text-[13px] text-gray-400 leading-relaxed line-clamp-2">
+        <p className="font-[var(--font-regular)] text-[13px] text-gray-400 leading-relaxed line-clamp-2">
           {fullAddress}
         </p>
       </div>
@@ -109,21 +109,21 @@ export const AddressCard = ({ address, onEdit, onDelete }) => {
         style={{ maxWidth: '400px' }}
       >
         <div className="text-center py-4">
-          <p className="font-[Nunito-regular] text-[15px] text-gray-600 mb-8">
-            Are you sure you want to delete <span className="font-[Nunito-bold] text-[var(--core-primary)]">&quot;{label || "this address"}&quot;</span>? This action cannot be undone.
+          <p className="font-[var(--font-regular)] text-[15px] text-gray-600 mb-8">
+            Are you sure you want to delete <span className="font-[var(--font-bold)] text-[var(--core-primary)]">&quot;{label || "this address"}&quot;</span>? This action cannot be undone.
           </p>
           <div className="flex gap-4">
             <button
               onClick={() => setShowConfirm(false)}
               disabled={isDeleting}
-              className="flex-1 h-[48px] text-[14px] font-[Nunito-bold] border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors uppercase tracking-widest"
+              className="flex-1 h-[48px] text-[14px] font-[var(--font-bold)] border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors uppercase tracking-widest"
             >
               Cancel
             </button>
             <button
               onClick={handleDelete}
               disabled={isDeleting}
-              className="flex-1 h-[48px] text-[14px] font-[Nunito-bold] bg-red-600 text-white hover:bg-red-700 transition-colors flex items-center justify-center gap-2 uppercase tracking-widest shadow-lg shadow-red-100"
+              className="flex-1 h-[48px] text-[14px] font-[var(--font-bold)] bg-red-600 text-white hover:bg-red-700 transition-colors flex items-center justify-center gap-2 uppercase tracking-widest shadow-lg shadow-red-100"
             >
               {isDeleting ? <Spinner size="sm" color="white" /> : "Delete"}
             </button>

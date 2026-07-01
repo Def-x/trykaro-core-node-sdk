@@ -38,7 +38,7 @@ const CustomizationModal = ({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
-        <h2 className="text-xl font-[Nunito-bold] text-[var(--main)] mb-4">
+        <h2 className="text-xl font-[var(--font-bold)] text-[var(--main)] mb-4">
           {isEditMode ? "Edit" : "Customize"} {product?.name}
         </h2>
 
@@ -46,7 +46,7 @@ const CustomizationModal = ({
         <div className="space-y-4 mb-6 max-h-[400px] overflow-y-auto">
           {customizationsList.map((customization) => (
             <div key={customization.id}>
-              <label className="block text-sm font-[Nunito-medium] text-[var(--main)] mb-2">
+              <label className="block text-sm font-[var(--font-medium)] text-[var(--main)] mb-2">
                 {customization.name}
               </label>
               {customization.customization_type === "select" ? (
@@ -81,7 +81,7 @@ const CustomizationModal = ({
 
         {/* Quantity */}
         <div className="mb-6">
-          <label className="block text-sm font-[Nunito-medium] text-[var(--main)] mb-2">
+          <label className="block text-sm font-[var(--font-medium)] text-[var(--main)] mb-2">
             Quantity
           </label>
           <div className="flex items-center border border-[#e8e5df] rounded-md w-fit">
@@ -110,14 +110,14 @@ const CustomizationModal = ({
           <button
             onClick={onClose}
             disabled={isAddToCartLoading}
-            className="flex-1 px-4 py-2 border border-[#e8e5df] rounded-md text-sm font-[Nunito-medium] hover:bg-gray-50 disabled:opacity-50"
+            className="flex-1 px-4 py-2 border border-[#e8e5df] rounded-md text-sm font-[var(--font-medium)] hover:bg-gray-50 disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             onClick={handleConfirm}
             disabled={isAddToCartLoading}
-            className="flex-1 px-4 py-2 bg-[var(--core-primary)] text-white rounded-md text-sm font-[Nunito-medium] hover:bg-[var(--core-primary)] disabled:opacity-50"
+            className="flex-1 px-4 py-2 bg-[var(--core-primary)] text-white rounded-md text-sm font-[var(--font-medium)] hover:bg-[var(--core-primary)] disabled:opacity-50"
           >
             {isAddToCartLoading
               ? "Loading..."
