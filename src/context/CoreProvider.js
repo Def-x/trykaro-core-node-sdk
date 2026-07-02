@@ -105,24 +105,37 @@ export const CoreProvider = ({
   auth: injectedAuth = null,
   orgData,
 }) => {
-  // ── Theme colors ────────────────────────────────────────────────────────────
-  const isRegionBased = config?.isRegion === true;
-  const resolvedRegion = isRegionBased
-    ? (config?.activeRegion ?? config?.region ?? null)
-    : null;
-  const resolvedRegionId = isRegionBased
-    ? (config?.regionId ?? resolvedRegion?.id ?? null)
-    : null;
+  // ── Region resolution ────────────────────────────────────────────────────
+  // Read activeRegion directly from config without gating on isRegion flag,
+  // because the flag can be falsy during the first render while the context
+  // prop hasn't propagated yet (timing issue with async region detection).
+  const isRegionBased = !!(config?.isRegion || config?.activeRegion || config?.region);
+  const resolvedRegion = config?.activeRegion ?? config?.region ?? null;
+  const resolvedRegionId = config?.regionId ?? resolvedRegion?.id ?? null;
+  const resolvedCurrency =
+    resolvedRegion?.currency ?? config?.currency ?? "INR";
+  const resolvedLocale =
+    resolvedRegion?.locale ?? config?.locale ?? "en-IN";
   const resolvedConfig = useMemo(
     () => ({
       ...config,
       isRegion: isRegionBased,
+      currency: resolvedCurrency,
+      locale: resolvedLocale,
       region: resolvedRegion,
       activeRegion: resolvedRegion,
       regionId: resolvedRegionId,
     }),
-    [config, isRegionBased, resolvedRegion, resolvedRegionId],
+    [
+      config,
+      isRegionBased,
+      resolvedCurrency,
+      resolvedLocale,
+      resolvedRegion,
+      resolvedRegionId,
+    ],
   );
+
   const primaryColor = resolvedConfig?.primaryColor ?? "#00214c";
   const secondaryColor = resolvedConfig?.secondaryColor ?? "#c8a95a";
   const [cart, setCart] = useState();
@@ -268,12 +281,13 @@ export const CoreProvider = ({
       cart,
       setCart,
       isCartLoading,
-      region,
+      region: resolvedRegion,   // use the resolved region, not the stale local state
       setRegion,
+      activeRegion: resolvedRegion,  // top-level convenience field
       actions: resolvedActions,
       toast,
       auth,
-      resolvedConfig,
+      config: resolvedConfig,   // consumers call useCore().config — key must be "config"
       orgData,
       primaryColor,
       secondaryColor,
@@ -282,18 +296,17 @@ export const CoreProvider = ({
     [
       cart,
       isCartLoading,
-      region,
+      resolvedRegion,   // was wrong: was "region" (stale local state) and "config" (raw prop)
+      resolvedConfig,   // was wrong: was raw "config" prop
       resolvedActions,
       toast,
       auth,
-      config,
       orgData,
       primaryColor,
       secondaryColor,
     ],
   );
 
-  console.log({ auth, config: resolvedConfig });
   return (
     <CoreContext.Provider value={value}>
       <div

@@ -26,7 +26,6 @@ import {
   trackMetaAddPaymentInfo,
 } from "../../lib/metaPixel";
 
-
 // ─── Top-level Checkout ────────────────────────────────────────────────────────
 const Checkout = ({ hasDeletedItems }) => {
   const { auth, config } = useCore();
@@ -80,20 +79,79 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
   const { cart, setCart, actions, config, auth, orgData, primaryColor, toast } =
     useCore();
 
-  // Read StripeCheckout from the gateway registry.
-  const StripeCheckout = getPaymentGateway("stripe");
+  // ── Payment gateway detection ───────────────────────────────────────────
+  // Region-based: activeRegion.payment_gateway + activeRegion.payment_config
+  // Fallback: orgData.organization_setting.payment
+  const activeRegion = config?.activeRegion ?? config?.region ?? null;
 
-  // ── Payment gateway config derived from orgData ──────────────────────
-  const paymentConfig = orgData?.organization_setting?.payment ?? {};
-  const paymentMode = paymentConfig?.mode ?? "razorpay";
-  const razorpayKeyId = paymentConfig?.razor_pay_key_id ?? "";
-  const stripePublishableKey = paymentConfig?.stripe_publishable_key ?? "";
+  const orgPaymentConfig = orgData?.organization_setting?.payment ?? {};
+  // Region payment_config holds: stripe_publishable_key, razor_pay_key_id, etc.
+  const regionPaymentConfig = activeRegion?.payment_config ?? null;
+  const paymentConfig = regionPaymentConfig ?? orgPaymentConfig;
+
+  // payment_gateway is a top-level field on the region object (not inside payment_config)
+  const rawPaymentGateway =
+    activeRegion?.payment_gateway || // ← primary: region.payment_gateway
+    orgPaymentConfig?.mode ||
+    orgPaymentConfig?.gateway ||
+    "";
+
+  const paymentGateway = String(rawPaymentGateway || "razorpay").toLowerCase();
+  const isStripeGateway = paymentGateway === "stripe";
+
+  // Credentials from region's payment_config, fallback to org
+  const stripePublishableKey =
+    paymentConfig?.stripe_publishable_key ??
+    orgPaymentConfig?.stripe_publishable_key ??
+    "";
+  const razorpayKeyId =
+    paymentConfig?.razor_pay_key_id ?? orgPaymentConfig?.razor_pay_key_id ?? "";
+  const paymentGatewayLabel = paymentGateway
+    ? paymentGateway.charAt(0).toUpperCase() +
+      paymentGateway.slice(1).replace(/_/g, " ")
+    : "Razorpay";
+
+  // Load Stripe eagerly at mount so it's ready when the user clicks Checkout.
+  // Must wrap in () => to prevent React treating the component fn as a state updater.
+  const [StripeCheckout, setStripeCheckout] = useState(() =>
+    getPaymentGateway("stripe"),
+  );
 
   const [showStripeForm, setShowStripeForm] = useState(false);
   const [addresses, setAddresses] = useState([]);
   const [isAddressLoading, setIsAddressLoading] = useState(true);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+
+  // Load Stripe module if not already in registry.
+  // Runs eagerly at mount so the form is ready the instant the user clicks Checkout.
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadStripeGateway = async () => {
+      try {
+        await import("../../stripe");
+        if (isMounted) {
+          setStripeCheckout(() => getPaymentGateway("stripe"));
+        }
+      } catch (error) {
+        console.error("[Checkout] Failed to load Stripe gateway:", error);
+      }
+    };
+
+    // If already cached in registry, grab it immediately
+    const cached = getPaymentGateway("stripe");
+    if (cached) {
+      setStripeCheckout(() => cached);
+    } else {
+      loadStripeGateway();
+    }
+
+    return () => {
+      isMounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const isCartHaveBillingAddress = !!cart?.billing_address;
   const isCarthaveShippingAddress = !!cart?.shipping_address;
@@ -339,7 +397,7 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
   const onPlaceOrder = async () => {
     if (hasDeletedItems || !cart?.id) return;
 
-    if (paymentMode === "stripe") {
+    if (isStripeGateway) {
       setShowStripeForm(true);
       return;
     }
@@ -377,7 +435,7 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
         trackAddPaymentInfo({
           userId,
           cart,
-          paymentType: "Razorpay",
+          paymentType: paymentGatewayLabel,
           currency,
           metaOverrides: { source: "checkout" },
         });
@@ -453,12 +511,13 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
           All transactions are secure and encrypted.
         </p>
         <div className="mt-[16px]">
-          {paymentMode === "stripe" ? (
+          {isStripeGateway ? (
             <>
               <AddressCard
-                addressType="Pay with Stripe"
+                addressType={`Pay with ${paymentGatewayLabel}`}
                 address="Enter your card details securely via Stripe to complete your payment."
                 type="stripe"
+                paymentLabel={paymentGatewayLabel}
               />
               {showStripeForm && stripePublishableKey && StripeCheckout && (
                 <div className="mt-4">
@@ -468,12 +527,31 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
                     createStripePaymentIntent={
                       actions?.createStripePaymentIntent
                     }
-                    onSuccess={() => {
+                    amount={cart?.display_total ?? ""}
+                    currency={config?.currency ?? "INR"}
+                    onSuccess={async () => {
                       if (typeof window !== "undefined") {
                         localStorage.removeItem("cartid");
                       }
                       setCart(null);
-                      router.push("/account/orders");
+                      // Fetch the latest order to get its ID and redirect
+                      // to the order detail page — same as Razorpay flow.
+                      try {
+                        const orders = await actions?.getOrders?.();
+                        const latestOrder = Array.isArray(orders)
+                          ? orders[0]
+                          : orders;
+                        console.log({ latestOrder, orders });
+                        const orderId =
+                          latestOrder?.id ?? latestOrder?.order_id;
+                        if (orderId) {
+                          router.push(`/order/${orderId}?show=true`);
+                        } else {
+                          router.push("/account/orders");
+                        }
+                      } catch {
+                        router.push("/account/orders");
+                      }
                     }}
                   />
                 </div>
@@ -490,16 +568,17 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
             </>
           ) : (
             <AddressCard
-              addressType="Pay with Razorpay"
-              address="Once you click Checkout, you'll be redirected to a secure Razorpay payment window to complete your payment."
+              addressType={`Pay with ${paymentGatewayLabel}`}
+              address={`Once you click Checkout, you'll be redirected to a secure ${paymentGatewayLabel} payment window to complete your payment.`}
               type="stripe"
+              paymentLabel={paymentGatewayLabel}
             />
           )}
         </div>
       </div>
 
       {/* ── CHECKOUT BUTTON ── */}
-      {!(paymentMode === "stripe" && showStripeForm) && (
+      {!(isStripeGateway && showStripeForm) && (
         <div className="mt-[32px]">
           <button
             onClick={onPlaceOrder}
@@ -514,7 +593,7 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
               ? "Processing…"
               : hasDeletedItems
                 ? "Remove Deleted Items to Checkout"
-                : paymentMode === "stripe"
+                : isStripeGateway
                   ? "Proceed to Card Payment"
                   : "Checkout"}
           </button>
@@ -578,8 +657,7 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
 
               <div className="space-y-2">
                 <p className="font-[var(--font-medium)] text-[#2d2d2d] text-base">
-                  We're finalizing your order with{" "}
-                  {paymentMode === "stripe" ? "Stripe" : "Razorpay"}.
+                  We're finalizing your order with {paymentGatewayLabel}.
                 </p>
                 <p className="font-[var(--font-regular)] text-[#8c92a4] text-sm leading-relaxed">
                   Please do not refresh the page or close this window. <br />

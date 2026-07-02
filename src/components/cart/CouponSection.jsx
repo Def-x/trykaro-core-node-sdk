@@ -273,7 +273,6 @@ const CouponSection = () => {
     );
   }
 
-  console.log({ availableDiscountsWithCode });
   // State 1 — Token exists (render applied discounts and accordion input)
   return (
     <div className="my-4">

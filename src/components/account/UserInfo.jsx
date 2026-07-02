@@ -11,7 +11,7 @@ import { EmptyState } from "../ui/EmptyState";
 
 /**
  * UserInfo Component
- * 
+ *
  * Displays the "MY PROFILE" section, including user details and a grid of addresses.
  */
 export const UserInfo = ({ user, isLoading, refetch }) => {
@@ -39,8 +39,6 @@ export const UserInfo = ({ user, isLoading, refetch }) => {
   }, [fetchAddresses]);
 
   const closeModal = () => setModalState({ type: null, data: null });
-
-  console.log({ addresses })
   if (isLoading) {
     return (
       <div className="flex justify-center py-20">
@@ -95,9 +93,13 @@ export const UserInfo = ({ user, isLoading, refetch }) => {
               </label>
               <p className="border-b border-gray-100 pb-2 text-[15px] font-[var(--font-medium)] text-[var(--core-primary)]">
                 {config?.authType === "own"
-                  ? (userData.phone || userData.mobile || userData.phone_number || "—")
-                  : (userData.email || userData.primaryEmailAddress?.emailAddress || "—")
-                }
+                  ? userData.phone ||
+                    userData.mobile ||
+                    userData.phone_number ||
+                    "—"
+                  : userData.email ||
+                    userData.primaryEmailAddress?.emailAddress ||
+                    "—"}
               </p>
             </div>
           </div>
@@ -128,7 +130,9 @@ export const UserInfo = ({ user, isLoading, refetch }) => {
               <AddressCard
                 key={addr.id}
                 address={addr}
-                onEdit={() => setModalState({ type: "edit_address", data: addr })}
+                onEdit={() =>
+                  setModalState({ type: "edit_address", data: addr })
+                }
                 onDelete={fetchAddresses}
               />
             ))}
@@ -140,7 +144,9 @@ export const UserInfo = ({ user, isLoading, refetch }) => {
             description="You haven't added any shipping or billing addresses yet. Add one to make your checkout faster."
             action={
               <button
-                onClick={() => setModalState({ type: "new_address", data: null })}
+                onClick={() =>
+                  setModalState({ type: "new_address", data: null })
+                }
                 className="mt-4 px-8 py-3 bg-[var(--core-primary)] text-white font-[var(--font-bold)] text-[13px] uppercase tracking-widest hover:opacity-90 transition-colors"
               >
                 Add Your First Address
@@ -156,22 +162,35 @@ export const UserInfo = ({ user, isLoading, refetch }) => {
         isOpen={!!modalState.type}
         onClose={closeModal}
         title={
-          modalState.type === "profile" ? "Edit Profile" :
-            modalState.type === "new_address" ? "Add New Address" : "Edit Address"
+          modalState.type === "profile"
+            ? "Edit Profile"
+            : modalState.type === "new_address"
+              ? "Add New Address"
+              : "Edit Address"
         }
       >
         {modalState.type === "profile" ? (
           <ProfileForm
             user={user}
-            onSuccess={() => { refetch(); closeModal(); }}
+            onSuccess={() => {
+              refetch();
+              closeModal();
+            }}
             onCancel={closeModal}
           />
         ) : (
           <AddressForm
             initialData={modalState.data}
-            onSuccess={() => { fetchAddresses(); closeModal(); }}
+            onSuccess={() => {
+              fetchAddresses();
+              closeModal();
+            }}
             onCancel={closeModal}
-            submitLabel={modalState.type === "new_address" ? "Add Address" : "Update Address"}
+            submitLabel={
+              modalState.type === "new_address"
+                ? "Add Address"
+                : "Update Address"
+            }
           />
         )}
       </Popup>

@@ -275,8 +275,9 @@ export const AddressCard = ({
   type,
   isSelected,
   onClick,
+  paymentLabel,
 }) => {
-  const isPayment = type === "stripe";
+  const isPayment = type === "stripe" || type === "payment";
   return (
     <div
       className={`w-full border-2 p-[16px] transition-all duration-200 rounded-lg ${
@@ -308,7 +309,7 @@ export const AddressCard = ({
             {/* Razorpay logo placeholder */}
             <div className="w-[60px] h-[30px] bg-[var(--secondaryBg)] border border-[var(--borders)] rounded flex items-center justify-center">
               <span className="text-[10px] font-[var(--font-bold)] text-[var(--main)]">
-                Razorpay
+                {paymentLabel ?? (type === "stripe" ? "Razorpay" : "Payment")}
               </span>
             </div>
           </div>
