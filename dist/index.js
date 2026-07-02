@@ -3596,18 +3596,20 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
               if (typeof window !== "undefined") {
                 localStorage.removeItem("cartid");
               }
-              setCart(null);
               try {
-                const orders = await actions?.getOrders?.();
-                const latestOrder = Array.isArray(orders) ? orders[0] : orders;
-                console.log({ latestOrder, orders });
-                const orderId = latestOrder?.id ?? latestOrder?.order_id;
+                const regionId = config?.regionId ?? null;
+                const updatedCart = await actions?.getCart?.(regionId);
+                const cartData = Array.isArray(updatedCart) ? updatedCart[0] : updatedCart;
+                console.log({ regionId, updatedCart, cartData });
+                const orderId = cartData?.order_id;
+                setCart(null);
                 if (orderId) {
-                  router.push(`/order/${orderId}?show=true`);
+                  router.push(`/account/orders/${orderId}`);
                 } else {
                   router.push("/account/orders");
                 }
               } catch {
+                setCart(null);
                 router.push("/account/orders");
               }
             }
