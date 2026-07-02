@@ -215,6 +215,12 @@ export const CoreProvider = ({
   useEffect(() => {
     if (!resolvedActions?.getCart) return;
 
+    // Prevent fetching cart before region detection is complete 
+    // if the storefront is configured to be region-based.
+    if (resolvedConfig?.isRegion && !resolvedConfig?.regionId) {
+      return;
+    }
+
     const loadCart = async () => {
       try {
         setIsCartLoading(true);

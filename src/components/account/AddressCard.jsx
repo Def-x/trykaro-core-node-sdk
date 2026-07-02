@@ -61,7 +61,7 @@ export const AddressCard = ({ address, onEdit, onDelete }) => {
           </h3>
           <div className="flex items-center gap-3">
             <button
-              className="flex items-center gap-1.5 font-[var(--font-medium)] text-[12px] text-[#2563EB] hover:text-[#1d4ed8] transition-colors uppercase tracking-widest"
+              className="flex items-center gap-1.5 font-[var(--font-medium)] text-[12px] text-[var(--core-primary)] hover:opacity-80 transition-colors uppercase tracking-widest"
               onClick={onEdit}
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

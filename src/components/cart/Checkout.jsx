@@ -342,7 +342,7 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
             // ─────────────────────────────────────────────────────────────
 
             setCart(null);
-            router.push(`/order/${order?.order_id}?show=true`);
+            router.push(`/account/orders/${order?.order_id}`);
           } else {
             // All 5 attempts failed — stop showing the processing screen
             setIsProcessingPayment(false);

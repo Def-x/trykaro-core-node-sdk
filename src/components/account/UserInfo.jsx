@@ -63,7 +63,7 @@ export const UserInfo = ({ user, isLoading, refetch }) => {
           </h2>
           <button
             onClick={() => setModalState({ type: "profile", data: user })}
-            className="text-[14px] font-[var(--font-medium)] text-[#2563EB] hover:underline uppercase tracking-widest transition-all"
+            className="text-[14px] font-[var(--font-medium)] text-[var(--core-primary)] hover:underline uppercase tracking-widest transition-all"
           >
             Edit
           </button>
@@ -114,7 +114,7 @@ export const UserInfo = ({ user, isLoading, refetch }) => {
           </h2>
           <button
             onClick={() => setModalState({ type: "new_address", data: null })}
-            className="text-[14px] font-[var(--font-medium)] text-[#2563EB] hover:underline uppercase tracking-widest transition-all"
+            className="text-[14px] font-[var(--font-medium)] text-[var(--core-primary)] hover:underline uppercase tracking-widest transition-all"
           >
             Add new address
           </button>

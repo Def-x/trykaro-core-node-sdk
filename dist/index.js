@@ -1,7 +1,7 @@
 import { getPaymentGateway } from './chunk-UP7U6KB6.js';
 import React8, { createContext, useMemo, useState, useEffect, useCallback, useContext, useRef } from 'react';
 import { jsx, jsxs, Fragment } from 'react/jsx-runtime';
-import { useRouter, useParams, useSearchParams } from 'next/navigation';
+import { useRouter, usePathname, useParams, useSearchParams } from 'next/navigation';
 import Cookies from 'js-cookie';
 import { flatten, map, compact, filter, uniqBy } from 'lodash';
 import Link from 'next/link';
@@ -577,6 +577,9 @@ var CoreProvider = ({
   }, [authType, injectedAuth, authState, setAuth, clearAuth]);
   useEffect(() => {
     if (!resolvedActions?.getCart) return;
+    if (resolvedConfig?.isRegion && !resolvedConfig?.regionId) {
+      return;
+    }
     const loadCart = async () => {
       try {
         setIsCartLoading(true);
@@ -3448,7 +3451,7 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
             });
             trackMetaPurchase(cart);
             setCart(null);
-            router.push(`/order/${order?.order_id}?show=true`);
+            router.push(`/account/orders/${order?.order_id}`);
           } else {
             setIsProcessingPayment(false);
             const msg = typeof lastError === "string" ? lastError : "Payment could not be updated. Please contact support.";
@@ -4362,7 +4365,7 @@ var AddressCard2 = ({ address, onEdit, onDelete }) => {
           /* @__PURE__ */ jsxs(
             "button",
             {
-              className: "flex items-center gap-1.5 font-[var(--font-medium)] text-[12px] text-[#2563EB] hover:text-[#1d4ed8] transition-colors uppercase tracking-widest",
+              className: "flex items-center gap-1.5 font-[var(--font-medium)] text-[12px] text-[var(--core-primary)] hover:opacity-80 transition-colors uppercase tracking-widest",
               onClick: onEdit,
               children: [
                 /* @__PURE__ */ jsx("svg", { className: "w-3.5 h-3.5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" }) }),
@@ -4576,7 +4579,7 @@ var UserInfo = ({ user, isLoading, refetch }) => {
           "button",
           {
             onClick: () => setModalState({ type: "profile", data: user }),
-            className: "text-[14px] font-[var(--font-medium)] text-[#2563EB] hover:underline uppercase tracking-widest transition-all",
+            className: "text-[14px] font-[var(--font-medium)] text-[var(--core-primary)] hover:underline uppercase tracking-widest transition-all",
             children: "Edit"
           }
         )
@@ -4603,7 +4606,7 @@ var UserInfo = ({ user, isLoading, refetch }) => {
           "button",
           {
             onClick: () => setModalState({ type: "new_address", data: null }),
-            className: "text-[14px] font-[var(--font-medium)] text-[#2563EB] hover:underline uppercase tracking-widest transition-all",
+            className: "text-[14px] font-[var(--font-medium)] text-[var(--core-primary)] hover:underline uppercase tracking-widest transition-all",
             children: "Add new address"
           }
         )
@@ -4851,6 +4854,438 @@ var AccountPage = ({ initialTab = "profile" }) => {
       }
     ) : /* @__PURE__ */ jsx(OrdersList, {}) })
   ] }) });
+};
+var IconBase = ({ children, className = "h-5 w-5", strokeWidth = 1.75, fill = "none", ...props }) => /* @__PURE__ */ jsx("svg", { viewBox: "0 0 24 24", fill, stroke: "currentColor", strokeWidth, strokeLinecap: "round", strokeLinejoin: "round", className, "aria-hidden": "true", ...props, children });
+var AccountMapPinIcon = (props) => /* @__PURE__ */ jsxs(IconBase, { ...props, children: [
+  /* @__PURE__ */ jsx("path", { d: "M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" }),
+  /* @__PURE__ */ jsx("circle", { cx: "12", cy: "10", r: "3" })
+] });
+var AccountShoppingBagIcon = (props) => /* @__PURE__ */ jsxs(IconBase, { ...props, children: [
+  /* @__PURE__ */ jsx("path", { d: "M6 8h12l-1 13H7L6 8Z" }),
+  /* @__PURE__ */ jsx("path", { d: "M9 8a3 3 0 0 1 6 0" })
+] });
+var AccountHeartIcon = ({ filled = false, ...props }) => /* @__PURE__ */ jsx(IconBase, { ...props, fill: filled ? "currentColor" : "none", children: /* @__PURE__ */ jsx("path", { d: "M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 1 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z" }) });
+var AccountLogOutIcon = (props) => /* @__PURE__ */ jsxs(IconBase, { ...props, children: [
+  /* @__PURE__ */ jsx("path", { d: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" }),
+  /* @__PURE__ */ jsx("path", { d: "M16 17l5-5-5-5" }),
+  /* @__PURE__ */ jsx("path", { d: "M21 12H9" })
+] });
+var AccountPlusIcon = (props) => /* @__PURE__ */ jsxs(IconBase, { ...props, children: [
+  /* @__PURE__ */ jsx("path", { d: "M12 5v14" }),
+  /* @__PURE__ */ jsx("path", { d: "M5 12h14" })
+] });
+var AccountPencilIcon = (props) => /* @__PURE__ */ jsxs(IconBase, { ...props, children: [
+  /* @__PURE__ */ jsx("path", { d: "M12 20h9" }),
+  /* @__PURE__ */ jsx("path", { d: "M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" })
+] });
+var AccountTrashIcon = (props) => /* @__PURE__ */ jsxs(IconBase, { ...props, children: [
+  /* @__PURE__ */ jsx("path", { d: "M3 6h18" }),
+  /* @__PURE__ */ jsx("path", { d: "M8 6V4h8v2" }),
+  /* @__PURE__ */ jsx("path", { d: "M19 6l-1 14H6L5 6" }),
+  /* @__PURE__ */ jsx("path", { d: "M10 11v6" }),
+  /* @__PURE__ */ jsx("path", { d: "M14 11v6" })
+] });
+var AccountPackageIcon = (props) => /* @__PURE__ */ jsxs(IconBase, { ...props, children: [
+  /* @__PURE__ */ jsx("path", { d: "M21 8l-9-5-9 5 9 5 9-5Z" }),
+  /* @__PURE__ */ jsx("path", { d: "M3 8v8l9 5 9-5V8" }),
+  /* @__PURE__ */ jsx("path", { d: "M12 13v8" })
+] });
+var AccountCalendarIcon = (props) => /* @__PURE__ */ jsxs(IconBase, { ...props, children: [
+  /* @__PURE__ */ jsx("rect", { x: "3", y: "4", width: "18", height: "18", rx: "2" }),
+  /* @__PURE__ */ jsx("path", { d: "M16 2v4" }),
+  /* @__PURE__ */ jsx("path", { d: "M8 2v4" }),
+  /* @__PURE__ */ jsx("path", { d: "M3 10h18" })
+] });
+var AccountTagIcon = (props) => /* @__PURE__ */ jsxs(IconBase, { ...props, children: [
+  /* @__PURE__ */ jsx("path", { d: "M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z" }),
+  /* @__PURE__ */ jsx("circle", { cx: "7.5", cy: "7.5", r: "1.5" })
+] });
+var AccountArrowLeftIcon = (props) => /* @__PURE__ */ jsxs(IconBase, { ...props, children: [
+  /* @__PURE__ */ jsx("path", { d: "M19 12H5" }),
+  /* @__PURE__ */ jsx("path", { d: "M12 19l-7-7 7-7" })
+] });
+var AccountCopyIcon = (props) => /* @__PURE__ */ jsxs(IconBase, { ...props, children: [
+  /* @__PURE__ */ jsx("rect", { x: "9", y: "9", width: "13", height: "13", rx: "2" }),
+  /* @__PURE__ */ jsx("rect", { x: "2", y: "2", width: "13", height: "13", rx: "2" })
+] });
+var AccountCheckIcon = (props) => /* @__PURE__ */ jsx(IconBase, { ...props, children: /* @__PURE__ */ jsx("path", { d: "M20 6 9 17l-5-5" }) });
+var DEFAULT_NAV_ITEMS = [
+  { label: "My Addresses", href: "/account/addresses", icon: AccountMapPinIcon },
+  { label: "My Orders", href: "/account/orders", icon: AccountShoppingBagIcon },
+  { label: "My Wishlist", href: "/account/wishlist", icon: AccountHeartIcon }
+];
+var getContactInfo = (user) => user?.phone || user?.mobile || user?.email || user?.email_address || user?.primaryPhoneNumber?.phoneNumber || user?.primaryEmailAddress?.emailAddress || "Guest User";
+var AccountSidebar = ({
+  navItems = DEFAULT_NAV_ITEMS,
+  user,
+  contactInfo,
+  onNavigate,
+  onLogout,
+  className = "",
+  showLogout = true,
+  logoutLabel = "Logout"
+}) => {
+  const pathname = usePathname();
+  const router = useRouter();
+  const coreLogout = useLogout();
+  const { auth } = useCore();
+  const resolvedContactInfo = contactInfo ?? getContactInfo(user ?? auth?.user);
+  const handleNavigate = (href) => {
+    if (onNavigate) {
+      onNavigate(href);
+      return;
+    }
+    router.push(href);
+  };
+  const handleLogout = () => {
+    if (onLogout) {
+      onLogout();
+      return;
+    }
+    coreLogout();
+  };
+  return /* @__PURE__ */ jsxs("aside", { className: `w-[220px] flex-shrink-0 border-r border-gray-100 bg-white max-md:w-full max-md:border-b max-md:border-r-0 ${className}`, children: [
+    /* @__PURE__ */ jsx("div", { className: "border-b border-gray-100 px-5 py-5 text-center", children: /* @__PURE__ */ jsx("p", { className: "truncate px-2 text-[13px] font-[var(--font-medium)] tracking-wide text-[#555555]", children: resolvedContactInfo }) }),
+    /* @__PURE__ */ jsxs("nav", { className: "flex flex-col py-2 max-md:flex-row max-md:overflow-x-auto max-md:py-0", children: [
+      navItems.map(({ label, href, icon: Icon = AccountMapPinIcon }) => {
+        const isActive = href === "/account" ? pathname === href : pathname.startsWith(href);
+        return /* @__PURE__ */ jsxs(
+          "button",
+          {
+            type: "button",
+            onClick: () => handleNavigate(href),
+            className: `flex items-center gap-3 border-l-[3px] px-5 py-[13px] text-left transition-colors max-md:min-w-max max-md:border-b-[3px] max-md:border-l-0 ${isActive ? "border-l-[var(--core-primary)] bg-[#EBF0FC] text-[#1C1C1C] max-md:border-b-[var(--core-primary)]" : "border-l-transparent text-[#555555] hover:bg-[#FAFAFA] max-md:border-b-transparent"}`,
+            children: [
+              /* @__PURE__ */ jsx(Icon, { className: `h-[18px] w-[18px] flex-shrink-0 ${isActive ? "text-[var(--core-primary)]" : "text-[#888888]"}` }),
+              /* @__PURE__ */ jsx("span", { className: `text-[14px] ${isActive ? "font-[var(--font-semibold)] text-[#1C1C1C]" : "font-[var(--font-medium)] text-[#555555]"}`, children: label })
+            ]
+          },
+          href
+        );
+      }),
+      showLogout && /* @__PURE__ */ jsxs(Fragment, { children: [
+        /* @__PURE__ */ jsx("div", { className: "mx-5 my-2 border-t border-gray-100 max-md:hidden" }),
+        /* @__PURE__ */ jsxs(
+          "button",
+          {
+            type: "button",
+            onClick: handleLogout,
+            className: "flex items-center gap-3 border-l-[3px] border-l-transparent px-5 py-[13px] text-left text-[#555555] transition-colors hover:bg-[#FAFAFA] max-md:ml-auto max-md:min-w-max max-md:border-l-0",
+            children: [
+              /* @__PURE__ */ jsx(AccountLogOutIcon, { className: "h-[18px] w-[18px] flex-shrink-0 text-[#888888]" }),
+              /* @__PURE__ */ jsx("span", { className: "text-[14px] font-[var(--font-medium)]", children: logoutLabel })
+            ]
+          }
+        )
+      ] })
+    ] })
+  ] });
+};
+var AccountLayout = ({
+  children,
+  sidebarProps,
+  className = "",
+  containerClassName = "",
+  panelClassName = "",
+  mainClassName = ""
+}) => {
+  return /* @__PURE__ */ jsx("div", { className: `min-h-screen bg-[#F0F0F0] ${className}`, children: /* @__PURE__ */ jsx("div", { className: `mx-auto max-w-[900px] px-4 py-8 ${containerClassName}`, children: /* @__PURE__ */ jsxs("div", { className: `flex min-h-[520px] overflow-hidden rounded-lg bg-white shadow-sm max-md:flex-col ${panelClassName}`, children: [
+    /* @__PURE__ */ jsx(AccountSidebar, { ...sidebarProps }),
+    /* @__PURE__ */ jsx("main", { className: `flex-1 p-8 max-md:p-5 ${mainClassName}`, children })
+  ] }) }) });
+};
+var normalizeAddresses = (payload) => payload?.data ?? payload?.addresses ?? (Array.isArray(payload) ? payload : []);
+var AccountAddressesPage = () => {
+  const { actions, toast } = useCore();
+  const [addresses, setAddresses] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [editingAddress, setEditingAddress] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  const fetchAddresses = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await actions?.getUserAddress?.();
+      setAddresses(normalizeAddresses(res));
+    } catch (error) {
+      console.error("Failed to fetch addresses", error);
+      toast?.error?.("Failed to fetch addresses");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [actions, toast]);
+  useEffect(() => {
+    fetchAddresses();
+  }, [fetchAddresses]);
+  const openAddModal = () => {
+    setEditingAddress(null);
+    setIsModalOpen(true);
+  };
+  const openEditModal = (address) => {
+    setEditingAddress(address);
+    setIsModalOpen(true);
+  };
+  const deleteAddress = async (addressId) => {
+    if (!addressId) return;
+    setDeletingId(addressId);
+    try {
+      await actions?.deleteAddress?.(addressId);
+      await fetchAddresses();
+      toast?.success?.("Address deleted successfully");
+    } catch (error) {
+      console.error("Failed to delete address", error);
+      toast?.error?.("Failed to delete address");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+  return /* @__PURE__ */ jsxs("div", { children: [
+    /* @__PURE__ */ jsx("h1", { className: "mb-4 text-[20px] font-[var(--font-bold)] text-[#1C1C1C]", children: "My addresses" }),
+    /* @__PURE__ */ jsxs("button", { onClick: openAddModal, className: "mb-5 flex items-center gap-1.5 text-[14px] font-[var(--font-semibold)] text-[var(--core-primary)] transition-opacity hover:opacity-80", children: [
+      /* @__PURE__ */ jsx(AccountPlusIcon, { className: "h-4 w-4", strokeWidth: 2.5 }),
+      "Add new address"
+    ] }),
+    /* @__PURE__ */ jsx("div", { className: "flex flex-col gap-3", children: isLoading ? /* @__PURE__ */ jsx("div", { className: "py-4 text-[14px] text-gray-500 animate-pulse", children: "Loading addresses..." }) : addresses.length === 0 ? /* @__PURE__ */ jsx("div", { className: "py-4 text-[14px] text-gray-500", children: "You have no saved addresses." }) : addresses.map((address) => /* @__PURE__ */ jsxs("div", { className: "flex items-start justify-between border-b border-gray-100 py-4 last:border-0", children: [
+      /* @__PURE__ */ jsxs("div", { className: "flex items-start gap-3", children: [
+        /* @__PURE__ */ jsx("div", { className: "mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-blue-50 text-[var(--core-primary)]", children: /* @__PURE__ */ jsx(AccountMapPinIcon, { className: "h-4 w-4" }) }),
+        /* @__PURE__ */ jsxs("div", { children: [
+          /* @__PURE__ */ jsx("p", { className: "text-[15px] font-[var(--font-bold)] leading-snug text-[#1C1C1C]", children: address.label || address.address_type || "Home" }),
+          /* @__PURE__ */ jsxs("p", { className: "mt-0.5 max-w-[480px] text-[13px] font-[var(--font-regular)] leading-relaxed text-[#888888]", children: [
+            address.firstname,
+            " ",
+            address.lastname,
+            /* @__PURE__ */ jsx("br", {}),
+            address.address1,
+            address.address2 ? `, ${address.address2}` : "",
+            /* @__PURE__ */ jsx("br", {}),
+            [address.city, address.state_name].filter(Boolean).join(", "),
+            address.zipcode ? ` - ${address.zipcode}` : ""
+          ] })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxs("div", { className: "mt-1 flex flex-shrink-0 items-center gap-2", children: [
+        /* @__PURE__ */ jsx("button", { type: "button", onClick: () => openEditModal(address), className: "flex items-center justify-center rounded-full p-1.5 text-[#888888] transition-colors hover:bg-gray-100 hover:text-[var(--core-primary)]", children: /* @__PURE__ */ jsx(AccountPencilIcon, { className: "h-4 w-4" }) }),
+        /* @__PURE__ */ jsx("button", { type: "button", disabled: deletingId === address.id, onClick: () => deleteAddress(address.id), className: "flex items-center justify-center rounded-full p-1.5 text-[#888888] transition-colors hover:bg-gray-100 hover:text-red-500 disabled:opacity-50", children: deletingId === address.id ? /* @__PURE__ */ jsx("div", { className: "h-4 w-4 animate-spin rounded-full border-2 border-red-500 border-t-transparent" }) : /* @__PURE__ */ jsx(AccountTrashIcon, { className: "h-4 w-4" }) })
+      ] })
+    ] }, address.id)) }),
+    /* @__PURE__ */ jsx(Popup, { isOpen: isModalOpen, onClose: () => setIsModalOpen(false), children: /* @__PURE__ */ jsx(
+      AddressForm,
+      {
+        initialData: editingAddress,
+        onCancel: () => setIsModalOpen(false),
+        onSuccess: () => {
+          setIsModalOpen(false);
+          fetchAddresses();
+        },
+        submitLabel: editingAddress?.id ? "Save Changes" : "Save Address"
+      }
+    ) })
+  ] });
+};
+var AccountOrdersPage = ({ initialOrders = [] }) => {
+  const router = useRouter();
+  const { formatCurrency } = useCurrencyFormat();
+  return /* @__PURE__ */ jsxs("div", { className: "animate-in fade-in duration-300", children: [
+    /* @__PURE__ */ jsxs("h1", { className: "mb-6 flex items-center gap-2 text-[20px] font-[var(--font-bold)] text-[#1C1C1C]", children: [
+      /* @__PURE__ */ jsx(AccountShoppingBagIcon, { className: "h-5 w-5 text-[var(--core-primary)]" }),
+      "My Orders"
+    ] }),
+    initialOrders.length === 0 ? /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center justify-center gap-4 rounded-xl border border-gray-100 bg-white py-16 shadow-sm", children: [
+      /* @__PURE__ */ jsx("div", { className: "flex h-16 w-16 items-center justify-center rounded-full bg-[#F5F5F5]", children: /* @__PURE__ */ jsx(AccountShoppingBagIcon, { className: "h-8 w-8 text-[#BBBBBB]", strokeWidth: 1.5 }) }),
+      /* @__PURE__ */ jsx("p", { className: "text-[15px] font-[var(--font-semibold)] text-[#1C1C1C]", children: "No orders yet!" }),
+      /* @__PURE__ */ jsx("p", { className: "max-w-[260px] text-center text-[13px] text-[#888888]", children: "Looks like you haven't placed any orders yet." }),
+      /* @__PURE__ */ jsx("button", { onClick: () => router.push("/"), className: "mt-2 rounded-lg bg-[var(--core-primary)] px-8 py-2.5 text-[13px] font-[var(--font-bold)] text-white transition-colors hover:opacity-90", children: "Start Shopping" })
+    ] }) : /* @__PURE__ */ jsx("div", { className: "flex flex-col gap-4", children: initialOrders.map((order) => {
+      const o = order.attributes || order;
+      const date = o.created_at ? new Date(o.created_at).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" }) : "Pending";
+      const total = formatCurrency(o?.cart?.display_total ?? o?.display_total ?? 0);
+      const status = o.order_status || o.status || "placed";
+      const lineItems = o.cart?.line_items || o.line_items || [];
+      return /* @__PURE__ */ jsxs("div", { onClick: () => router.push(`/account/orders/${o.number || o.id}`), className: "group flex cursor-pointer flex-col justify-between gap-4 rounded-xl border border-gray-100 bg-white p-5 shadow-sm transition hover:border-[var(--core-primary)] hover:shadow-md md:flex-row md:items-center", children: [
+        /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-2", children: [
+          /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3", children: [
+            /* @__PURE__ */ jsxs("span", { className: "text-[15px] font-[var(--font-bold)] text-gray-900", children: [
+              "Order #",
+              o.number || o.order_number || o.id
+            ] }),
+            /* @__PURE__ */ jsx("span", { className: "rounded bg-blue-50 px-2 py-0.5 text-[11px] font-[var(--font-bold)] uppercase text-[var(--core-primary)]", children: status })
+          ] }),
+          /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-4 text-[13px] font-[var(--font-medium)] text-gray-500", children: [
+            /* @__PURE__ */ jsxs("span", { className: "flex items-center gap-1.5", children: [
+              /* @__PURE__ */ jsx(AccountCalendarIcon, { className: "h-3.5 w-3.5" }),
+              " ",
+              date
+            ] }),
+            /* @__PURE__ */ jsxs("span", { className: "flex items-center gap-1.5", children: [
+              /* @__PURE__ */ jsx(AccountTagIcon, { className: "h-3.5 w-3.5" }),
+              " ",
+              total
+            ] })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "mt-2 flex w-full items-center justify-between gap-6 md:mt-0 md:w-auto md:justify-end", children: [
+          /* @__PURE__ */ jsxs("div", { className: "flex -space-x-3", children: [
+            lineItems.slice(0, 3).map((item, index) => /* @__PURE__ */ jsx("div", { className: "relative z-[1] flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-gray-200 bg-white p-1", children: /* @__PURE__ */ jsx("img", { src: item.image || "/NoProductImage.png", alt: item.name || "item", className: "h-full w-full object-contain" }) }, item.id || index)),
+            lineItems.length > 3 && /* @__PURE__ */ jsxs("div", { className: "relative z-0 flex h-10 w-10 items-center justify-center rounded-full border border-white bg-gray-100 text-[10px] font-bold text-gray-600", children: [
+              "+",
+              lineItems.length - 3
+            ] }),
+            lineItems.length === 0 && /* @__PURE__ */ jsx("div", { className: "relative z-[1] flex h-10 w-10 items-center justify-center rounded-full border border-white bg-[#F0F4FF]", children: /* @__PURE__ */ jsx(AccountPackageIcon, { className: "h-5 w-5 text-[var(--core-primary)]" }) })
+          ] }),
+          /* @__PURE__ */ jsx("span", { className: "text-[13px] font-[var(--font-bold)] text-[var(--core-primary)] group-hover:underline", children: "View Details >" })
+        ] })
+      ] }, o.id || o.number);
+    }) })
+  ] });
+};
+var AccountOrderDetailContent = ({ order, id }) => {
+  const { formatCurrency } = useCurrencyFormat();
+  const { config } = useCore();
+  const [copied, setCopied] = useState(false);
+  if (!order) return null;
+  const o = order.cart || order;
+  const date = new Date(order.created_at || o.created_at || Date.now()).toLocaleDateString("en-US", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+  const status = order.order_status || order.payment_state || order.state || "placed";
+  const shippingAddress = order.shipping_address || o.shipping_address || {};
+  const lineItems = o.line_items || [];
+  const orderNumber = order.order_number || o.number || o.order_id || id;
+  const handleCopy = () => {
+    navigator.clipboard?.writeText(orderNumber);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2e3);
+  };
+  return /* @__PURE__ */ jsxs("div", { className: "animate-in fade-in w-full pb-6 duration-300", children: [
+    /* @__PURE__ */ jsxs("div", { className: "sticky top-0 z-10 mb-2 flex items-center gap-3 border-b border-gray-50/50 bg-white/95 py-2.5 backdrop-blur-md", children: [
+      /* @__PURE__ */ jsx(Link, { href: "/account/orders", className: "ml-[-4px] rounded-full p-1.5 transition hover:bg-gray-100", children: /* @__PURE__ */ jsx(AccountArrowLeftIcon, { className: "h-5 w-5 text-[#1C1C1C]" }) }),
+      /* @__PURE__ */ jsx("h1", { className: "text-[17px] font-[var(--font-bold)] text-[#1C1C1C]", children: "Order Details" })
+    ] }),
+    /* @__PURE__ */ jsxs("div", { className: "mb-2 flex flex-col gap-0.5 rounded-xl border border-gray-100 bg-white p-3 shadow-sm", children: [
+      /* @__PURE__ */ jsxs("div", { className: "flex items-start justify-between", children: [
+        /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-0.5", children: [
+          /* @__PURE__ */ jsx("span", { className: "text-[14px] font-[var(--font-bold)] text-black", children: status === "placed" ? "Order Placed" : status.charAt(0).toUpperCase() + status.slice(1) }),
+          /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
+            /* @__PURE__ */ jsxs("span", { className: "text-[11.5px] font-[var(--font-medium)] text-[#666666]", children: [
+              "Order ID: ",
+              orderNumber
+            ] }),
+            /* @__PURE__ */ jsxs("button", { onClick: handleCopy, className: "group relative rounded p-1 transition-colors hover:bg-gray-50", title: "Copy Order ID", children: [
+              copied ? /* @__PURE__ */ jsx(AccountCheckIcon, { className: "h-3 w-3 text-green-600" }) : /* @__PURE__ */ jsx(AccountCopyIcon, { className: "h-3 w-3 text-[#BBBBBB] group-hover:text-[var(--core-primary)]" }),
+              copied && /* @__PURE__ */ jsx("span", { className: "absolute -top-7 left-1/2 -translate-x-1/2 rounded bg-gray-800 px-2 py-1 text-[10px] text-white shadow-lg", children: "Copied!" })
+            ] })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsx("span", { className: "rounded-full bg-[#E8F5E9] px-2 py-0.5 text-[10px] font-[var(--font-bold)] uppercase tracking-tight text-[#2E7D32]", children: status })
+      ] }),
+      /* @__PURE__ */ jsxs("div", { className: "mt-1 flex items-center gap-1.5 text-[11px] font-[var(--font-medium)] text-[#888888]", children: [
+        /* @__PURE__ */ jsx(AccountCalendarIcon, { className: "h-3 w-3" }),
+        " Placed on ",
+        date
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxs("div", { className: "mb-2 overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm", children: [
+      /* @__PURE__ */ jsx("div", { className: "border-b border-gray-50 bg-gray-50/50 px-3 py-2", children: /* @__PURE__ */ jsxs("h2", { className: "flex items-center gap-2 text-[12px] font-[var(--font-bold)] text-[#1C1C1C]", children: [
+        /* @__PURE__ */ jsx(AccountPackageIcon, { className: "h-3.5 w-3.5 text-[var(--core-primary)]" }),
+        lineItems.length,
+        " ",
+        lineItems.length === 1 ? "Item" : "Items"
+      ] }) }),
+      /* @__PURE__ */ jsx("div", { className: "flex flex-col", children: lineItems.map((item, index) => {
+        const unitValue = item.line_itemable?.selling_quantity?.values?.[0]?.label;
+        const amount = item.display_price ?? item.line_itemable?.display_price ?? (item.line_itemable?.price || 0) / 100;
+        return /* @__PURE__ */ jsxs("div", { className: "flex gap-3 border-b border-gray-50 p-3 transition last:border-0 hover:bg-gray-50", children: [
+          /* @__PURE__ */ jsx("div", { className: "h-14 w-14 shrink-0 rounded-lg border border-gray-50 bg-[#F8F8F8] p-1", children: /* @__PURE__ */ jsx("img", { src: item.image || "/NoProductImage.png", alt: item.name || item.line_itemable?.name || "item", className: "h-full w-full object-contain" }) }),
+          /* @__PURE__ */ jsxs("div", { className: "flex flex-1 flex-col justify-center gap-0.5", children: [
+            /* @__PURE__ */ jsx("h3", { className: "line-clamp-1 text-[13px] font-[var(--font-semibold)] leading-snug text-[#1C1C1C]", children: item.name || item.line_itemable?.name }),
+            /* @__PURE__ */ jsxs("div", { className: "flex w-full items-center justify-between", children: [
+              /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
+                unitValue && /* @__PURE__ */ jsx("span", { className: "text-[11px] font-[var(--font-medium)] text-[#888888]", children: unitValue }),
+                /* @__PURE__ */ jsxs("span", { className: "text-[11px] font-[var(--font-medium)] text-[#888888]", children: [
+                  "x ",
+                  item.quantity || 1
+                ] })
+              ] }),
+              /* @__PURE__ */ jsx("span", { className: "text-[13px] font-[var(--font-bold)] text-[#1C1C1C]", children: formatCurrency(amount) })
+            ] })
+          ] })
+        ] }, item.id || index);
+      }) })
+    ] }),
+    /* @__PURE__ */ jsxs("div", { className: "mb-2 rounded-xl border border-gray-100 bg-white p-3 shadow-sm", children: [
+      /* @__PURE__ */ jsx("h2", { className: "mb-2.5 text-[13px] font-[var(--font-bold)] text-[#1C1C1C]", children: "Bill Details" }),
+      /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-2", children: [
+        /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-[12.5px] font-[var(--font-medium)] text-[#555555]", children: [
+          /* @__PURE__ */ jsx("span", { children: "Item Total" }),
+          /* @__PURE__ */ jsx("span", { children: formatCurrency(o.display_item_total ?? (o.item_total || 0) / 100) })
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-[12.5px] font-[var(--font-medium)] text-[#555555]", children: [
+          /* @__PURE__ */ jsx("span", { children: "Delivery Charge" }),
+          /* @__PURE__ */ jsx("span", { children: formatCurrency(o.display_ship_total ?? (o.ship_total || 0) / 100) })
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-[12.5px] font-[var(--font-medium)] text-[#555555]", children: [
+          /* @__PURE__ */ jsx("span", { children: "Taxes" }),
+          /* @__PURE__ */ jsx("span", { children: formatCurrency(o.display_tax_total ?? (o.tax_total || 0) / 100) })
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "mt-0.5 flex items-center justify-between border-t border-dashed border-gray-100 pt-2", children: [
+          /* @__PURE__ */ jsx("span", { className: "text-[14px] font-[var(--font-bold)] text-black", children: "Grand Total" }),
+          /* @__PURE__ */ jsx("span", { className: "text-[14px] font-[var(--font-bold)] text-black", children: formatCurrency(o.display_total ?? (o.total || 0) / 100) })
+        ] })
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxs("div", { className: "mb-10 rounded-xl border border-gray-100 bg-white p-3 shadow-sm", children: [
+      /* @__PURE__ */ jsx("h2", { className: "mb-3 text-[13px] font-[var(--font-bold)] text-[#1C1C1C]", children: "Order Details" }),
+      /* @__PURE__ */ jsxs("div", { className: "flex gap-3", children: [
+        /* @__PURE__ */ jsx("div", { className: "flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#F5F7FA]", children: /* @__PURE__ */ jsx(AccountMapPinIcon, { className: "h-3.5 w-3.5 text-[#888888]" }) }),
+        /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-0.5", children: [
+          /* @__PURE__ */ jsx("span", { className: "text-[11px] font-[var(--font-bold)] uppercase tracking-wide text-[#888888]", children: "Delivery Address" }),
+          /* @__PURE__ */ jsxs("div", { className: "text-[12.5px] font-[var(--font-medium)] leading-relaxed text-[#444444]", children: [
+            (shippingAddress.firstname || order.user?.first_name) && /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-bold)] text-[#1C1C1C]", children: [
+              shippingAddress.firstname || order.user?.first_name,
+              " ",
+              shippingAddress.lastname || order.user?.last_name
+            ] }),
+            /* @__PURE__ */ jsxs("p", { children: [
+              shippingAddress.address1,
+              shippingAddress.address2 ? `, ${shippingAddress.address2}` : ""
+            ] }),
+            /* @__PURE__ */ jsxs("p", { children: [
+              shippingAddress.city,
+              shippingAddress.zipcode ? ` - ${shippingAddress.zipcode}` : ""
+            ] })
+          ] })
+        ] })
+      ] })
+    ] })
+  ] });
+};
+var AccountWishlistPage = ({ products = [], isLoading = false, renderProduct }) => {
+  const router = useRouter();
+  if (isLoading) {
+    return /* @__PURE__ */ jsxs("div", { className: "flex min-h-[400px] flex-col items-center justify-center py-20", children: [
+      /* @__PURE__ */ jsx("div", { className: "h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-green-600" }),
+      /* @__PURE__ */ jsx("p", { className: "mt-4 font-[var(--font-medium)] text-gray-500", children: "Loading your wishlist..." })
+    ] });
+  }
+  return /* @__PURE__ */ jsxs("div", { className: "flex w-full flex-col animate-in fade-in duration-300", children: [
+    /* @__PURE__ */ jsxs("h1", { className: "mb-6 flex items-center gap-2 text-[20px] font-[var(--font-bold)] text-[#1C1C1C]", children: [
+      /* @__PURE__ */ jsx(AccountHeartIcon, { filled: true, className: "h-5 w-5 text-red-500" }),
+      "My Wishlist"
+    ] }),
+    products.length === 0 ? /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center justify-center rounded-xl border border-gray-100 bg-white p-12 text-center shadow-sm", children: [
+      /* @__PURE__ */ jsx("div", { className: "mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-50", children: /* @__PURE__ */ jsx(AccountHeartIcon, { className: "h-8 w-8 text-red-300", strokeWidth: 2 }) }),
+      /* @__PURE__ */ jsx("h2", { className: "mb-2 text-[18px] font-[var(--font-bold)] text-gray-800", children: "Your wishlist is empty" }),
+      /* @__PURE__ */ jsx("p", { className: "mb-6 text-[14px] font-[var(--font-medium)] text-gray-500", children: "Save items you love and buy them later." }),
+      /* @__PURE__ */ jsx("button", { onClick: () => router.push("/"), className: "rounded-lg bg-[var(--core-primary)] px-6 py-2.5 font-[var(--font-bold)] text-white shadow-sm transition hover:opacity-90", children: "Start Shopping" })
+    ] }) : /* @__PURE__ */ jsx("div", { className: "grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-5", children: products.map((product, index) => renderProduct ? renderProduct(product, index) : /* @__PURE__ */ jsxs("button", { onClick: () => router.push(`/product/${product.id}`), className: "overflow-hidden rounded-lg border border-gray-100 bg-white text-left shadow-sm transition hover:shadow-md", children: [
+      /* @__PURE__ */ jsx("img", { src: product.image || product.product_image_url || "/NoProductImage.png", alt: product.name || "Product", className: "h-40 w-full object-cover" }),
+      /* @__PURE__ */ jsx("div", { className: "p-3", children: /* @__PURE__ */ jsx("p", { className: "line-clamp-2 text-[13px] font-[var(--font-semibold)] text-[#1C1C1C]", children: product.name || "Product" }) })
+    ] }, product.id ?? index)) })
+  ] });
 };
 var DownloadIcon = () => /* @__PURE__ */ jsxs("svg", { width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: [
   /* @__PURE__ */ jsx("path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" }),
@@ -5191,6 +5626,6 @@ var Hello = () => {
   return /* @__PURE__ */ jsx("div", { children: isCartLoading ? "Loading..." : "Core Working \u2705" });
 };
 
-export { AccountPage, AddressCard2 as AddressCard, AddressForm, AuthManager, CartItem, CartPage, CartSummary, CoreProvider, CouponSection_default as CouponSection, CustomOTPAuth, EmptyState, Hello, Order, OrdersList, Popup, ProfileForm, Spinner, UserInfo, ViewCart, buildItem, buildMeta, clearEcommerce, initGtmConfig, initMetaPixelConfig, pushToDataLayer, trackAddPaymentInfo, trackAddShippingInfo, trackAddToCart, trackApplyCoupon, trackBeginCheckout, trackCustomEvent, trackMetaAddPaymentInfo, trackMetaAddToCart, trackMetaCompleteRegistration, trackMetaInitiateCheckout, trackMetaLead, trackMetaPageView, trackMetaPurchase, trackMetaSearch, trackMetaViewContent, trackPageView, trackPaymentFailed, trackPurchase, trackSearch, trackViewItem, useAddToCart, useAuth, useCart, userCartInfo_default as useCartInfo, useCore, useCurrencyFormat, useLogout, useVariantSelection };
+export { AccountAddressesPage, AccountLayout, AccountOrderDetailContent, AccountOrdersPage, AccountPage, AccountSidebar, AccountWishlistPage, AddressCard2 as AddressCard, AddressForm, AuthManager, CartItem, CartPage, CartSummary, CoreProvider, CouponSection_default as CouponSection, CustomOTPAuth, DEFAULT_NAV_ITEMS as DEFAULT_ACCOUNT_NAV_ITEMS, EmptyState, Hello, Order, OrdersList, Popup, ProfileForm, Spinner, UserInfo, ViewCart, buildItem, buildMeta, clearEcommerce, initGtmConfig, initMetaPixelConfig, pushToDataLayer, trackAddPaymentInfo, trackAddShippingInfo, trackAddToCart, trackApplyCoupon, trackBeginCheckout, trackCustomEvent, trackMetaAddPaymentInfo, trackMetaAddToCart, trackMetaCompleteRegistration, trackMetaInitiateCheckout, trackMetaLead, trackMetaPageView, trackMetaPurchase, trackMetaSearch, trackMetaViewContent, trackPageView, trackPaymentFailed, trackPurchase, trackSearch, trackViewItem, useAddToCart, useAuth, useCart, userCartInfo_default as useCartInfo, useCore, useCurrencyFormat, useLogout, useVariantSelection };
 //# sourceMappingURL=index.js.map
 //# sourceMappingURL=index.js.map
