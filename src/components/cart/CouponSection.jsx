@@ -263,7 +263,7 @@ const CouponSection = () => {
         <div className="w-full flex items-center justify-between border-t border-b border-[var(--borders)] px-1 py-3">
           <span className="font-[var(--font-medium)] text-[14px] text-[var(--secondary)]">
             🏷 Have a coupon code?{" "}
-            <span className="text-[#FF6500] text-[12px] font-[var(--font-regular)]">
+            <span className="text-[var(--core-primary)] text-[12px] font-[var(--font-regular)]">
               Sign in to apply
             </span>
           </span>
@@ -357,7 +357,8 @@ const CouponSection = () => {
                 <button
                   onClick={handleApply}
                   disabled={isApplying || !inputValue.trim()}
-                  className="bg-[#FF6500] text-white text-[12px] font-[var(--font-bold)] px-4 py-2 rounded-lg border-none cursor-pointer tracking-wide disabled:opacity-60 shrink-0"
+                  className="text-white text-[12px] font-[var(--font-bold)] px-4 py-2 rounded-lg border-none cursor-pointer tracking-wide disabled:opacity-60 shrink-0"
+                  style={{ background: "var(--core-primary)" }}
                 >
                   {isApplying ? "APPLYING..." : "APPLY"}
                 </button>
@@ -400,7 +401,12 @@ const CouponSection = () => {
                               }
                             }}
                             disabled={!eligible || isApplying}
-                            className={`bg-[#fff5ee] border border-dashed border-[#FF6500] text-[#FF6500] text-[11px] font-[var(--font-bold)] px-3 py-1 rounded ${!eligible || isApplying ? "opacity-40 cursor-not-allowed" : ""}`}
+                            className={`border border-dashed text-[11px] font-[var(--font-bold)] px-3 py-1 rounded ${!eligible || isApplying ? "opacity-40 cursor-not-allowed" : ""}`}
+                            style={{ 
+                              color: "var(--core-primary)", 
+                              borderColor: "var(--core-primary)",
+                              backgroundColor: "color-mix(in srgb, var(--core-primary) 10%, transparent)"
+                            }}
                           >
                             {coupon.code ? `${coupon.code} — ` : ""}
                             {coupon.display_action_value || "Discount"}
