@@ -24,6 +24,12 @@ export { default as CouponSection } from "./components/cart/CouponSection";
 
 // ─── Account Components ───────────────────────────────────────────────────────
 export { AccountPage } from "./components/account/AccountPage";
+export { AccountLayout } from "./components/account/AccountLayout";
+export { AccountSidebar, DEFAULT_ACCOUNT_NAV_ITEMS } from "./components/account/AccountSidebar";
+export { AccountAddressesPage } from "./components/account/AccountAddressesPage";
+export { AccountOrdersPage } from "./components/account/AccountOrdersPage";
+export { AccountOrderDetailContent } from "./components/account/AccountOrderDetailContent";
+export { AccountWishlistPage } from "./components/account/AccountWishlistPage";
 export { UserInfo } from "./components/account/UserInfo";
 export { AddressCard } from "./components/account/AddressCard";
 export { OrdersList } from "./components/account/OrdersList";
@@ -76,3 +82,5 @@ export {
   trackMetaCompleteRegistration,
   trackMetaLead,
 } from "./lib/metaPixel";
+
+

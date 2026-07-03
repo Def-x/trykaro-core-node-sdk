@@ -261,9 +261,9 @@ const CouponSection = () => {
     return (
       <div className="my-4">
         <div className="w-full flex items-center justify-between border-t border-b border-[var(--borders)] px-1 py-3">
-          <span className="font-[Nunito-medium] text-[14px] text-[var(--secondary)]">
+          <span className="font-[var(--font-medium)] text-[14px] text-[var(--secondary)]">
             🏷 Have a coupon code?{" "}
-            <span className="text-[#FF6500] text-[12px] font-[Nunito-regular]">
+            <span className="text-[#FF6500] text-[12px] font-[var(--font-regular)]">
               Sign in to apply
             </span>
           </span>
@@ -273,7 +273,6 @@ const CouponSection = () => {
     );
   }
 
-  console.log({ availableDiscountsWithCode });
   // State 1 — Token exists (render applied discounts and accordion input)
   return (
     <div className="my-4">
@@ -287,18 +286,18 @@ const CouponSection = () => {
             >
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
                 <span className="text-base">✅</span>
-                <span className="font-[Nunito-bold] text-[#0f0f0f] text-[13px] tracking-wide">
+                <span className="font-[var(--font-bold)] text-[#0f0f0f] text-[13px] tracking-wide">
                   {coupon.code
                     ? coupon.code
                     : coupon.display_action_value || "Discount"}
                 </span>
-                <span className="font-[Nunito-regular] text-[#0f0f0f] text-[12px]">
+                <span className="font-[var(--font-regular)] text-[#0f0f0f] text-[12px]">
                   applied
                 </span>
                 <span className="text-[#0f0f0f] text-[12px] hidden sm:inline">
                   ·
                 </span>
-                <span className="text-[#00b300] text-[12px] font-[Nunito-bold]">
+                <span className="text-[#00b300] text-[12px] font-[var(--font-bold)]">
                   You save{" "}
                   {formatCurrency(
                     coupon.display_discount_amount ||
@@ -334,7 +333,7 @@ const CouponSection = () => {
             aria-expanded={isOpen}
             className="w-full flex items-center justify-between border-t border-b border-[var(--borders)] px-1 py-3 cursor-pointer"
           >
-            <span className="font-[Nunito-medium] text-[14px] text-[var(--main)]">
+            <span className="font-[var(--font-medium)] text-[14px] text-[var(--main)]">
               🏷 Have a coupon code?
             </span>
             <span className="text-[var(--main)] text-[16px]">
@@ -353,12 +352,12 @@ const CouponSection = () => {
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleApply()}
                   placeholder="ENTER CODE"
-                  className="border border-[var(--borders)] rounded-lg px-3 py-2 text-[13px] text-[var(--main)] font-[Nunito-regular] uppercase tracking-widest outline-none flex-1"
+                  className="border border-[var(--borders)] rounded-lg px-3 py-2 text-[13px] text-[var(--main)] font-[var(--font-regular)] uppercase tracking-widest outline-none flex-1"
                 />
                 <button
                   onClick={handleApply}
                   disabled={isApplying || !inputValue.trim()}
-                  className="bg-[#FF6500] text-white text-[12px] font-[Nunito-bold] px-4 py-2 rounded-lg border-none cursor-pointer tracking-wide disabled:opacity-60 shrink-0"
+                  className="bg-[#FF6500] text-white text-[12px] font-[var(--font-bold)] px-4 py-2 rounded-lg border-none cursor-pointer tracking-wide disabled:opacity-60 shrink-0"
                 >
                   {isApplying ? "APPLYING..." : "APPLY"}
                 </button>
@@ -366,7 +365,7 @@ const CouponSection = () => {
 
               {/* Error message */}
               {errorMessage && (
-                <p className="text-red-600 text-[12px] font-[Nunito-regular]">
+                <p className="text-red-600 text-[12px] font-[var(--font-regular)]">
                   {errorMessage}
                 </p>
               )}
@@ -374,7 +373,7 @@ const CouponSection = () => {
               {/* Available coupons */}
               {!discountsLoading && availableDiscountsWithCode.length > 0 && (
                 <div className="flex flex-col gap-2 mt-1">
-                  <p className="font-[Nunito-medium] text-[12px] text-[var(--secondary)]">
+                  <p className="font-[var(--font-medium)] text-[12px] text-[var(--secondary)]">
                     Available coupons
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -401,7 +400,7 @@ const CouponSection = () => {
                               }
                             }}
                             disabled={!eligible || isApplying}
-                            className={`bg-[#fff5ee] border border-dashed border-[#FF6500] text-[#FF6500] text-[11px] font-[Nunito-bold] px-3 py-1 rounded ${!eligible || isApplying ? "opacity-40 cursor-not-allowed" : ""}`}
+                            className={`bg-[#fff5ee] border border-dashed border-[#FF6500] text-[#FF6500] text-[11px] font-[var(--font-bold)] px-3 py-1 rounded ${!eligible || isApplying ? "opacity-40 cursor-not-allowed" : ""}`}
                           >
                             {coupon.code ? `${coupon.code} — ` : ""}
                             {coupon.display_action_value || "Discount"}

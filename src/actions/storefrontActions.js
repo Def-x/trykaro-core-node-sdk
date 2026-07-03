@@ -388,9 +388,10 @@ export const updateUserAction = async (userId, userData, options = {}) =>
 // ─── Orders ───────────────────────────────────────────────────────────────────
 
 export const getOrdersAction = async (regionId, page = 1, options = {}) => {
-  const url = new URL(`${getApiBaseUrl(options)}/api/orders`);
+  const url = new URL(`${getApiBaseUrl(options)}/api/get_current_user_orders`);
   if (regionId) url.searchParams.set("region_id", regionId);
   url.searchParams.set("page", page.toString());
+  url.searchParams.set("per_page", "10");
 
   return requestJson(
     url.toString(),

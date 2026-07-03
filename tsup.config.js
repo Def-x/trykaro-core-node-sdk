@@ -6,8 +6,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   entry: [
-    "src/index.js",   // main bundle — zero Stripe code
-    "src/stripe.js",  // optional Stripe sub-package — only imported by Stripe projects
+    "src/index.js", // main bundle — zero Stripe code
+    "src/stripe.js", // optional Stripe sub-package — only imported by Stripe projects
   ],
   format: ["esm"],
   clean: true,

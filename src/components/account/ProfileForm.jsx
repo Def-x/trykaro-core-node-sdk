@@ -52,8 +52,8 @@ export const ProfileForm = ({ user, onSuccess, onCancel }) => {
     }
   };
 
-  const inputCls = "w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--core-primary)] font-[Nunito-regular]";
-  const labelCls = "text-sm font-[Nunito-bold] text-[var(--core-primary)] uppercase tracking-widest text-[11px]";
+  const inputCls = "w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--core-primary)] font-[var(--font-regular)]";
+  const labelCls = "text-sm font-[var(--font-bold)] text-[var(--core-primary)] uppercase tracking-widest text-[11px]";
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -104,7 +104,7 @@ export const ProfileForm = ({ user, onSuccess, onCancel }) => {
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 py-3 border border-gray-300 rounded-md text-[var(--core-primary)] font-[Nunito-bold] hover:bg-gray-50 transition-colors uppercase tracking-widest text-[12px]"
+            className="flex-1 py-3 border border-gray-300 rounded-md text-[var(--core-primary)] font-[var(--font-bold)] hover:bg-gray-50 transition-colors uppercase tracking-widest text-[12px]"
           >
             Cancel
           </button>
@@ -112,7 +112,7 @@ export const ProfileForm = ({ user, onSuccess, onCancel }) => {
         <button
           type="submit"
           disabled={isSubmitting}
-          className={`flex-1 py-3 bg-[var(--core-primary)] text-white rounded-md font-[Nunito-bold] transition-colors flex items-center justify-center gap-2 uppercase tracking-widest text-[12px] shadow-lg shadow-blue-100 ${isSubmitting ? "opacity-70 cursor-not-allowed" : "hover:opacity-90"
+          className={`flex-1 py-3 bg-[var(--core-primary)] text-white rounded-md font-[var(--font-bold)] transition-colors flex items-center justify-center gap-2 uppercase tracking-widest text-[12px] shadow-lg shadow-blue-100 ${isSubmitting ? "opacity-70 cursor-not-allowed" : "hover:opacity-90"
             }`}
         >
           {isSubmitting ? <Spinner size="sm" color="white" /> : "Save Changes"}

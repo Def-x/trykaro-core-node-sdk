@@ -55,7 +55,7 @@ export const Popup = ({
         {(title || onClose) && (
           <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-white sticky top-0 z-10">
             {title && (
-              <h2 className="text-[20px] font-[Nunito-bold] text-[var(--core-primary)] uppercase tracking-wide">
+              <h2 className="text-[20px] font-[var(--font-bold)] text-[var(--core-primary)] uppercase tracking-wide">
                 {title}
               </h2>
             )}

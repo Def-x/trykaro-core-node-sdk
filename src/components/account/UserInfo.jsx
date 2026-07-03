@@ -11,7 +11,7 @@ import { EmptyState } from "../ui/EmptyState";
 
 /**
  * UserInfo Component
- * 
+ *
  * Displays the "MY PROFILE" section, including user details and a grid of addresses.
  */
 export const UserInfo = ({ user, isLoading, refetch }) => {
@@ -39,8 +39,6 @@ export const UserInfo = ({ user, isLoading, refetch }) => {
   }, [fetchAddresses]);
 
   const closeModal = () => setModalState({ type: null, data: null });
-
-  console.log({ addresses })
   if (isLoading) {
     return (
       <div className="flex justify-center py-20">
@@ -53,19 +51,19 @@ export const UserInfo = ({ user, isLoading, refetch }) => {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <h1 className="font-[Nunito-regular] text-[32px] text-[var(--core-primary)] mb-10 tracking-tight">
+      <h1 className="font-[var(--font-regular)] text-[32px] text-[var(--core-primary)] mb-10 tracking-tight">
         MY PROFILE
       </h1>
 
       {/* ── Profile Section ── */}
       <section className="mb-12">
         <div className="flex justify-between items-end mb-4">
-          <h2 className="font-[Nunito-medium] text-[20px] text-[#2d2d2d] uppercase tracking-wider">
+          <h2 className="font-[var(--font-medium)] text-[20px] text-[#2d2d2d] uppercase tracking-wider">
             Profile
           </h2>
           <button
             onClick={() => setModalState({ type: "profile", data: user })}
-            className="text-[14px] font-[Nunito-medium] text-[#2563EB] hover:underline uppercase tracking-widest transition-all"
+            className="text-[14px] font-[var(--font-medium)] text-[var(--core-primary)] hover:underline uppercase tracking-widest transition-all"
           >
             Edit
           </button>
@@ -74,30 +72,34 @@ export const UserInfo = ({ user, isLoading, refetch }) => {
         <div className="border border-gray-100 p-8 shadow-sm bg-white hover:shadow-md transition-shadow duration-300">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
             <div className="flex flex-col gap-1">
-              <label className="text-[12px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest">
+              <label className="text-[12px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest">
                 First name
               </label>
-              <p className="border-b border-gray-100 pb-2 text-[15px] font-[Nunito-medium] text-[var(--core-primary)]">
+              <p className="border-b border-gray-100 pb-2 text-[15px] font-[var(--font-medium)] text-[var(--core-primary)]">
                 {userData.first_name || userData.firstName || "—"}
               </p>
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-[12px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest">
+              <label className="text-[12px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest">
                 Last name
               </label>
-              <p className="border-b border-gray-100 pb-2 text-[15px] font-[Nunito-medium] text-[var(--core-primary)]">
+              <p className="border-b border-gray-100 pb-2 text-[15px] font-[var(--font-medium)] text-[var(--core-primary)]">
                 {userData.last_name || userData.lastName || "—"}
               </p>
             </div>
             <div className="flex flex-col gap-1 md:col-span-2">
-              <label className="text-[12px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest">
+              <label className="text-[12px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest">
                 {config?.authType === "own" ? "Phone number" : "Email address"}
               </label>
-              <p className="border-b border-gray-100 pb-2 text-[15px] font-[Nunito-medium] text-[var(--core-primary)]">
+              <p className="border-b border-gray-100 pb-2 text-[15px] font-[var(--font-medium)] text-[var(--core-primary)]">
                 {config?.authType === "own"
-                  ? (userData.phone || userData.mobile || userData.phone_number || "—")
-                  : (userData.email || userData.primaryEmailAddress?.emailAddress || "—")
-                }
+                  ? userData.phone ||
+                    userData.mobile ||
+                    userData.phone_number ||
+                    "—"
+                  : userData.email ||
+                    userData.primaryEmailAddress?.emailAddress ||
+                    "—"}
               </p>
             </div>
           </div>
@@ -107,12 +109,12 @@ export const UserInfo = ({ user, isLoading, refetch }) => {
       {/* ── Addresses Section ── */}
       <section>
         <div className="flex justify-between items-end mb-4">
-          <h2 className="font-[Nunito-medium] text-[20px] text-[#2d2d2d] uppercase tracking-wider">
+          <h2 className="font-[var(--font-medium)] text-[20px] text-[#2d2d2d] uppercase tracking-wider">
             Addresses
           </h2>
           <button
             onClick={() => setModalState({ type: "new_address", data: null })}
-            className="text-[14px] font-[Nunito-medium] text-[#2563EB] hover:underline uppercase tracking-widest transition-all"
+            className="text-[14px] font-[var(--font-medium)] text-[var(--core-primary)] hover:underline uppercase tracking-widest transition-all"
           >
             Add new address
           </button>
@@ -128,7 +130,9 @@ export const UserInfo = ({ user, isLoading, refetch }) => {
               <AddressCard
                 key={addr.id}
                 address={addr}
-                onEdit={() => setModalState({ type: "edit_address", data: addr })}
+                onEdit={() =>
+                  setModalState({ type: "edit_address", data: addr })
+                }
                 onDelete={fetchAddresses}
               />
             ))}
@@ -140,8 +144,10 @@ export const UserInfo = ({ user, isLoading, refetch }) => {
             description="You haven't added any shipping or billing addresses yet. Add one to make your checkout faster."
             action={
               <button
-                onClick={() => setModalState({ type: "new_address", data: null })}
-                className="mt-4 px-8 py-3 bg-[var(--core-primary)] text-white font-[Nunito-bold] text-[13px] uppercase tracking-widest hover:opacity-90 transition-colors"
+                onClick={() =>
+                  setModalState({ type: "new_address", data: null })
+                }
+                className="mt-4 px-8 py-3 bg-[var(--core-primary)] text-white font-[var(--font-bold)] text-[13px] uppercase tracking-widest hover:opacity-90 transition-colors"
               >
                 Add Your First Address
               </button>
@@ -156,22 +162,35 @@ export const UserInfo = ({ user, isLoading, refetch }) => {
         isOpen={!!modalState.type}
         onClose={closeModal}
         title={
-          modalState.type === "profile" ? "Edit Profile" :
-            modalState.type === "new_address" ? "Add New Address" : "Edit Address"
+          modalState.type === "profile"
+            ? "Edit Profile"
+            : modalState.type === "new_address"
+              ? "Add New Address"
+              : "Edit Address"
         }
       >
         {modalState.type === "profile" ? (
           <ProfileForm
             user={user}
-            onSuccess={() => { refetch(); closeModal(); }}
+            onSuccess={() => {
+              refetch();
+              closeModal();
+            }}
             onCancel={closeModal}
           />
         ) : (
           <AddressForm
             initialData={modalState.data}
-            onSuccess={() => { fetchAddresses(); closeModal(); }}
+            onSuccess={() => {
+              fetchAddresses();
+              closeModal();
+            }}
             onCancel={closeModal}
-            submitLabel={modalState.type === "new_address" ? "Add Address" : "Update Address"}
+            submitLabel={
+              modalState.type === "new_address"
+                ? "Add Address"
+                : "Update Address"
+            }
           />
         )}
       </Popup>

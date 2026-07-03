@@ -1,7 +1,7 @@
-import { getPaymentGateway } from './chunk-ICFWQ2RM.js';
-import React8, { createContext, useState, useMemo, useEffect, useCallback, useContext, useRef } from 'react';
+import { getPaymentGateway } from './chunk-UP7U6KB6.js';
+import React8, { createContext, useMemo, useState, useEffect, useCallback, useContext, useRef } from 'react';
 import { jsx, jsxs, Fragment } from 'react/jsx-runtime';
-import { useRouter, useParams, useSearchParams } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams, useParams } from 'next/navigation';
 import Cookies from 'js-cookie';
 import { flatten, map, compact, filter, uniqBy } from 'lodash';
 import Link from 'next/link';
@@ -298,9 +298,10 @@ var updateUserAction = async (userId, userData, options = {}) => requestJson(
   "Failed to update user"
 );
 var getOrdersAction = async (regionId, page = 1, options = {}) => {
-  const url = new URL(`${getApiBaseUrl(options)}/api/orders`);
+  const url = new URL(`${getApiBaseUrl(options)}/api/get_current_user_orders`);
   if (regionId) url.searchParams.set("region_id", regionId);
   url.searchParams.set("page", page.toString());
+  url.searchParams.set("per_page", "10");
   return requestJson(
     url.toString(),
     {
@@ -419,7 +420,13 @@ var wrapResponse = async (res, fallbackMessage) => {
   }
   return data;
 };
-var removeDiscountById = async ({ token, discount_id, region_id, apiBaseUrl, orgId } = {}) => {
+var removeDiscountById = async ({
+  token,
+  discount_id,
+  region_id,
+  apiBaseUrl,
+  orgId
+} = {}) => {
   const baseUrl = apiBaseUrl || process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL;
   if (!baseUrl) throw new Error("API base URL is not configured");
   const url = new URL(`${baseUrl}/api/discounts/remove`);
@@ -481,8 +488,32 @@ var CoreProvider = ({
   auth: injectedAuth = null,
   orgData
 }) => {
-  const primaryColor = config?.primaryColor ?? "#00214c";
-  const secondaryColor = config?.secondaryColor ?? "#c8a95a";
+  const isRegionBased = !!(config?.isRegion || config?.activeRegion || config?.region);
+  const resolvedRegion = config?.activeRegion ?? config?.region ?? null;
+  const resolvedRegionId = config?.regionId ?? resolvedRegion?.id ?? null;
+  const resolvedCurrency = resolvedRegion?.currency ?? config?.currency ?? "INR";
+  const resolvedLocale = resolvedRegion?.locale ?? config?.locale ?? "en-IN";
+  const resolvedConfig = useMemo(
+    () => ({
+      ...config,
+      isRegion: isRegionBased,
+      currency: resolvedCurrency,
+      locale: resolvedLocale,
+      region: resolvedRegion,
+      activeRegion: resolvedRegion,
+      regionId: resolvedRegionId
+    }),
+    [
+      config,
+      isRegionBased,
+      resolvedCurrency,
+      resolvedLocale,
+      resolvedRegion,
+      resolvedRegionId
+    ]
+  );
+  const primaryColor = resolvedConfig?.primaryColor ?? "#00214c";
+  const secondaryColor = resolvedConfig?.secondaryColor ?? "#c8a95a";
   const [cart, setCart] = useState();
   const resolvedActions = useMemo(() => {
     const merged = { ...actions };
@@ -494,9 +525,9 @@ var CoreProvider = ({
     return merged;
   }, [actions]);
   const [isCartLoading, setIsCartLoading] = useState(true);
-  const [region, setRegion] = useState(config?.region ?? null);
+  const [region, setRegion] = useState(resolvedConfig?.region ?? null);
   const [authState, setAuthState] = useState(() => injectedAuth ?? {});
-  const authType = config?.authType ?? "clerk";
+  const authType = resolvedConfig?.authType ?? "clerk";
   useEffect(() => {
     if (!injectedAuth) return;
     setAuthState((prev) => ({
@@ -547,20 +578,23 @@ var CoreProvider = ({
   }, [authType, injectedAuth, authState, setAuth, clearAuth]);
   useEffect(() => {
     if (!resolvedActions?.getCart) return;
+    if (resolvedConfig?.isRegion && !resolvedConfig?.regionId) {
+      return;
+    }
     const loadCart = async () => {
       try {
         setIsCartLoading(true);
         let resolvedCart = null;
         const isSignedIn = auth?.isSignedIn ?? false;
         if (isSignedIn) {
-          const data = await resolvedActions.getCart(config?.regionId);
+          const data = await resolvedActions.getCart(resolvedConfig?.regionId);
           resolvedCart = Array.isArray(data) ? data[0] : data;
         } else {
           const storedCartId = typeof window !== "undefined" ? localStorage.getItem("cartid") : null;
           if (storedCartId && resolvedActions?.getCartById) {
             resolvedCart = await resolvedActions.getCartById(
               storedCartId,
-              config?.regionId
+              resolvedConfig?.regionId
             );
           }
         }
@@ -572,7 +606,7 @@ var CoreProvider = ({
       }
     };
     loadCart();
-  }, [config?.regionId, auth?.isSignedIn]);
+  }, [resolvedConfig?.regionId, auth?.isSignedIn]);
   useEffect(() => {
     if (typeof document === "undefined") return;
     const root = document.documentElement;
@@ -598,12 +632,16 @@ var CoreProvider = ({
       cart,
       setCart,
       isCartLoading,
-      region,
+      region: resolvedRegion,
+      // use the resolved region, not the stale local state
       setRegion,
+      activeRegion: resolvedRegion,
+      // top-level convenience field
       actions: resolvedActions,
       toast,
       auth,
-      config,
+      config: resolvedConfig,
+      // consumers call useCore().config — key must be "config"
       orgData,
       primaryColor,
       secondaryColor
@@ -612,17 +650,18 @@ var CoreProvider = ({
     [
       cart,
       isCartLoading,
-      region,
+      resolvedRegion,
+      // was wrong: was "region" (stale local state) and "config" (raw prop)
+      resolvedConfig,
+      // was wrong: was raw "config" prop
       resolvedActions,
       toast,
       auth,
-      config,
       orgData,
       primaryColor,
       secondaryColor
     ]
   );
-  console.log({ auth, config });
   return /* @__PURE__ */ jsx(CoreContext.Provider, { value, children: /* @__PURE__ */ jsx(
     "div",
     {
@@ -1268,16 +1307,25 @@ function useAddToCart() {
 
 // src/hooks/useCurrencyFormat.js
 function useCurrencyFormat() {
-  const { orgData } = useCore();
-  const currency = orgData?.organization_setting?.currency ?? "INR";
-  const locale = orgData?.organization_setting?.locale ?? "en-IN";
-  console.log({ orgData });
+  const { config, orgData } = useCore();
+  const activeRegion = config?.isRegion ? config?.activeRegion ?? config?.region ?? null : null;
+  const currency = activeRegion?.currency ?? config?.currency ?? orgData?.organization_setting?.currency ?? "INR";
+  const locale = activeRegion?.locale ?? config?.locale ?? orgData?.organization_setting?.locale ?? "en-IN";
+  const currencySymbol = activeRegion?.invoice_setting?.currency_symbol ?? activeRegion?.currency_symbol ?? null;
   const formatCurrency = (amount) => {
     if (amount == null) return "";
+    const numericAmount = Number(amount);
+    const formattedAmount = new Intl.NumberFormat(locale, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(numericAmount);
+    if (currencySymbol) {
+      return `${currencySymbol}${formattedAmount}`;
+    }
     return new Intl.NumberFormat(locale, {
       style: "currency",
       currency
-    }).format(amount);
+    }).format(numericAmount);
   };
   return { formatCurrency };
 }
@@ -1645,8 +1693,8 @@ var CustomOTPAuth = ({ mode = "sign-in", onLoginSuccess }) => {
   };
   return /* @__PURE__ */ jsxs("div", { className: "w-full max-w-[400px] mx-auto p-6 bg-white rounded-2xl shadow-xl border border-gray-100", children: [
     /* @__PURE__ */ jsxs("div", { className: "text-center mb-8", children: [
-      /* @__PURE__ */ jsx("h2", { className: "text-2xl font-[Nunito-bold] text-[var(--core-primary)]", children: step === "phone" ? isSignup ? "Create Your Account" : "Welcome Back" : "Verify OTP" }),
-      /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-500 mt-2 font-[Nunito-regular]", children: step === "phone" ? isSignup ? "Enter your details to create an account" : "Enter your mobile number to sign in" : `Enter the ${otpLength}-digit code sent to ${countryCode} ${phone}` })
+      /* @__PURE__ */ jsx("h2", { className: "text-2xl font-[var(--font-bold)] text-[var(--core-primary)]", children: step === "phone" ? isSignup ? "Create Your Account" : "Welcome Back" : "Verify OTP" }),
+      /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-500 mt-2 font-[var(--font-regular)]", children: step === "phone" ? isSignup ? "Enter your details to create an account" : "Enter your mobile number to sign in" : `Enter the ${otpLength}-digit code sent to ${countryCode} ${phone}` })
     ] }),
     step === "phone" ? /* @__PURE__ */ jsxs("form", { onSubmit: handleSendOtp, className: "space-y-6", children: [
       isSignup && /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-1 gap-4 sm:grid-cols-2", children: [
@@ -1657,7 +1705,7 @@ var CustomOTPAuth = ({ mode = "sign-in", onLoginSuccess }) => {
             value: firstName,
             onChange: (event) => setFirstName(event.target.value),
             placeholder: "First Name",
-            className: "w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[var(--core-primary)]/20 focus:border-[var(--core-primary)] outline-none transition-all font-[Nunito-medium]",
+            className: "w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[var(--core-primary)]/20 focus:border-[var(--core-primary)] outline-none transition-all font-[var(--font-medium)]",
             required: true
           }
         ),
@@ -1668,13 +1716,13 @@ var CustomOTPAuth = ({ mode = "sign-in", onLoginSuccess }) => {
             value: lastName,
             onChange: (event) => setLastName(event.target.value),
             placeholder: "Last Name",
-            className: "w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[var(--core-primary)]/20 focus:border-[var(--core-primary)] outline-none transition-all font-[Nunito-medium]",
+            className: "w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[var(--core-primary)]/20 focus:border-[var(--core-primary)] outline-none transition-all font-[var(--font-medium)]",
             required: true
           }
         )
       ] }),
       /* @__PURE__ */ jsxs("div", { className: "relative", children: [
-        /* @__PURE__ */ jsx("span", { className: "absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-[Nunito-medium]", children: countryCode }),
+        /* @__PURE__ */ jsx("span", { className: "absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-[var(--font-medium)]", children: countryCode }),
         /* @__PURE__ */ jsx(
           "input",
           {
@@ -1682,7 +1730,7 @@ var CustomOTPAuth = ({ mode = "sign-in", onLoginSuccess }) => {
             value: phone,
             onChange: (event) => setPhone(event.target.value.replace(/\D/g, "").slice(0, 10)),
             placeholder: "Mobile Number",
-            className: "w-full pl-14 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[var(--core-primary)]/20 focus:border-[var(--core-primary)] outline-none transition-all font-[Nunito-medium]",
+            className: "w-full pl-14 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[var(--core-primary)]/20 focus:border-[var(--core-primary)] outline-none transition-all font-[var(--font-medium)]",
             required: true
           }
         )
@@ -1692,14 +1740,14 @@ var CustomOTPAuth = ({ mode = "sign-in", onLoginSuccess }) => {
         {
           type: "submit",
           disabled: isLoading || phone.length < 10,
-          className: `w-full py-3 rounded-xl font-[Nunito-bold] text-white transition-all ${isLoading || phone.length < 10 ? "bg-gray-300 cursor-not-allowed" : "bg-[var(--core-primary)] hover:bg-[var(--core-primary)] active:scale-[0.98]"}`,
+          className: `w-full py-3 rounded-xl font-[var(--font-bold)] text-white transition-all ${isLoading || phone.length < 10 ? "bg-gray-300 cursor-not-allowed" : "bg-[var(--core-primary)] hover:bg-[var(--core-primary)] active:scale-[0.98]"}`,
           children: isLoading ? /* @__PURE__ */ jsxs("span", { className: "flex items-center justify-center gap-2", children: [
             /* @__PURE__ */ jsx("div", { className: "w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" }),
             "Sending..."
           ] }) : "Get OTP"
         }
       ),
-      /* @__PURE__ */ jsxs("p", { className: "text-sm text-center text-gray-500 font-[Nunito-medium]", children: [
+      /* @__PURE__ */ jsxs("p", { className: "text-sm text-center text-gray-500 font-[var(--font-medium)]", children: [
         isSignup ? "Already have an account?" : "New here?",
         " ",
         /* @__PURE__ */ jsx(
@@ -1707,7 +1755,7 @@ var CustomOTPAuth = ({ mode = "sign-in", onLoginSuccess }) => {
           {
             type: "button",
             onClick: () => switchMode(isSignup ? "signin" : "signup"),
-            className: "text-[var(--core-primary)] font-[Nunito-bold] hover:underline",
+            className: "text-[var(--core-primary)] font-[var(--font-bold)] hover:underline",
             children: isSignup ? "Sign In" : "Create Account"
           }
         )
@@ -1724,13 +1772,13 @@ var CustomOTPAuth = ({ mode = "sign-in", onLoginSuccess }) => {
           value: digit,
           onChange: (event) => handleOtpChange(index, event.target.value),
           onKeyDown: (event) => handleKeyDown(index, event),
-          className: "w-12 h-14 text-center text-xl font-[Nunito-bold] bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[var(--core-primary)]/20 focus:border-[var(--core-primary)] outline-none transition-all"
+          className: "w-12 h-14 text-center text-xl font-[var(--font-bold)] bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[var(--core-primary)]/20 focus:border-[var(--core-primary)] outline-none transition-all"
         },
         index
       )) }),
-      /* @__PURE__ */ jsx("div", { className: "text-center", children: timer > 0 ? /* @__PURE__ */ jsxs("p", { className: "text-xs text-gray-500 font-[Nunito-regular]", children: [
+      /* @__PURE__ */ jsx("div", { className: "text-center", children: timer > 0 ? /* @__PURE__ */ jsxs("p", { className: "text-xs text-gray-500 font-[var(--font-regular)]", children: [
         "Resend OTP in ",
-        /* @__PURE__ */ jsxs("span", { className: "font-[Nunito-bold]", children: [
+        /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-bold)]", children: [
           timer,
           "s"
         ] })
@@ -1739,7 +1787,7 @@ var CustomOTPAuth = ({ mode = "sign-in", onLoginSuccess }) => {
         {
           type: "button",
           onClick: handleSendOtp,
-          className: "text-xs text-[var(--core-primary)] font-[Nunito-bold] hover:underline",
+          className: "text-xs text-[var(--core-primary)] font-[var(--font-bold)] hover:underline",
           children: "Resend OTP"
         }
       ) }),
@@ -1748,7 +1796,7 @@ var CustomOTPAuth = ({ mode = "sign-in", onLoginSuccess }) => {
         {
           type: "submit",
           disabled: isLoading || otpValue.length < otpLength,
-          className: `w-full py-3 rounded-xl font-[Nunito-bold] text-white transition-all ${isLoading || otpValue.length < otpLength ? "bg-gray-300 cursor-not-allowed" : "bg-[var(--core-primary)] hover:bg-[var(--core-primary)] active:scale-[0.98]"}`,
+          className: `w-full py-3 rounded-xl font-[var(--font-bold)] text-white transition-all ${isLoading || otpValue.length < otpLength ? "bg-gray-300 cursor-not-allowed" : "bg-[var(--core-primary)] hover:bg-[var(--core-primary)] active:scale-[0.98]"}`,
           children: isLoading ? /* @__PURE__ */ jsxs("span", { className: "flex items-center justify-center gap-2", children: [
             /* @__PURE__ */ jsx("div", { className: "w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" }),
             "Verifying..."
@@ -1760,7 +1808,7 @@ var CustomOTPAuth = ({ mode = "sign-in", onLoginSuccess }) => {
         {
           type: "button",
           onClick: resetOtpStep,
-          className: "w-full text-sm text-gray-500 font-[Nunito-medium] hover:text-[var(--core-primary)] transition-colors",
+          className: "w-full text-sm text-gray-500 font-[var(--font-medium)] hover:text-[var(--core-primary)] transition-colors",
           children: "Change Details"
         }
       )
@@ -1772,13 +1820,13 @@ var AuthManager = ({ mode = "sign-in", onLoginSuccess }) => {
   const authType = config?.authType ?? "clerk";
   if (authType === "clerk") {
     return /* @__PURE__ */ jsxs("div", { className: "w-full text-center py-8", children: [
-      /* @__PURE__ */ jsx("h2", { className: "text-2xl font-[Nunito-bold] text-[var(--core-primary)] mb-6", children: "Sign in to continue" }),
+      /* @__PURE__ */ jsx("h2", { className: "text-2xl font-[var(--font-bold)] text-[var(--core-primary)] mb-6", children: "Sign in to continue" }),
       /* @__PURE__ */ jsxs("div", { className: "space-y-4", children: [
         /* @__PURE__ */ jsx(
           "button",
           {
             onClick: () => auth?.openSignIn?.(),
-            className: "w-full py-3 bg-[var(--core-primary)] text-white rounded-xl font-[Nunito-bold] hover:opacity-90 transition-all",
+            className: "w-full py-3 bg-[var(--core-primary)] text-white rounded-xl font-[var(--font-bold)] hover:opacity-90 transition-all",
             children: "Sign In"
           }
         ),
@@ -1786,7 +1834,7 @@ var AuthManager = ({ mode = "sign-in", onLoginSuccess }) => {
           "button",
           {
             onClick: () => auth?.openSignUp?.(),
-            className: "w-full py-3 border border-[var(--core-primary)] text-[var(--core-primary)] rounded-xl font-[Nunito-bold] hover:bg-gray-50 transition-all",
+            className: "w-full py-3 border border-[var(--core-primary)] text-[var(--core-primary)] rounded-xl font-[var(--font-bold)] hover:bg-gray-50 transition-all",
             children: "Create Account"
           }
         )
@@ -2193,13 +2241,13 @@ var CustomizationModal = ({
   };
   if (!isOpen) return null;
   return /* @__PURE__ */ jsx("div", { className: "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50", children: /* @__PURE__ */ jsxs("div", { className: "bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4", children: [
-    /* @__PURE__ */ jsxs("h2", { className: "text-xl font-[Nunito-bold] text-[var(--main)] mb-4", children: [
+    /* @__PURE__ */ jsxs("h2", { className: "text-xl font-[var(--font-bold)] text-[var(--main)] mb-4", children: [
       isEditMode ? "Edit" : "Customize",
       " ",
       product?.name
     ] }),
     /* @__PURE__ */ jsx("div", { className: "space-y-4 mb-6 max-h-[400px] overflow-y-auto", children: customizationsList.map((customization) => /* @__PURE__ */ jsxs("div", { children: [
-      /* @__PURE__ */ jsx("label", { className: "block text-sm font-[Nunito-medium] text-[var(--main)] mb-2", children: customization.name }),
+      /* @__PURE__ */ jsx("label", { className: "block text-sm font-[var(--font-medium)] text-[var(--main)] mb-2", children: customization.name }),
       customization.customization_type === "select" ? /* @__PURE__ */ jsxs(
         "select",
         {
@@ -2223,7 +2271,7 @@ var CustomizationModal = ({
       )
     ] }, customization.id)) }),
     /* @__PURE__ */ jsxs("div", { className: "mb-6", children: [
-      /* @__PURE__ */ jsx("label", { className: "block text-sm font-[Nunito-medium] text-[var(--main)] mb-2", children: "Quantity" }),
+      /* @__PURE__ */ jsx("label", { className: "block text-sm font-[var(--font-medium)] text-[var(--main)] mb-2", children: "Quantity" }),
       /* @__PURE__ */ jsxs("div", { className: "flex items-center border border-[#e8e5df] rounded-md w-fit", children: [
         /* @__PURE__ */ jsx(
           "button",
@@ -2252,7 +2300,7 @@ var CustomizationModal = ({
         {
           onClick: onClose,
           disabled: isAddToCartLoading,
-          className: "flex-1 px-4 py-2 border border-[#e8e5df] rounded-md text-sm font-[Nunito-medium] hover:bg-gray-50 disabled:opacity-50",
+          className: "flex-1 px-4 py-2 border border-[#e8e5df] rounded-md text-sm font-[var(--font-medium)] hover:bg-gray-50 disabled:opacity-50",
           children: "Cancel"
         }
       ),
@@ -2261,7 +2309,7 @@ var CustomizationModal = ({
         {
           onClick: handleConfirm,
           disabled: isAddToCartLoading,
-          className: "flex-1 px-4 py-2 bg-[var(--core-primary)] text-white rounded-md text-sm font-[Nunito-medium] hover:bg-[var(--core-primary)] disabled:opacity-50",
+          className: "flex-1 px-4 py-2 bg-[var(--core-primary)] text-white rounded-md text-sm font-[var(--font-medium)] hover:bg-[var(--core-primary)] disabled:opacity-50",
           children: isAddToCartLoading ? "Loading..." : isEditMode ? "Update" : "Add to Cart"
         }
       )
@@ -2277,7 +2325,7 @@ var ViewCustomizationModal = ({
 }) => {
   if (!isOpen) return null;
   return /* @__PURE__ */ jsx("div", { className: "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50", children: /* @__PURE__ */ jsxs("div", { className: "bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4", children: [
-    /* @__PURE__ */ jsxs("h2", { className: "text-xl font-[Nunito-bold] text-[var(--main)] mb-4", children: [
+    /* @__PURE__ */ jsxs("h2", { className: "text-xl font-[var(--font-bold)] text-[var(--main)] mb-4", children: [
       "Customizations for ",
       productName
     ] }),
@@ -2286,7 +2334,7 @@ var ViewCustomizationModal = ({
       {
         className: "border border-[#e8e5df] rounded-md p-3",
         children: [
-          /* @__PURE__ */ jsx("p", { className: "text-sm font-[Nunito-medium] text-[var(--main)]", children: customization.name || `Custom ${index + 1}` }),
+          /* @__PURE__ */ jsx("p", { className: "text-sm font-[var(--font-medium)] text-[var(--main)]", children: customization.name || `Custom ${index + 1}` }),
           /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-600 mt-1", children: customization.value })
         ]
       },
@@ -2296,7 +2344,7 @@ var ViewCustomizationModal = ({
       "button",
       {
         onClick: onClose,
-        className: "w-full px-4 py-2 bg-[var(--core-primary)] text-white rounded-md text-sm font-[Nunito-medium] hover:bg-[var(--core-primary)]",
+        className: "w-full px-4 py-2 bg-[var(--core-primary)] text-white rounded-md text-sm font-[var(--font-medium)] hover:bg-[var(--core-primary)]",
         children: "Close"
       }
     )
@@ -2402,14 +2450,14 @@ var ProductlistCard = ({ product, component, orderType }) => {
               onError: handleImageError
             }
           ),
-          /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-lg", children: /* @__PURE__ */ jsx("span", { className: "text-white text-xs font-[Nunito-bold] text-center", children: "UNAVAILABLE" }) })
+          /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-lg", children: /* @__PURE__ */ jsx("span", { className: "text-white text-xs font-[var(--font-bold)] text-center", children: "UNAVAILABLE" }) })
         ] }),
         /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between h-[124px] flex-1 min-w-0", children: [
           /* @__PURE__ */ jsx("div", { className: "min-w-0", children: /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
-            /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-base text-[var(--main)] line-clamp-1", children: name }),
-            /* @__PURE__ */ jsx("span", { className: "text-xs bg-red-100 text-red-700 px-2 py-1 rounded font-[Nunito-medium] flex-shrink-0", children: "Deleted" })
+            /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)] line-clamp-1", children: name }),
+            /* @__PURE__ */ jsx("span", { className: "text-xs bg-red-100 text-red-700 px-2 py-1 rounded font-[var(--font-medium)] flex-shrink-0", children: "Deleted" })
           ] }) }),
-          /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsxs("p", { className: "font-[Nunito-medium] text-base text-[var(--main)]", children: [
+          /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)]", children: [
             quantity,
             " x ",
             formatCurrency(displayPrice)
@@ -2417,7 +2465,7 @@ var ProductlistCard = ({ product, component, orderType }) => {
         ] })
       ] }),
       /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between items-end h-[124px] flex-shrink-0", children: [
-        /* @__PURE__ */ jsx("div", { className: "flex flex-col items-end text-right opacity-50", children: /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-base text-[var(--main)] line-clamp-2", children: formatCurrency(displayPrice * quantity) }) }),
+        /* @__PURE__ */ jsx("div", { className: "flex flex-col items-end text-right opacity-50", children: /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)] line-clamp-2", children: formatCurrency(displayPrice * quantity) }) }),
         component !== "order" && /* @__PURE__ */ jsx(
           DeleteIcon,
           {
@@ -2449,13 +2497,13 @@ var ProductlistCard = ({ product, component, orderType }) => {
           /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between h-[124px] flex-1 min-w-0", children: [
             /* @__PURE__ */ jsxs("div", { className: "min-w-0", children: [
               /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
-                /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-base text-[var(--main)] line-clamp-1 hover:underline", children: name }),
-                product?.bogo_benefit?.benefit_type === "free" && /* @__PURE__ */ jsx("span", { className: "text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-[Nunito-medium] flex-shrink-0 whitespace-nowrap", children: "FREE" })
+                /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)] line-clamp-1 hover:underline", children: name }),
+                product?.bogo_benefit?.benefit_type === "free" && /* @__PURE__ */ jsx("span", { className: "text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-[var(--font-medium)] flex-shrink-0 whitespace-nowrap", children: "FREE" })
               ] }),
               variantOptions.length > 0 && /* @__PURE__ */ jsx("div", { className: "mt-1 flex flex-wrap gap-1", children: variantOptions.map((vo, i) => /* @__PURE__ */ jsxs(
                 "span",
                 {
-                  className: "text-[11px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-[Nunito-medium]",
+                  className: "text-[11px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-[var(--font-medium)]",
                   children: [
                     vo?.option_type?.presentation ?? vo?.option_type?.name,
                     ":",
@@ -2491,7 +2539,7 @@ var ProductlistCard = ({ product, component, orderType }) => {
                 c.product_customization_id
               )) })
             ] }),
-            /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsxs("p", { className: "font-[Nunito-medium] text-base text-[var(--main)]", children: [
+            /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)]", children: [
               quantity,
               " x ",
               formatCurrency(displayPrice)
@@ -2501,7 +2549,7 @@ var ProductlistCard = ({ product, component, orderType }) => {
       }
     ),
     /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between items-end h-[124px] flex-shrink-0", children: [
-      /* @__PURE__ */ jsx("div", { className: "flex flex-col items-end text-right", children: component !== "order" ? /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-base text-[var(--main)] line-clamp-1", children: formatCurrency(displayPrice * quantity) }) : /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-base text-[var(--main)] line-clamp-2", children: formatCurrency(displayPrice * quantity) }) }),
+      /* @__PURE__ */ jsx("div", { className: "flex flex-col items-end text-right", children: component !== "order" ? /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)] line-clamp-1", children: formatCurrency(displayPrice * quantity) }) : /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)] line-clamp-2", children: formatCurrency(displayPrice * quantity) }) }),
       component !== "order" && /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3", children: [
         !isSellingQty ? /* @__PURE__ */ jsxs("div", { className: "flex items-center border border-[#e8e5df] rounded-md h-[28px] bg-[#f9f9f9]", children: [
           /* @__PURE__ */ jsx(
@@ -2604,7 +2652,7 @@ var Popup = ({
           style,
           children: [
             (title || onClose) && /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center p-6 border-b border-gray-100 bg-white sticky top-0 z-10", children: [
-              title && /* @__PURE__ */ jsx("h2", { className: "text-[20px] font-[Nunito-bold] text-[var(--core-primary)] uppercase tracking-wide", children: title }),
+              title && /* @__PURE__ */ jsx("h2", { className: "text-[20px] font-[var(--font-bold)] text-[var(--core-primary)] uppercase tracking-wide", children: title }),
               onClose && /* @__PURE__ */ jsx(
                 "button",
                 {
@@ -2695,8 +2743,8 @@ var AddressForm = ({
       setIsSubmitting(false);
     }
   };
-  const inputCls = "w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--core-primary)] font-[Nunito-regular]";
-  const labelCls = "text-sm font-[Nunito-bold] text-[var(--core-primary)]";
+  const inputCls = "w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--core-primary)] font-[var(--font-regular)]";
+  const labelCls = "text-sm font-[var(--font-bold)] text-[var(--core-primary)]";
   return /* @__PURE__ */ jsxs("form", { onSubmit: handleSubmit, className: "space-y-4", children: [
     /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
       /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
@@ -2858,7 +2906,7 @@ var AddressForm = ({
         {
           type: "submit",
           disabled: isSubmitting,
-          className: `w-full py-3 bg-[var(--core-primary)] text-white rounded-md font-[Nunito-bold] transition-colors flex items-center justify-center gap-2 uppercase tracking-widest text-[12px] shadow-lg shadow-blue-100 ${isSubmitting ? "opacity-70 cursor-not-allowed" : "hover:opacity-90"}`,
+          className: `w-full py-3 bg-[var(--core-primary)] text-white rounded-md font-[var(--font-bold)] transition-colors flex items-center justify-center gap-2 uppercase tracking-widest text-[12px] shadow-lg shadow-blue-100 ${isSubmitting ? "opacity-70 cursor-not-allowed" : "hover:opacity-90"}`,
           children: [
             isSubmitting && /* @__PURE__ */ jsx("div", { className: "w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" }),
             isSubmitting ? "Saving..." : submitLabel
@@ -2871,7 +2919,7 @@ var AddressForm = ({
           {
             type: "button",
             onClick: onCancel,
-            className: "flex-1 py-3 border border-gray-100 rounded-md text-[var(--core-primary)] font-[Nunito-bold] hover:bg-gray-50 transition-colors uppercase tracking-widest text-[12px]",
+            className: "flex-1 py-3 border border-gray-100 rounded-md text-[var(--core-primary)] font-[var(--font-bold)] hover:bg-gray-50 transition-colors uppercase tracking-widest text-[12px]",
             children: "Cancel"
           }
         ),
@@ -2894,7 +2942,7 @@ var AddressForm = ({
                 }
               }
             },
-            className: "flex-1 py-3 border border-red-100 text-red-500 rounded-md font-[Nunito-bold] hover:bg-red-50 transition-colors uppercase tracking-widest text-[12px]",
+            className: "flex-1 py-3 border border-red-100 text-red-500 rounded-md font-[var(--font-bold)] hover:bg-red-50 transition-colors uppercase tracking-widest text-[12px]",
             children: "Delete Address"
           }
         )
@@ -2905,12 +2953,12 @@ var AddressForm = ({
 var AddressFormInline = ({ refetch }) => {
   const [isOpen, setIsOpen] = useState(false);
   return /* @__PURE__ */ jsxs("div", { children: [
-    /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[14px] text-[var(--secondary)] mb-3", children: "No addresses saved yet." }),
+    /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[14px] text-[var(--secondary)] mb-3", children: "No addresses saved yet." }),
     /* @__PURE__ */ jsx(
       "button",
       {
         onClick: () => setIsOpen(true),
-        className: "font-[Nunito-medium] text-[var(--main)] underline text-sm",
+        className: "font-[var(--font-medium)] text-[var(--main)] underline text-sm",
         children: "+ Add your first address"
       }
     ),
@@ -2999,11 +3047,11 @@ var AddressSelection = ({
     /* @__PURE__ */ jsxs("div", { className: "w-full space-y-8", children: [
       /* @__PURE__ */ jsxs("div", { children: [
         /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center mb-4", children: [
-          /* @__PURE__ */ jsx("h2", { className: "font-[Nunito-medium] text-[20px] text-[var(--main)] tracking-wide", children: "SHIPPING ADDRESS" }),
+          /* @__PURE__ */ jsx("h2", { className: "font-[var(--font-medium)] text-[20px] text-[var(--main)] tracking-wide", children: "SHIPPING ADDRESS" }),
           /* @__PURE__ */ jsx(
             "button",
             {
-              className: "text-base font-[Nunito-medium] text-[var(--main)] hover:underline",
+              className: "text-base font-[var(--font-medium)] text-[var(--main)] hover:underline",
               onClick: () => setIsOpenAddAddress(true),
               children: "Add new address"
             }
@@ -3021,11 +3069,11 @@ var AddressSelection = ({
       ] }),
       /* @__PURE__ */ jsxs("div", { children: [
         /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center mb-4", children: [
-          /* @__PURE__ */ jsx("h2", { className: "font-[Nunito-medium] text-[20px] text-[var(--main)] tracking-wide", children: "BILLING ADDRESS" }),
+          /* @__PURE__ */ jsx("h2", { className: "font-[var(--font-medium)] text-[20px] text-[var(--main)] tracking-wide", children: "BILLING ADDRESS" }),
           /* @__PURE__ */ jsx(
             "button",
             {
-              className: "text-base font-[Nunito-medium] text-[var(--main)] hover:underline",
+              className: "text-base font-[var(--font-medium)] text-[var(--main)] hover:underline",
               onClick: () => setIsOpenAddAddress(true),
               children: "Add new address"
             }
@@ -3037,7 +3085,7 @@ var AddressSelection = ({
             className: `flex items-center justify-between mb-6 p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 ${sameAsShipping ? "border-[var(--core-primary)] bg-gray-50 shadow-sm" : "border-gray-200 hover:border-gray-300"}`,
             onClick: onSwitchChange,
             children: [
-              /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-base text-[var(--main)]", children: "Same as Shipping address" }),
+              /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)]", children: "Same as Shipping address" }),
               /* @__PURE__ */ jsxs("div", { className: "relative w-12 h-6 flex items-center", children: [
                 /* @__PURE__ */ jsx(
                   "div",
@@ -3105,12 +3153,12 @@ var AddressSelectionCard = ({
       onClick,
       className: `w-full flex flex-col border-2 cursor-pointer transition-all duration-200 rounded-lg p-[16px] gap-y-[8px] ${isSelected ? "border-[var(--core-primary)] bg-gray-50 shadow-sm" : "border-gray-200 hover:border-gray-300"}`,
       children: [
-        /* @__PURE__ */ jsxs("p", { className: "font-[Nunito-medium] text-[var(--main)] text-base truncate", children: [
+        /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-medium)] text-[var(--main)] text-base truncate", children: [
           label,
-          isShippingAddress && /* @__PURE__ */ jsx("span", { className: "font-[Nunito-regular] text-[14px] text-[var(--secondary)] ml-1", children: "(Current shipping address)" })
+          isShippingAddress && /* @__PURE__ */ jsx("span", { className: "font-[var(--font-regular)] text-[14px] text-[var(--secondary)] ml-1", children: "(Current shipping address)" })
         ] }),
         /* @__PURE__ */ jsx("div", { className: "border-t border-[var(--borders)]" }),
-        /* @__PURE__ */ jsxs("p", { className: "font-[Nunito-regular] text-[14px] text-[var(--main)] break-words", children: [
+        /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-regular)] text-[14px] text-[var(--main)] break-words", children: [
           fullName,
           " | ",
           phone
@@ -3119,7 +3167,7 @@ var AddressSelectionCard = ({
         /* @__PURE__ */ jsx(
           "p",
           {
-            className: "font-[Nunito-regular] text-[14px] text-[var(--main)] w-full break-words overflow-hidden text-ellipsis",
+            className: "font-[var(--font-regular)] text-[14px] text-[var(--main)] w-full break-words overflow-hidden text-ellipsis",
             style: {
               display: "-webkit-box",
               WebkitLineClamp: 2,
@@ -3137,9 +3185,10 @@ var AddressCard = ({
   address,
   type,
   isSelected,
-  onClick
+  onClick,
+  paymentLabel
 }) => {
-  const isPayment = type === "stripe";
+  const isPayment = type === "stripe" || type === "payment";
   return /* @__PURE__ */ jsx(
     "div",
     {
@@ -3147,11 +3196,11 @@ var AddressCard = ({
       onClick,
       children: isPayment ? /* @__PURE__ */ jsxs("div", { className: "flex flex-row items-center justify-between", children: [
         /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between", children: [
-          /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-base text-[var(--main)]", children: addressType }),
+          /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)]", children: addressType }),
           /* @__PURE__ */ jsx(
             "p",
             {
-              className: "font-[Nunito-regular] text-[var(--main)] text-[14px] mt-[8px] break-words",
+              className: "font-[var(--font-regular)] text-[var(--main)] text-[14px] mt-[8px] break-words",
               style: {
                 display: "-webkit-box",
                 WebkitLineClamp: 2,
@@ -3162,13 +3211,13 @@ var AddressCard = ({
             }
           )
         ] }),
-        /* @__PURE__ */ jsx("div", { className: "ml-4 flex-shrink-0", children: /* @__PURE__ */ jsx("div", { className: "w-[60px] h-[30px] bg-[var(--secondaryBg)] border border-[var(--borders)] rounded flex items-center justify-center", children: /* @__PURE__ */ jsx("span", { className: "text-[10px] font-[Nunito-bold] text-[var(--main)]", children: "Razorpay" }) }) })
+        /* @__PURE__ */ jsx("div", { className: "ml-4 flex-shrink-0", children: /* @__PURE__ */ jsx("div", { className: "w-[60px] h-[30px] bg-[var(--secondaryBg)] border border-[var(--borders)] rounded flex items-center justify-center", children: /* @__PURE__ */ jsx("span", { className: "text-[10px] font-[var(--font-bold)] text-[var(--main)]", children: paymentLabel ?? (type === "stripe" ? "Razorpay" : "Payment") }) }) })
       ] }) : /* @__PURE__ */ jsxs("div", { children: [
-        /* @__PURE__ */ jsx("div", { className: "flex flex-row justify-between items-center", children: /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-base text-[var(--main)]", children: addressType }) }),
+        /* @__PURE__ */ jsx("div", { className: "flex flex-row justify-between items-center", children: /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)]", children: addressType }) }),
         /* @__PURE__ */ jsx(
           "p",
           {
-            className: "font-[Nunito-regular] text-[var(--main)] text-[14px] mt-[8px] break-words",
+            className: "font-[var(--font-regular)] text-[var(--main)] text-[14px] mt-[8px] break-words",
             style: {
               display: "-webkit-box",
               WebkitLineClamp: 2,
@@ -3216,16 +3265,47 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
   const router = useRouter();
   const { Razorpay } = useRazorpay();
   const { cart, setCart, actions, config, auth, orgData, primaryColor, toast } = useCore();
-  const StripeCheckout = getPaymentGateway("stripe");
-  const paymentConfig = orgData?.organization_setting?.payment ?? {};
-  const paymentMode = paymentConfig?.mode ?? "razorpay";
-  const razorpayKeyId = paymentConfig?.razor_pay_key_id ?? "";
-  const stripePublishableKey = paymentConfig?.stripe_publishable_key ?? "";
+  const activeRegion = config?.activeRegion ?? config?.region ?? null;
+  const orgPaymentConfig = orgData?.organization_setting?.payment ?? {};
+  const regionPaymentConfig = activeRegion?.payment_config ?? null;
+  const paymentConfig = regionPaymentConfig ?? orgPaymentConfig;
+  const rawPaymentGateway = activeRegion?.payment_gateway || // ← primary: region.payment_gateway
+  orgPaymentConfig?.mode || orgPaymentConfig?.gateway || "";
+  const paymentGateway = String(rawPaymentGateway || "razorpay").toLowerCase();
+  const isStripeGateway = paymentGateway === "stripe";
+  const stripePublishableKey = paymentConfig?.stripe_publishable_key ?? orgPaymentConfig?.stripe_publishable_key ?? "";
+  const razorpayKeyId = paymentConfig?.razor_pay_key_id ?? orgPaymentConfig?.razor_pay_key_id ?? "";
+  const paymentGatewayLabel = paymentGateway ? paymentGateway.charAt(0).toUpperCase() + paymentGateway.slice(1).replace(/_/g, " ") : "Razorpay";
+  const [StripeCheckout, setStripeCheckout] = useState(
+    () => getPaymentGateway("stripe")
+  );
   const [showStripeForm, setShowStripeForm] = useState(false);
   const [addresses, setAddresses] = useState([]);
   const [isAddressLoading, setIsAddressLoading] = useState(true);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  useEffect(() => {
+    let isMounted = true;
+    const loadStripeGateway = async () => {
+      try {
+        await import('./stripe.js');
+        if (isMounted) {
+          setStripeCheckout(() => getPaymentGateway("stripe"));
+        }
+      } catch (error) {
+        console.error("[Checkout] Failed to load Stripe gateway:", error);
+      }
+    };
+    const cached = getPaymentGateway("stripe");
+    if (cached) {
+      setStripeCheckout(() => cached);
+    } else {
+      loadStripeGateway();
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, []);
   const isCartHaveBillingAddress = !!cart?.billing_address;
   const isCarthaveShippingAddress = !!cart?.shipping_address;
   const [orderType, setOrderType] = useState(cart?.order_type ?? "delivery");
@@ -3372,7 +3452,7 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
             });
             trackMetaPurchase(cart);
             setCart(null);
-            router.push(`/order/${order?.order_id}?show=true`);
+            router.push(`/account/orders/${order?.order_id}`);
           } else {
             setIsProcessingPayment(false);
             const msg = typeof lastError === "string" ? lastError : "Payment could not be updated. Please contact support.";
@@ -3416,7 +3496,7 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
   };
   const onPlaceOrder = async () => {
     if (hasDeletedItems || !cart?.id) return;
-    if (paymentMode === "stripe") {
+    if (isStripeGateway) {
       setShowStripeForm(true);
       return;
     }
@@ -3444,7 +3524,7 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
         trackAddPaymentInfo({
           userId,
           cart,
-          paymentType: "Razorpay",
+          paymentType: paymentGatewayLabel,
           currency,
           metaOverrides: { source: "checkout" }
         });
@@ -3464,7 +3544,7 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
     }
   };
   return /* @__PURE__ */ jsxs("div", { children: [
-    /* @__PURE__ */ jsx("h1", { className: "font-[Nunito-medium] text-[20px] text-[var(--main)] leading-[24px]", children: "ORDER TYPE" }),
+    /* @__PURE__ */ jsx("h1", { className: "font-[var(--font-medium)] text-[20px] text-[var(--main)] leading-[24px]", children: "ORDER TYPE" }),
     /* @__PURE__ */ jsx("div", { className: "mt-[16px] flex flex-col gap-y-[16px]", children: /* @__PURE__ */ jsx(
       AddressCard,
       {
@@ -3475,7 +3555,7 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
         type: "delivery"
       }
     ) }),
-    orderType !== "pickup" && /* @__PURE__ */ jsx("div", { className: "mt-[32px]", children: isAddressLoading ? /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2 text-[var(--secondary)] text-sm font-[Nunito-regular]", children: [
+    orderType !== "pickup" && /* @__PURE__ */ jsx("div", { className: "mt-[32px]", children: isAddressLoading ? /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2 text-[var(--secondary)] text-sm font-[var(--font-regular)]", children: [
       /* @__PURE__ */ jsx("div", { className: "w-4 h-4 border-2 border-[var(--core-primary)] border-t-transparent rounded-full animate-spin" }),
       "Loading addresses\u2026"
     ] }) : addresses.length > 0 ? /* @__PURE__ */ jsx(
@@ -3496,15 +3576,16 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
       }
     ) : /* @__PURE__ */ jsx(AddressFormInline, { refetch: fetchAddresses }) }),
     /* @__PURE__ */ jsxs("div", { className: "mt-[32px]", children: [
-      /* @__PURE__ */ jsx("h1", { className: "font-[Nunito-medium] text-[20px] text-[var(--main)]", children: "PAYMENT" }),
-      /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[14px] text-[var(--secondary)]", children: "All transactions are secure and encrypted." }),
-      /* @__PURE__ */ jsx("div", { className: "mt-[16px]", children: paymentMode === "stripe" ? /* @__PURE__ */ jsxs(Fragment, { children: [
+      /* @__PURE__ */ jsx("h1", { className: "font-[var(--font-medium)] text-[20px] text-[var(--main)]", children: "PAYMENT" }),
+      /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[14px] text-[var(--secondary)]", children: "All transactions are secure and encrypted." }),
+      /* @__PURE__ */ jsx("div", { className: "mt-[16px]", children: isStripeGateway ? /* @__PURE__ */ jsxs(Fragment, { children: [
         /* @__PURE__ */ jsx(
           AddressCard,
           {
-            addressType: "Pay with Stripe",
+            addressType: `Pay with ${paymentGatewayLabel}`,
             address: "Enter your card details securely via Stripe to complete your payment.",
-            type: "stripe"
+            type: "stripe",
+            paymentLabel: paymentGatewayLabel
           }
         ),
         showStripeForm && stripePublishableKey && StripeCheckout && /* @__PURE__ */ jsx("div", { className: "mt-4", children: /* @__PURE__ */ jsx(
@@ -3513,12 +3594,28 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
             cartId: cart?.id,
             publishableKey: stripePublishableKey,
             createStripePaymentIntent: actions?.createStripePaymentIntent,
-            onSuccess: () => {
+            amount: cart?.display_total ?? "",
+            currency: config?.currency ?? "INR",
+            onSuccess: async () => {
               if (typeof window !== "undefined") {
                 localStorage.removeItem("cartid");
               }
-              setCart(null);
-              router.push("/account/orders");
+              try {
+                const regionId = config?.regionId ?? null;
+                const updatedCart = await actions?.getCart?.(regionId);
+                const cartData = Array.isArray(updatedCart) ? updatedCart[0] : updatedCart;
+                console.log({ regionId, updatedCart, cartData });
+                const orderId = cartData?.order_id;
+                setCart(null);
+                if (orderId) {
+                  router.push(`/account/orders/${orderId}`);
+                } else {
+                  router.push("/account/orders");
+                }
+              } catch {
+                setCart(null);
+                router.push("/account/orders");
+              }
             }
           }
         ) }),
@@ -3534,24 +3631,25 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
       ] }) : /* @__PURE__ */ jsx(
         AddressCard,
         {
-          addressType: "Pay with Razorpay",
-          address: "Once you click Checkout, you'll be redirected to a secure Razorpay payment window to complete your payment.",
-          type: "stripe"
+          addressType: `Pay with ${paymentGatewayLabel}`,
+          address: `Once you click Checkout, you'll be redirected to a secure ${paymentGatewayLabel} payment window to complete your payment.`,
+          type: "stripe",
+          paymentLabel: paymentGatewayLabel
         }
       ) })
     ] }),
-    !(paymentMode === "stripe" && showStripeForm) && /* @__PURE__ */ jsxs("div", { className: "mt-[32px]", children: [
+    !(isStripeGateway && showStripeForm) && /* @__PURE__ */ jsxs("div", { className: "mt-[32px]", children: [
       /* @__PURE__ */ jsx(
         "button",
         {
           onClick: onPlaceOrder,
           disabled: hasDeletedItems || isPlacingOrder || isAddressLoading,
-          className: `px-5 py-3 w-full rounded-lg cursor-pointer font-[Nunito-medium] text-[15px] transition-all duration-300 ${hasDeletedItems || isPlacingOrder || isAddressLoading ? "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none" : "bg-[var(--core-primary)] text-white hover:opacity-90 hover:shadow-lg transform active:scale-[0.98]"}`,
-          children: isPlacingOrder ? "Processing\u2026" : hasDeletedItems ? "Remove Deleted Items to Checkout" : paymentMode === "stripe" ? "Proceed to Card Payment" : "Checkout"
+          className: `px-5 py-3 w-full rounded-lg cursor-pointer font-[var(--font-medium)] text-[15px] transition-all duration-300 ${hasDeletedItems || isPlacingOrder || isAddressLoading ? "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none" : "bg-[var(--core-primary)] text-white hover:opacity-90 hover:shadow-lg transform active:scale-[0.98]"}`,
+          children: isPlacingOrder ? "Processing\u2026" : hasDeletedItems ? "Remove Deleted Items to Checkout" : isStripeGateway ? "Proceed to Card Payment" : "Checkout"
         }
       ),
       /* @__PURE__ */ jsxs("div", { className: "mt-4 text-center", children: [
-        /* @__PURE__ */ jsxs("p", { className: "text-[11px] text-[#8c92a4] font-[Nunito-regular] leading-relaxed", children: [
+        /* @__PURE__ */ jsxs("p", { className: "text-[11px] text-[#8c92a4] font-[var(--font-regular)] leading-relaxed", children: [
           "By placing your order, you agree to our",
           " ",
           /* @__PURE__ */ jsx(
@@ -3584,7 +3682,7 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
           }
         ) })
       ] }),
-      hasDeletedItems && /* @__PURE__ */ jsx("p", { className: "text-xs text-red-600 mt-2 font-[Nunito-regular]", children: "Please remove unavailable items before proceeding to checkout." })
+      hasDeletedItems && /* @__PURE__ */ jsx("p", { className: "text-xs text-red-600 mt-2 font-[var(--font-regular)]", children: "Please remove unavailable items before proceeding to checkout." })
     ] }),
     isProcessingPayment && /* @__PURE__ */ jsx("div", { className: "fixed inset-0 z-[200] flex flex-col items-center justify-center bg-white/95 backdrop-blur-md animate-fadeIn", children: /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center gap-8 max-w-md w-full px-6", children: [
       /* @__PURE__ */ jsxs("div", { className: "relative", children: [
@@ -3598,13 +3696,12 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
           /* @__PURE__ */ jsx("div", { className: "w-12 h-[1px] bg-[var(--core-secondary)] mx-auto opacity-50" })
         ] }),
         /* @__PURE__ */ jsxs("div", { className: "space-y-2", children: [
-          /* @__PURE__ */ jsxs("p", { className: "font-[Nunito-medium] text-[#2d2d2d] text-base", children: [
-            "We're finalizing your order with",
-            " ",
-            paymentMode === "stripe" ? "Stripe" : "Razorpay",
+          /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-medium)] text-[#2d2d2d] text-base", children: [
+            "We're finalizing your order with ",
+            paymentGatewayLabel,
             "."
           ] }),
-          /* @__PURE__ */ jsxs("p", { className: "font-[Nunito-regular] text-[#8c92a4] text-sm leading-relaxed", children: [
+          /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-regular)] text-[#8c92a4] text-sm leading-relaxed", children: [
             "Please do not refresh the page or close this window. ",
             /* @__PURE__ */ jsx("br", {}),
             "This will only take a moment."
@@ -3822,15 +3919,14 @@ var CouponSection = () => {
   };
   if (!token) {
     return /* @__PURE__ */ jsx("div", { className: "my-4", children: /* @__PURE__ */ jsxs("div", { className: "w-full flex items-center justify-between border-t border-b border-[var(--borders)] px-1 py-3", children: [
-      /* @__PURE__ */ jsxs("span", { className: "font-[Nunito-medium] text-[14px] text-[var(--secondary)]", children: [
+      /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-medium)] text-[14px] text-[var(--secondary)]", children: [
         "\u{1F3F7} Have a coupon code?",
         " ",
-        /* @__PURE__ */ jsx("span", { className: "text-[#FF6500] text-[12px] font-[Nunito-regular]", children: "Sign in to apply" })
+        /* @__PURE__ */ jsx("span", { className: "text-[#FF6500] text-[12px] font-[var(--font-regular)]", children: "Sign in to apply" })
       ] }),
       /* @__PURE__ */ jsx("span", { className: "text-[var(--secondary)] text-[16px]", children: "\u25BE" })
     ] }) });
   }
-  console.log({ availableDiscountsWithCode });
   return /* @__PURE__ */ jsxs("div", { className: "my-4", children: [
     appliedDiscounts?.length > 0 && /* @__PURE__ */ jsx("div", { className: "flex flex-col gap-2 mb-3", children: appliedDiscounts?.map((coupon) => /* @__PURE__ */ jsxs(
       "div",
@@ -3839,10 +3935,10 @@ var CouponSection = () => {
         children: [
           /* @__PURE__ */ jsxs("div", { className: "flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0", children: [
             /* @__PURE__ */ jsx("span", { className: "text-base", children: "\u2705" }),
-            /* @__PURE__ */ jsx("span", { className: "font-[Nunito-bold] text-[#0f0f0f] text-[13px] tracking-wide", children: coupon.code ? coupon.code : coupon.display_action_value || "Discount" }),
-            /* @__PURE__ */ jsx("span", { className: "font-[Nunito-regular] text-[#0f0f0f] text-[12px]", children: "applied" }),
+            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-bold)] text-[#0f0f0f] text-[13px] tracking-wide", children: coupon.code ? coupon.code : coupon.display_action_value || "Discount" }),
+            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-regular)] text-[#0f0f0f] text-[12px]", children: "applied" }),
             /* @__PURE__ */ jsx("span", { className: "text-[#0f0f0f] text-[12px] hidden sm:inline", children: "\xB7" }),
-            /* @__PURE__ */ jsxs("span", { className: "text-[#00b300] text-[12px] font-[Nunito-bold]", children: [
+            /* @__PURE__ */ jsxs("span", { className: "text-[#00b300] text-[12px] font-[var(--font-bold)]", children: [
               "You save",
               " ",
               formatCurrency(
@@ -3877,7 +3973,7 @@ var CouponSection = () => {
           "aria-expanded": isOpen,
           className: "w-full flex items-center justify-between border-t border-b border-[var(--borders)] px-1 py-3 cursor-pointer",
           children: [
-            /* @__PURE__ */ jsx("span", { className: "font-[Nunito-medium] text-[14px] text-[var(--main)]", children: "\u{1F3F7} Have a coupon code?" }),
+            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-medium)] text-[14px] text-[var(--main)]", children: "\u{1F3F7} Have a coupon code?" }),
             /* @__PURE__ */ jsx("span", { className: "text-[var(--main)] text-[16px]", children: isOpen ? "\u25B4" : "\u25BE" })
           ]
         }
@@ -3893,7 +3989,7 @@ var CouponSection = () => {
               onChange: (e) => setInputValue(e.target.value),
               onKeyDown: (e) => e.key === "Enter" && handleApply(),
               placeholder: "ENTER CODE",
-              className: "border border-[var(--borders)] rounded-lg px-3 py-2 text-[13px] text-[var(--main)] font-[Nunito-regular] uppercase tracking-widest outline-none flex-1"
+              className: "border border-[var(--borders)] rounded-lg px-3 py-2 text-[13px] text-[var(--main)] font-[var(--font-regular)] uppercase tracking-widest outline-none flex-1"
             }
           ),
           /* @__PURE__ */ jsx(
@@ -3901,14 +3997,14 @@ var CouponSection = () => {
             {
               onClick: handleApply,
               disabled: isApplying || !inputValue.trim(),
-              className: "bg-[#FF6500] text-white text-[12px] font-[Nunito-bold] px-4 py-2 rounded-lg border-none cursor-pointer tracking-wide disabled:opacity-60 shrink-0",
+              className: "bg-[#FF6500] text-white text-[12px] font-[var(--font-bold)] px-4 py-2 rounded-lg border-none cursor-pointer tracking-wide disabled:opacity-60 shrink-0",
               children: isApplying ? "APPLYING..." : "APPLY"
             }
           )
         ] }),
-        errorMessage && /* @__PURE__ */ jsx("p", { className: "text-red-600 text-[12px] font-[Nunito-regular]", children: errorMessage }),
+        errorMessage && /* @__PURE__ */ jsx("p", { className: "text-red-600 text-[12px] font-[var(--font-regular)]", children: errorMessage }),
         !discountsLoading && availableDiscountsWithCode.length > 0 && /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-2 mt-1", children: [
-          /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-[12px] text-[var(--secondary)]", children: "Available coupons" }),
+          /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-[12px] text-[var(--secondary)]", children: "Available coupons" }),
           /* @__PURE__ */ jsx("div", { className: "flex flex-wrap gap-2", children: availableDiscountsWithCode.map((coupon) => {
             const endDate = formatEndDate(coupon.end_at);
             const { eligible, reason } = getEligibility(coupon);
@@ -3933,7 +4029,7 @@ var CouponSection = () => {
                         }
                       },
                       disabled: !eligible || isApplying,
-                      className: `bg-[#fff5ee] border border-dashed border-[#FF6500] text-[#FF6500] text-[11px] font-[Nunito-bold] px-3 py-1 rounded ${!eligible || isApplying ? "opacity-40 cursor-not-allowed" : ""}`,
+                      className: `bg-[#fff5ee] border border-dashed border-[#FF6500] text-[#FF6500] text-[11px] font-[var(--font-bold)] px-3 py-1 rounded ${!eligible || isApplying ? "opacity-40 cursor-not-allowed" : ""}`,
                       children: [
                         coupon.code ? `${coupon.code} \u2014 ` : "",
                         coupon.display_action_value || "Discount"
@@ -4001,31 +4097,57 @@ var ViewCart = () => {
     if (prev !== void 0 && prev && !activeDiscountId && items?.length > 0) {
       if (toast?.info) {
         toast.info("Coupon removed \u2014 conditions no longer met");
-      } else {
-        console.log("Coupon removed \u2014 conditions no longer met");
       }
     }
     prevDiscountIdRef.current = activeDiscountId;
   }, [activeDiscountId, items?.length, toast]);
-  console.log({ cart, appliedDiscounts });
-  return /* @__PURE__ */ jsx("div", { className: "mx-4 md:mx-[24px] my-[100px] flex justify-center", children: isLoading ? /* @__PURE__ */ jsx("div", { className: "flex justify-center items-center w-full h-[400px]", children: /* @__PURE__ */ jsx("div", { className: "animate-spin rounded-full h-10 w-10 border-t-2 border-b-2", style: { borderColor: "var(--core-primary)" } }) }) : items.length === 0 ? /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center justify-center p-12 bg-gray-50/50 border border-gray-100 rounded-2xl min-h-[400px] gap-y-6 max-w-[600px] w-full mx-auto", children: [
-    /* @__PURE__ */ jsx("div", { className: "p-4 bg-white rounded-full shadow-sm border border-gray-100", children: /* @__PURE__ */ jsxs("svg", { xmlns: "http://www.w3.org/2000/svg", width: "32", height: "32", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", style: { color: "var(--core-primary)" }, children: [
-      /* @__PURE__ */ jsx("path", { d: "M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" }),
-      /* @__PURE__ */ jsx("path", { d: "M3 6h18" }),
-      /* @__PURE__ */ jsx("path", { d: "M16 10a4 4 0 0 1-8 0" })
-    ] }) }),
+  return /* @__PURE__ */ jsx("div", { className: "mx-4 md:mx-[24px] my-[100px] flex justify-center", children: isLoading ? /* @__PURE__ */ jsx("div", { className: "flex justify-center items-center w-full h-[400px]", children: /* @__PURE__ */ jsx(
+    "div",
+    {
+      className: "animate-spin rounded-full h-10 w-10 border-t-2 border-b-2",
+      style: { borderColor: "var(--core-primary)" }
+    }
+  ) }) : items.length === 0 ? /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center justify-center p-12 bg-gray-50/50 border border-gray-100 rounded-2xl min-h-[400px] gap-y-6 max-w-[600px] w-full mx-auto", children: [
+    /* @__PURE__ */ jsx("div", { className: "p-4 bg-white rounded-full shadow-sm border border-gray-100", children: /* @__PURE__ */ jsxs(
+      "svg",
+      {
+        xmlns: "http://www.w3.org/2000/svg",
+        width: "32",
+        height: "32",
+        viewBox: "0 0 24 24",
+        fill: "none",
+        stroke: "currentColor",
+        strokeWidth: "1.5",
+        strokeLinecap: "round",
+        strokeLinejoin: "round",
+        style: { color: "var(--core-primary)" },
+        children: [
+          /* @__PURE__ */ jsx("path", { d: "M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" }),
+          /* @__PURE__ */ jsx("path", { d: "M3 6h18" }),
+          /* @__PURE__ */ jsx("path", { d: "M16 10a4 4 0 0 1-8 0" })
+        ]
+      }
+    ) }),
     /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center gap-2 text-center", children: [
-      /* @__PURE__ */ jsx("p", { className: "font-[Nunito-bold] text-[22px] text-gray-800", children: "Your cart is empty" }),
-      /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[15px] text-gray-500 max-w-[400px]", children: "Looks like you haven't added anything to your cart yet. Explore our collections and find something you love!" })
+      /* @__PURE__ */ jsx("p", { className: "font-[var(--font-bold)] text-[22px] text-gray-800", children: "Your cart is empty" }),
+      /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[15px] text-gray-500 max-w-[400px]", children: "Looks like you haven't added anything to your cart yet. Explore our collections and find something you love!" })
     ] }),
-    /* @__PURE__ */ jsx("a", { href: "/", className: "mt-4 px-8 py-3 rounded-full text-white font-[Nunito-medium] transition-opacity hover:opacity-90", style: { backgroundColor: "var(--core-primary)" }, children: "Continue Shopping" })
+    /* @__PURE__ */ jsx(
+      "a",
+      {
+        href: "/",
+        className: "mt-4 px-8 py-3 rounded-full text-white font-[var(--font-medium)] transition-opacity hover:opacity-90",
+        style: { backgroundColor: "var(--core-primary)" },
+        children: "Continue Shopping"
+      }
+    )
   ] }) : /* @__PURE__ */ jsxs("div", { className: "flex flex-row flex-wrap gap-[16px] max-w-[1248px] w-full", children: [
     /* @__PURE__ */ jsx("div", { className: "flex-1 mt-8 md:mt-0", children: /* @__PURE__ */ jsx(Checkout_default, { hasDeletedItems }) }),
     /* @__PURE__ */ jsx("div", { className: "border border-[var(--borders)] sticky hidden md:block" }),
     /* @__PURE__ */ jsxs("div", { className: "flex-1 md:sticky top-4 self-start mt-[18px] md:mt-0 order-first md:order-last", children: [
-      hasDeletedItems && /* @__PURE__ */ jsx("div", { className: "bg-yellow-50 border border-yellow-200 rounded-md p-3 mb-4", children: /* @__PURE__ */ jsx("p", { className: "text-sm text-yellow-800 font-[Nunito-medium]", children: "\u26A0\uFE0F Some items in your cart are no longer available. Please remove them before checkout." }) }),
+      hasDeletedItems && /* @__PURE__ */ jsx("div", { className: "bg-yellow-50 border border-yellow-200 rounded-md p-3 mb-4", children: /* @__PURE__ */ jsx("p", { className: "text-sm text-yellow-800 font-[var(--font-medium)]", children: "\u26A0\uFE0F Some items in your cart are no longer available. Please remove them before checkout." }) }),
       /* @__PURE__ */ jsxs("div", { children: [
-        /* @__PURE__ */ jsxs("div", { className: "font-[Nunito-medium] text-[20px] text-[var(--main)]", children: [
+        /* @__PURE__ */ jsxs("div", { className: "font-[var(--font-medium)] text-[20px] text-[var(--main)]", children: [
           "ORDER ITEMS (",
           items.length,
           ")"
@@ -4040,11 +4162,11 @@ var ViewCart = () => {
         )) }) }),
         /* @__PURE__ */ jsx("div", { className: "mt-4", children: /* @__PURE__ */ jsx(CouponSection_default, {}) }),
         /* @__PURE__ */ jsxs("div", { className: "mt-8", children: [
-          /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-[20px] text-[var(--main)]", children: "Bill summary" }),
+          /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-[20px] text-[var(--main)]", children: "Bill summary" }),
           /* @__PURE__ */ jsxs("div", { className: "mt-[24px] space-y-[8px]", children: [
             /* @__PURE__ */ jsxs("div", { className: "flex justify-between", children: [
-              /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[14px] text-[var(--main)]", children: "Item total" }),
-              /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[14px] text-[var(--main)]", children: display_item_total ? formatCurrency(display_item_total) : "\u2014" })
+              /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[14px] text-[var(--main)]", children: "Item total" }),
+              /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[14px] text-[var(--main)]", children: display_item_total ? formatCurrency(display_item_total) : "\u2014" })
             ] }),
             (appliedDiscounts?.length > 0 || cart?.promo_total > 0 || parseFloat(cart?.display_promo_total) > 0) && (() => {
               const totalDiscount = appliedDiscounts?.length > 0 ? appliedDiscounts.reduce((sum, c) => {
@@ -4075,7 +4197,7 @@ var ViewCart = () => {
                             display: "flex",
                             alignItems: "center",
                             gap: "4px",
-                            fontFamily: "Nunito-regular",
+                            fontFamily: "var(--font-regular)",
                             fontSize: "14px",
                             color: "#FF6500"
                           },
@@ -4106,7 +4228,7 @@ var ViewCart = () => {
                         "span",
                         {
                           style: {
-                            fontFamily: "Nunito-regular",
+                            fontFamily: "var(--font-regular)",
                             fontSize: "14px",
                             color: "#FF6500"
                           },
@@ -4144,7 +4266,7 @@ var ViewCart = () => {
                               "span",
                               {
                                 style: {
-                                  fontFamily: "Nunito-regular",
+                                  fontFamily: "var(--font-regular)",
                                   fontSize: "13px",
                                   color: "#FF6500",
                                   opacity: 0.85
@@ -4156,7 +4278,7 @@ var ViewCart = () => {
                               "span",
                               {
                                 style: {
-                                  fontFamily: "Nunito-regular",
+                                  fontFamily: "var(--font-regular)",
                                   fontSize: "13px",
                                   color: "#FF6500",
                                   opacity: 0.85
@@ -4177,19 +4299,19 @@ var ViewCart = () => {
               ] });
             })(),
             /* @__PURE__ */ jsxs("div", { className: "flex justify-between", children: [
-              /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[14px] text-[var(--main)]", children: "Tax" }),
-              /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[14px] text-[var(--main)]", children: display_tax_total ? formatCurrency(display_tax_total) : "\u2014" })
+              /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[14px] text-[var(--main)]", children: "Tax" }),
+              /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[14px] text-[var(--main)]", children: display_tax_total ? formatCurrency(display_tax_total) : "\u2014" })
             ] }),
             order_type !== "pickup" && /* @__PURE__ */ jsxs("div", { className: "flex justify-between", children: [
-              /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[14px] text-[var(--main)]", children: "Shipping" }),
-              /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[14px] text-[var(--main)]", children: display_ship_total === "0.00" || display_ship_total === 0 ? "Free" : display_ship_total ? formatCurrency(display_ship_total) : "\u2014" })
+              /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[14px] text-[var(--main)]", children: "Shipping" }),
+              /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[14px] text-[var(--main)]", children: display_ship_total === "0.00" || display_ship_total === 0 ? "Free" : display_ship_total ? formatCurrency(display_ship_total) : "\u2014" })
             ] }),
             /* @__PURE__ */ jsxs("div", { className: "pt-[16px] border-t border-[var(--borders)]", children: [
               /* @__PURE__ */ jsxs("div", { className: "flex justify-between", children: [
-                /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-[16px] text-[var(--main)]", children: "Total payment" }),
-                /* @__PURE__ */ jsx("p", { className: "font-[Nunito-bold] text-[16px] text-[var(--main)]", children: display_total ? formatCurrency(display_total) : "\u2014" })
+                /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-[16px] text-[var(--main)]", children: "Total payment" }),
+                /* @__PURE__ */ jsx("p", { className: "font-[var(--font-bold)] text-[16px] text-[var(--main)]", children: display_total ? formatCurrency(display_total) : "\u2014" })
               ] }),
-              (cart?.promo_total > 0 || parseFloat(cart?.display_promo_total) > 0) && /* @__PURE__ */ jsxs("p", { className: "text-[13px] font-[Nunito-bold] text-[#00b300] mt-[6px] text-right", children: [
+              (cart?.promo_total > 0 || parseFloat(cart?.display_promo_total) > 0) && /* @__PURE__ */ jsxs("p", { className: "text-[13px] font-[var(--font-bold)] text-[#00b300] mt-[6px] text-right", children: [
                 "You save ",
                 formatCurrency(cart?.display_promo_total),
                 " on this order \u{1F389}"
@@ -4239,12 +4361,12 @@ var AddressCard2 = ({ address, onEdit, onDelete }) => {
   return /* @__PURE__ */ jsxs(Fragment, { children: [
     /* @__PURE__ */ jsxs("div", { className: "border border-gray-100 p-6 flex flex-col gap-y-4 hover:border-[var(--core-primary)] transition-all duration-300 bg-white shadow-sm hover:shadow-md group", children: [
       /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
-        /* @__PURE__ */ jsx("h3", { className: "font-[Nunito-bold] text-[13px] text-[var(--core-primary)] uppercase tracking-widest bg-gray-50 px-2 py-1", children: label || "Address" }),
+        /* @__PURE__ */ jsx("h3", { className: "font-[var(--font-bold)] text-[13px] text-[var(--core-primary)] uppercase tracking-widest bg-gray-50 px-2 py-1", children: label || "Address" }),
         /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3", children: [
           /* @__PURE__ */ jsxs(
             "button",
             {
-              className: "flex items-center gap-1.5 font-[Nunito-medium] text-[12px] text-[#2563EB] hover:text-[#1d4ed8] transition-colors uppercase tracking-widest",
+              className: "flex items-center gap-1.5 font-[var(--font-medium)] text-[12px] text-[var(--core-primary)] hover:opacity-80 transition-colors uppercase tracking-widest",
               onClick: onEdit,
               children: [
                 /* @__PURE__ */ jsx("svg", { className: "w-3.5 h-3.5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" }) }),
@@ -4256,7 +4378,7 @@ var AddressCard2 = ({ address, onEdit, onDelete }) => {
           /* @__PURE__ */ jsxs(
             "button",
             {
-              className: "flex items-center gap-1.5 font-[Nunito-medium] text-[12px] text-red-500 hover:text-red-700 transition-colors uppercase tracking-widest",
+              className: "flex items-center gap-1.5 font-[var(--font-medium)] text-[12px] text-red-500 hover:text-red-700 transition-colors uppercase tracking-widest",
               onClick: () => setShowConfirm(true),
               children: [
                 /* @__PURE__ */ jsx("svg", { className: "w-3.5 h-3.5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" }) }),
@@ -4268,10 +4390,10 @@ var AddressCard2 = ({ address, onEdit, onDelete }) => {
       ] }),
       /* @__PURE__ */ jsx("div", { className: "border-t border-gray-50" }),
       /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
-        /* @__PURE__ */ jsx("p", { className: "font-[Nunito-bold] text-[14px] text-[#2d2d2d] uppercase", children: fullName }),
-        /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-[13px] text-gray-500", children: phone })
+        /* @__PURE__ */ jsx("p", { className: "font-[var(--font-bold)] text-[14px] text-[#2d2d2d] uppercase", children: fullName }),
+        /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-[13px] text-gray-500", children: phone })
       ] }),
-      /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[13px] text-gray-400 leading-relaxed line-clamp-2", children: fullAddress })
+      /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[13px] text-gray-400 leading-relaxed line-clamp-2", children: fullAddress })
     ] }),
     /* @__PURE__ */ jsx(
       Popup,
@@ -4282,9 +4404,9 @@ var AddressCard2 = ({ address, onEdit, onDelete }) => {
         maxWidth: "max-w-[400px]",
         style: { maxWidth: "400px" },
         children: /* @__PURE__ */ jsxs("div", { className: "text-center py-4", children: [
-          /* @__PURE__ */ jsxs("p", { className: "font-[Nunito-regular] text-[15px] text-gray-600 mb-8", children: [
+          /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-regular)] text-[15px] text-gray-600 mb-8", children: [
             "Are you sure you want to delete ",
-            /* @__PURE__ */ jsxs("span", { className: "font-[Nunito-bold] text-[var(--core-primary)]", children: [
+            /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-bold)] text-[var(--core-primary)]", children: [
               '"',
               label || "this address",
               '"'
@@ -4297,7 +4419,7 @@ var AddressCard2 = ({ address, onEdit, onDelete }) => {
               {
                 onClick: () => setShowConfirm(false),
                 disabled: isDeleting,
-                className: "flex-1 h-[48px] text-[14px] font-[Nunito-bold] border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors uppercase tracking-widest",
+                className: "flex-1 h-[48px] text-[14px] font-[var(--font-bold)] border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors uppercase tracking-widest",
                 children: "Cancel"
               }
             ),
@@ -4306,7 +4428,7 @@ var AddressCard2 = ({ address, onEdit, onDelete }) => {
               {
                 onClick: handleDelete,
                 disabled: isDeleting,
-                className: "flex-1 h-[48px] text-[14px] font-[Nunito-bold] bg-red-600 text-white hover:bg-red-700 transition-colors flex items-center justify-center gap-2 uppercase tracking-widest shadow-lg shadow-red-100",
+                className: "flex-1 h-[48px] text-[14px] font-[var(--font-bold)] bg-red-600 text-white hover:bg-red-700 transition-colors flex items-center justify-center gap-2 uppercase tracking-widest shadow-lg shadow-red-100",
                 children: isDeleting ? /* @__PURE__ */ jsx(Spinner, { size: "sm", color: "white" }) : "Delete"
               }
             )
@@ -4351,8 +4473,8 @@ var ProfileForm = ({ user, onSuccess, onCancel }) => {
       setIsSubmitting(false);
     }
   };
-  const inputCls = "w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--core-primary)] font-[Nunito-regular]";
-  const labelCls = "text-sm font-[Nunito-bold] text-[var(--core-primary)] uppercase tracking-widest text-[11px]";
+  const inputCls = "w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--core-primary)] font-[var(--font-regular)]";
+  const labelCls = "text-sm font-[var(--font-bold)] text-[var(--core-primary)] uppercase tracking-widest text-[11px]";
   return /* @__PURE__ */ jsxs("form", { onSubmit: handleSubmit, className: "space-y-6", children: [
     /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-6", children: [
       /* @__PURE__ */ jsxs("div", { className: "space-y-2", children: [
@@ -4407,7 +4529,7 @@ var ProfileForm = ({ user, onSuccess, onCancel }) => {
         {
           type: "button",
           onClick: onCancel,
-          className: "flex-1 py-3 border border-gray-300 rounded-md text-[var(--core-primary)] font-[Nunito-bold] hover:bg-gray-50 transition-colors uppercase tracking-widest text-[12px]",
+          className: "flex-1 py-3 border border-gray-300 rounded-md text-[var(--core-primary)] font-[var(--font-bold)] hover:bg-gray-50 transition-colors uppercase tracking-widest text-[12px]",
           children: "Cancel"
         }
       ),
@@ -4416,7 +4538,7 @@ var ProfileForm = ({ user, onSuccess, onCancel }) => {
         {
           type: "submit",
           disabled: isSubmitting,
-          className: `flex-1 py-3 bg-[var(--core-primary)] text-white rounded-md font-[Nunito-bold] transition-colors flex items-center justify-center gap-2 uppercase tracking-widest text-[12px] shadow-lg shadow-blue-100 ${isSubmitting ? "opacity-70 cursor-not-allowed" : "hover:opacity-90"}`,
+          className: `flex-1 py-3 bg-[var(--core-primary)] text-white rounded-md font-[var(--font-bold)] transition-colors flex items-center justify-center gap-2 uppercase tracking-widest text-[12px] shadow-lg shadow-blue-100 ${isSubmitting ? "opacity-70 cursor-not-allowed" : "hover:opacity-90"}`,
           children: isSubmitting ? /* @__PURE__ */ jsx(Spinner, { size: "sm", color: "white" }) : "Save Changes"
         }
       )
@@ -4445,48 +4567,47 @@ var UserInfo = ({ user, isLoading, refetch }) => {
     fetchAddresses();
   }, [fetchAddresses]);
   const closeModal = () => setModalState({ type: null, data: null });
-  console.log({ addresses });
   if (isLoading) {
     return /* @__PURE__ */ jsx("div", { className: "flex justify-center py-20", children: /* @__PURE__ */ jsx(Spinner, {}) });
   }
   const userData = user || {};
   return /* @__PURE__ */ jsxs("div", { className: "animate-in fade-in slide-in-from-bottom-4 duration-500", children: [
-    /* @__PURE__ */ jsx("h1", { className: "font-[Nunito-regular] text-[32px] text-[var(--core-primary)] mb-10 tracking-tight", children: "MY PROFILE" }),
+    /* @__PURE__ */ jsx("h1", { className: "font-[var(--font-regular)] text-[32px] text-[var(--core-primary)] mb-10 tracking-tight", children: "MY PROFILE" }),
     /* @__PURE__ */ jsxs("section", { className: "mb-12", children: [
       /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-end mb-4", children: [
-        /* @__PURE__ */ jsx("h2", { className: "font-[Nunito-medium] text-[20px] text-[#2d2d2d] uppercase tracking-wider", children: "Profile" }),
+        /* @__PURE__ */ jsx("h2", { className: "font-[var(--font-medium)] text-[20px] text-[#2d2d2d] uppercase tracking-wider", children: "Profile" }),
         /* @__PURE__ */ jsx(
           "button",
           {
             onClick: () => setModalState({ type: "profile", data: user }),
-            className: "text-[14px] font-[Nunito-medium] text-[#2563EB] hover:underline uppercase tracking-widest transition-all",
+            className: "text-[14px] font-[var(--font-medium)] text-[var(--core-primary)] hover:underline uppercase tracking-widest transition-all",
             children: "Edit"
           }
         )
       ] }),
       /* @__PURE__ */ jsx("div", { className: "border border-gray-100 p-8 shadow-sm bg-white hover:shadow-md transition-shadow duration-300", children: /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6", children: [
         /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-1", children: [
-          /* @__PURE__ */ jsx("label", { className: "text-[12px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest", children: "First name" }),
-          /* @__PURE__ */ jsx("p", { className: "border-b border-gray-100 pb-2 text-[15px] font-[Nunito-medium] text-[var(--core-primary)]", children: userData.first_name || userData.firstName || "\u2014" })
+          /* @__PURE__ */ jsx("label", { className: "text-[12px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "First name" }),
+          /* @__PURE__ */ jsx("p", { className: "border-b border-gray-100 pb-2 text-[15px] font-[var(--font-medium)] text-[var(--core-primary)]", children: userData.first_name || userData.firstName || "\u2014" })
         ] }),
         /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-1", children: [
-          /* @__PURE__ */ jsx("label", { className: "text-[12px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest", children: "Last name" }),
-          /* @__PURE__ */ jsx("p", { className: "border-b border-gray-100 pb-2 text-[15px] font-[Nunito-medium] text-[var(--core-primary)]", children: userData.last_name || userData.lastName || "\u2014" })
+          /* @__PURE__ */ jsx("label", { className: "text-[12px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Last name" }),
+          /* @__PURE__ */ jsx("p", { className: "border-b border-gray-100 pb-2 text-[15px] font-[var(--font-medium)] text-[var(--core-primary)]", children: userData.last_name || userData.lastName || "\u2014" })
         ] }),
         /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-1 md:col-span-2", children: [
-          /* @__PURE__ */ jsx("label", { className: "text-[12px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest", children: config?.authType === "own" ? "Phone number" : "Email address" }),
-          /* @__PURE__ */ jsx("p", { className: "border-b border-gray-100 pb-2 text-[15px] font-[Nunito-medium] text-[var(--core-primary)]", children: config?.authType === "own" ? userData.phone || userData.mobile || userData.phone_number || "\u2014" : userData.email || userData.primaryEmailAddress?.emailAddress || "\u2014" })
+          /* @__PURE__ */ jsx("label", { className: "text-[12px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: config?.authType === "own" ? "Phone number" : "Email address" }),
+          /* @__PURE__ */ jsx("p", { className: "border-b border-gray-100 pb-2 text-[15px] font-[var(--font-medium)] text-[var(--core-primary)]", children: config?.authType === "own" ? userData.phone || userData.mobile || userData.phone_number || "\u2014" : userData.email || userData.primaryEmailAddress?.emailAddress || "\u2014" })
         ] })
       ] }) })
     ] }),
     /* @__PURE__ */ jsxs("section", { children: [
       /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-end mb-4", children: [
-        /* @__PURE__ */ jsx("h2", { className: "font-[Nunito-medium] text-[20px] text-[#2d2d2d] uppercase tracking-wider", children: "Addresses" }),
+        /* @__PURE__ */ jsx("h2", { className: "font-[var(--font-medium)] text-[20px] text-[#2d2d2d] uppercase tracking-wider", children: "Addresses" }),
         /* @__PURE__ */ jsx(
           "button",
           {
             onClick: () => setModalState({ type: "new_address", data: null }),
-            className: "text-[14px] font-[Nunito-medium] text-[#2563EB] hover:underline uppercase tracking-widest transition-all",
+            className: "text-[14px] font-[var(--font-medium)] text-[var(--core-primary)] hover:underline uppercase tracking-widest transition-all",
             children: "Add new address"
           }
         )
@@ -4509,7 +4630,7 @@ var UserInfo = ({ user, isLoading, refetch }) => {
             "button",
             {
               onClick: () => setModalState({ type: "new_address", data: null }),
-              className: "mt-4 px-8 py-3 bg-[var(--core-primary)] text-white font-[Nunito-bold] text-[13px] uppercase tracking-widest hover:opacity-90 transition-colors",
+              className: "mt-4 px-8 py-3 bg-[var(--core-primary)] text-white font-[var(--font-bold)] text-[13px] uppercase tracking-widest hover:opacity-90 transition-colors",
               children: "Add Your First Address"
             }
           ),
@@ -4561,7 +4682,7 @@ var OrdersList = ({ initialOrders }) => {
       try {
         if (actions?.getOrders) {
           const data = await actions.getOrders(config?.regionId);
-          setOrders(data || []);
+          setOrders(data?.orders || data || []);
         }
       } catch (error) {
         console.error("Error fetching orders:", error);
@@ -4575,14 +4696,14 @@ var OrdersList = ({ initialOrders }) => {
     return /* @__PURE__ */ jsx("div", { className: "flex justify-center py-20", children: /* @__PURE__ */ jsx(Spinner, {}) });
   }
   return /* @__PURE__ */ jsxs("div", { className: "animate-in fade-in slide-in-from-bottom-4 duration-500", children: [
-    /* @__PURE__ */ jsx("h1", { className: "font-[Nunito-regular] text-[32px] text-[var(--core-primary)] mb-10 tracking-tight uppercase", children: "MY ORDERS" }),
+    /* @__PURE__ */ jsx("h1", { className: "font-[var(--font-regular)] text-[32px] text-[var(--core-primary)] mb-10 tracking-tight uppercase", children: "MY ORDERS" }),
     orders.length > 0 ? /* @__PURE__ */ jsx("div", { className: "space-y-6", children: orders.map((order) => /* @__PURE__ */ jsx(OrderCard, { order, formatCurrency }, order.id)) }) : /* @__PURE__ */ jsx(
       EmptyState,
       {
         icon: "\u{1F4E6}",
         title: "No Orders Found",
         description: "It looks like you haven't placed any orders yet. Once you do, they will appear here.",
-        action: /* @__PURE__ */ jsx("button", { className: "mt-4 px-8 py-3 bg-[var(--core-primary)] text-white font-[Nunito-bold] text-[13px] uppercase tracking-widest hover:opacity-90 transition-colors rounded-none", children: "Start Shopping" }),
+        action: /* @__PURE__ */ jsx("button", { className: "mt-4 px-8 py-3 bg-[var(--core-primary)] text-white font-[var(--font-bold)] text-[13px] uppercase tracking-widest hover:opacity-90 transition-colors rounded-none", children: "Start Shopping" }),
         className: "border border-dashed border-gray-200 bg-gray-50/30"
       }
     )
@@ -4617,11 +4738,11 @@ var OrderCard = ({ order, formatCurrency }) => {
         /* @__PURE__ */ jsxs("div", { className: "flex flex-col md:flex-row justify-between items-start md:items-center bg-gray-50/80 p-5 border-b border-gray-100 gap-4", children: [
           /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-1.5", children: [
             /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3", children: [
-              /* @__PURE__ */ jsx("span", { className: "font-[Nunito-bold] text-[16px] text-[var(--core-primary)]", children: order_number || cartNumber || id }),
+              /* @__PURE__ */ jsx("span", { className: "font-[var(--font-bold)] text-[16px] text-[var(--core-primary)]", children: order_number || cartNumber || id }),
               /* @__PURE__ */ jsx(
                 "span",
                 {
-                  className: "text-[10px] font-[Nunito-bold] uppercase tracking-wider",
+                  className: "text-[10px] font-[var(--font-bold)] uppercase tracking-wider",
                   style: {
                     padding: "3px 10px",
                     borderRadius: "999px",
@@ -4633,16 +4754,16 @@ var OrderCard = ({ order, formatCurrency }) => {
                 }
               )
             ] }),
-            /* @__PURE__ */ jsxs("p", { className: "text-[13px] font-[Nunito-medium] text-gray-500", children: [
+            /* @__PURE__ */ jsxs("p", { className: "text-[13px] font-[var(--font-medium)] text-gray-500", children: [
               "Placed on ",
               /* @__PURE__ */ jsx("span", { className: "text-gray-700", children: dateStr })
             ] })
           ] }),
           /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-start md:items-end gap-1.5 w-full md:w-auto", children: [
-            /* @__PURE__ */ jsx("span", { className: "font-[Nunito-bold] text-[18px] text-[var(--core-primary)]", children: display_total ? formatCurrency(display_total) : "\u2014" }),
-            /* @__PURE__ */ jsxs("p", { className: "text-[12px] font-[Nunito-medium] flex items-center gap-1.5", children: [
-              /* @__PURE__ */ jsx("span", { className: "text-gray-400 uppercase tracking-wider text-[10px] font-[Nunito-bold]", children: "Payment:" }),
-              /* @__PURE__ */ jsx("span", { className: `uppercase font-[Nunito-bold] tracking-tight ${payment_status === "received" || payment_status === "paid" ? "text-green-600" : "text-orange-500"}`, children: payment_status || "Pending" })
+            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-bold)] text-[18px] text-[var(--core-primary)]", children: display_total ? formatCurrency(display_total) : "\u2014" }),
+            /* @__PURE__ */ jsxs("p", { className: "text-[12px] font-[var(--font-medium)] flex items-center gap-1.5", children: [
+              /* @__PURE__ */ jsx("span", { className: "text-gray-400 uppercase tracking-wider text-[10px] font-[var(--font-bold)]", children: "Payment:" }),
+              /* @__PURE__ */ jsx("span", { className: `uppercase font-[var(--font-bold)] tracking-tight ${payment_status === "received" || payment_status === "paid" ? "text-green-600" : "text-orange-500"}`, children: payment_status || "Pending" })
             ] })
           ] })
         ] }),
@@ -4661,13 +4782,13 @@ var OrderCard = ({ order, formatCurrency }) => {
                 }
               ) : /* @__PURE__ */ jsxs("div", { className: "w-full h-full flex flex-col items-center justify-center text-gray-300", children: [
                 /* @__PURE__ */ jsx("span", { className: "text-[20px] mb-1", children: "\u{1F4E6}" }),
-                /* @__PURE__ */ jsx("span", { className: "text-[9px] uppercase tracking-wider font-[Nunito-medium]", children: "No Image" })
+                /* @__PURE__ */ jsx("span", { className: "text-[9px] uppercase tracking-wider font-[var(--font-medium)]", children: "No Image" })
               ] }) }),
               /* @__PURE__ */ jsx("span", { className: "absolute top-0 right-0 -translate-y-1/3 translate-x-1/3 bg-[var(--core-primary)] text-white text-[11px] font-bold w-6 h-6 flex items-center justify-center rounded-full border-2 border-white shadow-sm z-10", children: item.quantity })
             ] }, idx);
           }),
           line_items.length === 0 && /* @__PURE__ */ jsx("p", { className: "text-gray-400 italic text-sm py-4", children: "No items info" }),
-          /* @__PURE__ */ jsx("div", { className: "absolute right-5 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 hidden md:flex items-center text-[var(--core-primary)] text-[13px] font-[Nunito-bold] bg-white/90 backdrop-blur-sm py-2 px-4 rounded-full shadow-sm border border-gray-200 pointer-events-none", children: "View Details \u2192" })
+          /* @__PURE__ */ jsx("div", { className: "absolute right-5 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 hidden md:flex items-center text-[var(--core-primary)] text-[13px] font-[var(--font-bold)] bg-white/90 backdrop-blur-sm py-2 px-4 rounded-full shadow-sm border border-gray-200 pointer-events-none", children: "View Details \u2192" })
         ] })
       ]
     }
@@ -4705,8 +4826,8 @@ var AccountPage = ({ initialTab = "profile" }) => {
   console.log({ userData });
   return /* @__PURE__ */ jsx("div", { className: "min-h-screen bg-white", children: /* @__PURE__ */ jsxs("div", { className: "px-4 md:px-8 lg:px-[32px] py-[40px] md:py-[100px] flex flex-col md:flex-row items-start justify-between gap-8 w-full", children: [
     /* @__PURE__ */ jsxs("aside", { className: "w-full md:w-[280px] lg:w-[320px] md:sticky top-[40px]", children: [
-      /* @__PURE__ */ jsx("h1", { className: "font-[Nunito-Regular] text-[40px] md:text-[48px] leading-[1.05] text-[var(--core-primary)] mb-8 tracking-tight uppercase", children: "MY ACCOUNT" }),
-      /* @__PURE__ */ jsx("nav", { children: /* @__PURE__ */ jsxs("ul", { className: "space-y-1 font-[Nunito-Medium]", children: [
+      /* @__PURE__ */ jsx("h1", { className: "font-[var(--font-regular)] text-[40px] md:text-[48px] leading-[1.05] text-[var(--core-primary)] mb-8 tracking-tight uppercase", children: "MY ACCOUNT" }),
+      /* @__PURE__ */ jsx("nav", { children: /* @__PURE__ */ jsxs("ul", { className: "space-y-1 font-[var(--font-medium)]", children: [
         navItems.map((item) => /* @__PURE__ */ jsx("li", { children: /* @__PURE__ */ jsx(
           "button",
           {
@@ -4734,6 +4855,556 @@ var AccountPage = ({ initialTab = "profile" }) => {
       }
     ) : /* @__PURE__ */ jsx(OrdersList, {}) })
   ] }) });
+};
+var IconBase = ({ children, className = "h-5 w-5", strokeWidth = 1.75, fill = "none", ...props }) => /* @__PURE__ */ jsx("svg", { viewBox: "0 0 24 24", fill, stroke: "currentColor", strokeWidth, strokeLinecap: "round", strokeLinejoin: "round", className, "aria-hidden": "true", ...props, children });
+var AccountMapPinIcon = (props) => /* @__PURE__ */ jsxs(IconBase, { ...props, children: [
+  /* @__PURE__ */ jsx("path", { d: "M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" }),
+  /* @__PURE__ */ jsx("circle", { cx: "12", cy: "10", r: "3" })
+] });
+var AccountShoppingBagIcon = (props) => /* @__PURE__ */ jsxs(IconBase, { ...props, children: [
+  /* @__PURE__ */ jsx("path", { d: "M6 8h12l-1 13H7L6 8Z" }),
+  /* @__PURE__ */ jsx("path", { d: "M9 8a3 3 0 0 1 6 0" })
+] });
+var AccountHeartIcon = ({ filled = false, ...props }) => /* @__PURE__ */ jsx(IconBase, { ...props, fill: filled ? "currentColor" : "none", children: /* @__PURE__ */ jsx("path", { d: "M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 1 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z" }) });
+var AccountLogOutIcon = (props) => /* @__PURE__ */ jsxs(IconBase, { ...props, children: [
+  /* @__PURE__ */ jsx("path", { d: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" }),
+  /* @__PURE__ */ jsx("path", { d: "M16 17l5-5-5-5" }),
+  /* @__PURE__ */ jsx("path", { d: "M21 12H9" })
+] });
+var AccountPlusIcon = (props) => /* @__PURE__ */ jsxs(IconBase, { ...props, children: [
+  /* @__PURE__ */ jsx("path", { d: "M12 5v14" }),
+  /* @__PURE__ */ jsx("path", { d: "M5 12h14" })
+] });
+var AccountPencilIcon = (props) => /* @__PURE__ */ jsxs(IconBase, { ...props, children: [
+  /* @__PURE__ */ jsx("path", { d: "M12 20h9" }),
+  /* @__PURE__ */ jsx("path", { d: "M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" })
+] });
+var AccountTrashIcon = (props) => /* @__PURE__ */ jsxs(IconBase, { ...props, children: [
+  /* @__PURE__ */ jsx("path", { d: "M3 6h18" }),
+  /* @__PURE__ */ jsx("path", { d: "M8 6V4h8v2" }),
+  /* @__PURE__ */ jsx("path", { d: "M19 6l-1 14H6L5 6" }),
+  /* @__PURE__ */ jsx("path", { d: "M10 11v6" }),
+  /* @__PURE__ */ jsx("path", { d: "M14 11v6" })
+] });
+var AccountPackageIcon = (props) => /* @__PURE__ */ jsxs(IconBase, { ...props, children: [
+  /* @__PURE__ */ jsx("path", { d: "M21 8l-9-5-9 5 9 5 9-5Z" }),
+  /* @__PURE__ */ jsx("path", { d: "M3 8v8l9 5 9-5V8" }),
+  /* @__PURE__ */ jsx("path", { d: "M12 13v8" })
+] });
+var AccountCalendarIcon = (props) => /* @__PURE__ */ jsxs(IconBase, { ...props, children: [
+  /* @__PURE__ */ jsx("rect", { x: "3", y: "4", width: "18", height: "18", rx: "2" }),
+  /* @__PURE__ */ jsx("path", { d: "M16 2v4" }),
+  /* @__PURE__ */ jsx("path", { d: "M8 2v4" }),
+  /* @__PURE__ */ jsx("path", { d: "M3 10h18" })
+] });
+var AccountTagIcon = (props) => /* @__PURE__ */ jsxs(IconBase, { ...props, children: [
+  /* @__PURE__ */ jsx("path", { d: "M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z" }),
+  /* @__PURE__ */ jsx("circle", { cx: "7.5", cy: "7.5", r: "1.5" })
+] });
+var AccountArrowLeftIcon = (props) => /* @__PURE__ */ jsxs(IconBase, { ...props, children: [
+  /* @__PURE__ */ jsx("path", { d: "M19 12H5" }),
+  /* @__PURE__ */ jsx("path", { d: "M12 19l-7-7 7-7" })
+] });
+var AccountCopyIcon = (props) => /* @__PURE__ */ jsxs(IconBase, { ...props, children: [
+  /* @__PURE__ */ jsx("rect", { x: "9", y: "9", width: "13", height: "13", rx: "2" }),
+  /* @__PURE__ */ jsx("rect", { x: "2", y: "2", width: "13", height: "13", rx: "2" })
+] });
+var AccountCheckIcon = (props) => /* @__PURE__ */ jsx(IconBase, { ...props, children: /* @__PURE__ */ jsx("path", { d: "M20 6 9 17l-5-5" }) });
+var DEFAULT_NAV_ITEMS = [
+  { label: "My Addresses", href: "/account/addresses", icon: AccountMapPinIcon },
+  { label: "My Orders", href: "/account/orders", icon: AccountShoppingBagIcon },
+  { label: "My Wishlist", href: "/account/wishlist", icon: AccountHeartIcon }
+];
+var getContactInfo = (user) => user?.phone || user?.mobile || user?.email || user?.email_address || user?.primaryPhoneNumber?.phoneNumber || user?.primaryEmailAddress?.emailAddress || "Guest User";
+var AccountSidebar = ({
+  navItems = DEFAULT_NAV_ITEMS,
+  user,
+  contactInfo,
+  onNavigate,
+  onLogout,
+  className = "",
+  showLogout = true,
+  logoutLabel = "Logout"
+}) => {
+  const pathname = usePathname();
+  const router = useRouter();
+  const coreLogout = useLogout();
+  const { auth } = useCore();
+  const resolvedContactInfo = contactInfo ?? getContactInfo(user ?? auth?.user);
+  const handleNavigate = (href) => {
+    if (onNavigate) {
+      onNavigate(href);
+      return;
+    }
+    router.push(href);
+  };
+  const handleLogout = () => {
+    if (onLogout) {
+      onLogout();
+      return;
+    }
+    coreLogout();
+  };
+  return /* @__PURE__ */ jsxs("aside", { className: `w-[220px] flex-shrink-0 border-r border-gray-100 bg-white max-md:w-full max-md:border-b max-md:border-r-0 ${className}`, children: [
+    /* @__PURE__ */ jsx("div", { className: "border-b border-gray-100 px-5 py-5 text-center", children: /* @__PURE__ */ jsx("p", { className: "truncate px-2 text-[13px] font-[var(--font-medium)] tracking-wide text-[#555555]", children: resolvedContactInfo }) }),
+    /* @__PURE__ */ jsxs("nav", { className: "flex flex-col py-2 max-md:flex-row max-md:overflow-x-auto max-md:py-0", children: [
+      navItems.map(({ label, href, icon: Icon = AccountMapPinIcon }) => {
+        const isActive = href === "/account" ? pathname === href : pathname.startsWith(href);
+        return /* @__PURE__ */ jsxs(
+          "button",
+          {
+            type: "button",
+            onClick: () => handleNavigate(href),
+            className: `flex items-center gap-3 border-l-[3px] px-5 py-[13px] text-left transition-colors max-md:min-w-max max-md:border-b-[3px] max-md:border-l-0 ${isActive ? "border-l-[var(--core-primary)] bg-[#EBF0FC] text-[#1C1C1C] max-md:border-b-[var(--core-primary)]" : "border-l-transparent text-[#555555] hover:bg-[#FAFAFA] max-md:border-b-transparent"}`,
+            children: [
+              /* @__PURE__ */ jsx(Icon, { className: `h-[18px] w-[18px] flex-shrink-0 ${isActive ? "text-[var(--core-primary)]" : "text-[#888888]"}` }),
+              /* @__PURE__ */ jsx("span", { className: `text-[14px] ${isActive ? "font-[var(--font-semibold)] text-[#1C1C1C]" : "font-[var(--font-medium)] text-[#555555]"}`, children: label })
+            ]
+          },
+          href
+        );
+      }),
+      showLogout && /* @__PURE__ */ jsxs(Fragment, { children: [
+        /* @__PURE__ */ jsx("div", { className: "mx-5 my-2 border-t border-gray-100 max-md:hidden" }),
+        /* @__PURE__ */ jsxs(
+          "button",
+          {
+            type: "button",
+            onClick: handleLogout,
+            className: "flex items-center gap-3 border-l-[3px] border-l-transparent px-5 py-[13px] text-left text-[#555555] transition-colors hover:bg-[#FAFAFA] max-md:ml-auto max-md:min-w-max max-md:border-l-0",
+            children: [
+              /* @__PURE__ */ jsx(AccountLogOutIcon, { className: "h-[18px] w-[18px] flex-shrink-0 text-[#888888]" }),
+              /* @__PURE__ */ jsx("span", { className: "text-[14px] font-[var(--font-medium)]", children: logoutLabel })
+            ]
+          }
+        )
+      ] })
+    ] })
+  ] });
+};
+var AccountLayout = ({
+  children,
+  sidebarProps,
+  className = "",
+  containerClassName = "",
+  panelClassName = "",
+  mainClassName = ""
+}) => {
+  return /* @__PURE__ */ jsx("div", { className: `min-h-screen bg-[#F0F0F0] ${className}`, children: /* @__PURE__ */ jsx("div", { className: `mx-auto max-w-[900px] px-4 py-8 ${containerClassName}`, children: /* @__PURE__ */ jsxs("div", { className: `flex min-h-[520px] overflow-hidden rounded-lg bg-white shadow-sm max-md:flex-col ${panelClassName}`, children: [
+    /* @__PURE__ */ jsx(AccountSidebar, { ...sidebarProps }),
+    /* @__PURE__ */ jsx("main", { className: `flex-1 p-8 max-md:p-5 ${mainClassName}`, children })
+  ] }) }) });
+};
+var normalizeAddresses = (payload) => payload?.data ?? payload?.addresses ?? (Array.isArray(payload) ? payload : []);
+var AccountAddressesPage = () => {
+  const { actions, toast } = useCore();
+  const [addresses, setAddresses] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [editingAddress, setEditingAddress] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  const fetchAddresses = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await actions?.getUserAddress?.();
+      setAddresses(normalizeAddresses(res));
+    } catch (error) {
+      console.error("Failed to fetch addresses", error);
+      toast?.error?.("Failed to fetch addresses");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [actions, toast]);
+  useEffect(() => {
+    fetchAddresses();
+  }, [fetchAddresses]);
+  const openAddModal = () => {
+    setEditingAddress(null);
+    setIsModalOpen(true);
+  };
+  const openEditModal = (address) => {
+    setEditingAddress(address);
+    setIsModalOpen(true);
+  };
+  const deleteAddress = async (addressId) => {
+    if (!addressId) return;
+    setDeletingId(addressId);
+    try {
+      await actions?.deleteAddress?.(addressId);
+      await fetchAddresses();
+      toast?.success?.("Address deleted successfully");
+    } catch (error) {
+      console.error("Failed to delete address", error);
+      toast?.error?.("Failed to delete address");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+  return /* @__PURE__ */ jsxs("div", { children: [
+    /* @__PURE__ */ jsx("h1", { className: "mb-4 text-[20px] font-[var(--font-bold)] text-[#1C1C1C]", children: "My addresses" }),
+    /* @__PURE__ */ jsxs("button", { onClick: openAddModal, className: "mb-5 flex items-center gap-1.5 text-[14px] font-[var(--font-semibold)] text-[var(--core-primary)] transition-opacity hover:opacity-80", children: [
+      /* @__PURE__ */ jsx(AccountPlusIcon, { className: "h-4 w-4", strokeWidth: 2.5 }),
+      "Add new address"
+    ] }),
+    /* @__PURE__ */ jsx("div", { className: "flex flex-col gap-3", children: isLoading ? /* @__PURE__ */ jsx("div", { className: "py-4 text-[14px] text-gray-500 animate-pulse", children: "Loading addresses..." }) : addresses.length === 0 ? /* @__PURE__ */ jsx("div", { className: "py-4 text-[14px] text-gray-500", children: "You have no saved addresses." }) : addresses.map((address) => /* @__PURE__ */ jsxs("div", { className: "flex items-start justify-between border-b border-gray-100 py-4 last:border-0", children: [
+      /* @__PURE__ */ jsxs("div", { className: "flex items-start gap-3", children: [
+        /* @__PURE__ */ jsx("div", { className: "mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-blue-50 text-[var(--core-primary)]", children: /* @__PURE__ */ jsx(AccountMapPinIcon, { className: "h-4 w-4" }) }),
+        /* @__PURE__ */ jsxs("div", { children: [
+          /* @__PURE__ */ jsx("p", { className: "text-[15px] font-[var(--font-bold)] leading-snug text-[#1C1C1C]", children: address.label || address.address_type || "Home" }),
+          /* @__PURE__ */ jsxs("p", { className: "mt-0.5 max-w-[480px] text-[13px] font-[var(--font-regular)] leading-relaxed text-[#888888]", children: [
+            address.firstname,
+            " ",
+            address.lastname,
+            /* @__PURE__ */ jsx("br", {}),
+            address.address1,
+            address.address2 ? `, ${address.address2}` : "",
+            /* @__PURE__ */ jsx("br", {}),
+            [address.city, address.state_name].filter(Boolean).join(", "),
+            address.zipcode ? ` - ${address.zipcode}` : ""
+          ] })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxs("div", { className: "mt-1 flex flex-shrink-0 items-center gap-2", children: [
+        /* @__PURE__ */ jsx("button", { type: "button", onClick: () => openEditModal(address), className: "flex items-center justify-center rounded-full p-1.5 text-[#888888] transition-colors hover:bg-gray-100 hover:text-[var(--core-primary)]", children: /* @__PURE__ */ jsx(AccountPencilIcon, { className: "h-4 w-4" }) }),
+        /* @__PURE__ */ jsx("button", { type: "button", disabled: deletingId === address.id, onClick: () => deleteAddress(address.id), className: "flex items-center justify-center rounded-full p-1.5 text-[#888888] transition-colors hover:bg-gray-100 hover:text-red-500 disabled:opacity-50", children: deletingId === address.id ? /* @__PURE__ */ jsx("div", { className: "h-4 w-4 animate-spin rounded-full border-2 border-red-500 border-t-transparent" }) : /* @__PURE__ */ jsx(AccountTrashIcon, { className: "h-4 w-4" }) })
+      ] })
+    ] }, address.id)) }),
+    /* @__PURE__ */ jsx(Popup, { isOpen: isModalOpen, onClose: () => setIsModalOpen(false), children: /* @__PURE__ */ jsx(
+      AddressForm,
+      {
+        initialData: editingAddress,
+        onCancel: () => setIsModalOpen(false),
+        onSuccess: () => {
+          setIsModalOpen(false);
+          fetchAddresses();
+        },
+        submitLabel: editingAddress?.id ? "Save Changes" : "Save Address"
+      }
+    ) })
+  ] });
+};
+var AccountOrdersPage = ({ initialOrders = [], pagination }) => {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const { formatCurrency } = useCurrencyFormat();
+  const itemsPerPage = 10;
+  const isServerPaginated = pagination && pagination.total_pages !== void 0;
+  const currentPage = isServerPaginated ? pagination.current_page : parseInt(searchParams.get("page") || "1", 10);
+  const totalPages = isServerPaginated ? pagination.total_pages : Math.ceil(initialOrders.length / itemsPerPage) || 1;
+  const currentOrders = isServerPaginated ? initialOrders : initialOrders.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const handlePageChange = (page) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", page.toString());
+    router.push(`${pathname}?${params.toString()}`);
+  };
+  const getVisiblePages = (current, total) => {
+    if (total <= 5) return Array.from({ length: total }, (_, i) => i + 1);
+    if (current <= 3) return [1, 2, 3, 4, 5, "...", total];
+    if (current >= total - 2) return [1, "...", total - 4, total - 3, total - 2, total - 1, total];
+    return [1, "...", current - 1, current, current + 1, "...", total];
+  };
+  const visiblePages = getVisiblePages(currentPage, totalPages);
+  console.log({ initialOrders, currentOrders, currentPage, totalPages });
+  return /* @__PURE__ */ jsxs("div", { className: "animate-in fade-in duration-300", children: [
+    /* @__PURE__ */ jsxs("h1", { className: "mb-6 flex items-center gap-2 text-[20px] font-[var(--font-bold)] text-[#1C1C1C]", children: [
+      /* @__PURE__ */ jsx(AccountShoppingBagIcon, { className: "h-5 w-5 text-[var(--core-primary)]" }),
+      "My Orders"
+    ] }),
+    initialOrders.length === 0 ? /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center justify-center gap-4 rounded-xl border border-gray-100 bg-white py-16 shadow-sm", children: [
+      /* @__PURE__ */ jsx("div", { className: "flex h-16 w-16 items-center justify-center rounded-full bg-[#F5F5F5]", children: /* @__PURE__ */ jsx(
+        AccountShoppingBagIcon,
+        {
+          className: "h-8 w-8 text-[#BBBBBB]",
+          strokeWidth: 1.5
+        }
+      ) }),
+      /* @__PURE__ */ jsx("p", { className: "text-[15px] font-[var(--font-semibold)] text-[#1C1C1C]", children: "No orders yet!" }),
+      /* @__PURE__ */ jsx("p", { className: "max-w-[260px] text-center text-[13px] text-[#888888]", children: "Looks like you haven't placed any orders yet." }),
+      /* @__PURE__ */ jsx(
+        "button",
+        {
+          onClick: () => router.push("/"),
+          className: "mt-2 rounded-lg bg-[var(--core-primary)] px-8 py-2.5 text-[13px] font-[var(--font-bold)] text-white transition-colors hover:opacity-90",
+          children: "Start Shopping"
+        }
+      )
+    ] }) : /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-4", children: [
+      currentOrders.map((order) => {
+        const o = order.attributes || order;
+        const date = o.created_at ? new Date(o.created_at).toLocaleDateString("en-US", {
+          day: "numeric",
+          month: "short",
+          year: "numeric"
+        }) : "Pending";
+        const total = formatCurrency(
+          o?.cart?.display_total ?? o?.display_total ?? 0
+        );
+        const status = o.order_status || o.status || "placed";
+        const paymentStatus = o.payment_status || o.cart?.payment_state || "Pending";
+        const lineItems = o.cart?.line_items || o.line_items || [];
+        return /* @__PURE__ */ jsxs(
+          "div",
+          {
+            onClick: () => router.push(`/account/orders/${o.number || o.id}`),
+            className: "group flex cursor-pointer flex-col justify-between gap-4 rounded-xl border border-gray-100 bg-white p-5 shadow-sm transition hover:border-[var(--core-primary)] hover:shadow-md md:flex-row md:items-center",
+            children: [
+              /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-2", children: [
+                /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3", children: [
+                  /* @__PURE__ */ jsxs("span", { className: "text-[15px] font-[var(--font-bold)] text-gray-900", children: [
+                    "Order #",
+                    o.number || o.order_number || o.id
+                  ] }),
+                  /* @__PURE__ */ jsx("span", { className: "rounded bg-blue-50 px-2 py-0.5 text-[11px] font-[var(--font-bold)] uppercase text-[var(--core-primary)]", children: status })
+                ] }),
+                /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-4 text-[13px] font-[var(--font-medium)] text-gray-500", children: [
+                  /* @__PURE__ */ jsxs("span", { className: "flex items-center gap-1.5", children: [
+                    /* @__PURE__ */ jsx(AccountCalendarIcon, { className: "h-3.5 w-3.5" }),
+                    " ",
+                    date
+                  ] }),
+                  /* @__PURE__ */ jsxs("span", { className: "flex items-center gap-1.5", children: [
+                    /* @__PURE__ */ jsx(AccountTagIcon, { className: "h-3.5 w-3.5" }),
+                    " ",
+                    total
+                  ] }),
+                  /* @__PURE__ */ jsxs("span", { className: "flex items-center gap-1.5 border-l border-gray-200 pl-4", children: [
+                    "Payment: ",
+                    /* @__PURE__ */ jsx("span", { className: `uppercase text-[11px] font-[var(--font-bold)] tracking-tight ${paymentStatus.toLowerCase() === "received" || paymentStatus.toLowerCase() === "paid" ? "text-green-600" : "text-orange-500"}`, children: paymentStatus })
+                  ] })
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxs("div", { className: "mt-2 flex w-full items-center justify-between gap-6 md:mt-0 md:w-auto md:justify-end", children: [
+                /* @__PURE__ */ jsxs("div", { className: "flex -space-x-3", children: [
+                  lineItems.slice(0, 3).map((item, index) => /* @__PURE__ */ jsx(
+                    "div",
+                    {
+                      className: "relative z-[1] flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-gray-200 bg-white p-1",
+                      children: /* @__PURE__ */ jsx(
+                        "img",
+                        {
+                          src: item.image || "/NoProductImage.png",
+                          alt: item.name || "item",
+                          className: "h-full w-full object-contain"
+                        }
+                      )
+                    },
+                    item.id || index
+                  )),
+                  lineItems.length > 3 && /* @__PURE__ */ jsxs("div", { className: "relative z-0 flex h-10 w-10 items-center justify-center rounded-full border border-white bg-gray-100 text-[10px] font-bold text-gray-600", children: [
+                    "+",
+                    lineItems.length - 3
+                  ] }),
+                  lineItems.length === 0 && /* @__PURE__ */ jsx("div", { className: "relative z-[1] flex h-10 w-10 items-center justify-center rounded-full border border-white bg-[#F0F4FF]", children: /* @__PURE__ */ jsx(AccountPackageIcon, { className: "h-5 w-5 text-[var(--core-primary)]" }) })
+                ] }),
+                /* @__PURE__ */ jsx("span", { className: "text-[13px] font-[var(--font-bold)] text-[var(--core-primary)] group-hover:underline", children: "View Details >" })
+              ] })
+            ]
+          },
+          o.id || o.number
+        );
+      }),
+      totalPages > 1 && /* @__PURE__ */ jsxs("div", { className: "mt-8 flex flex-wrap items-center justify-center gap-2 md:gap-4", children: [
+        /* @__PURE__ */ jsx(
+          "button",
+          {
+            onClick: () => handlePageChange(Math.max(1, currentPage - 1)),
+            disabled: currentPage === 1,
+            className: "flex h-9 items-center justify-center rounded-lg border border-gray-200 px-3 text-[13px] font-[var(--font-medium)] text-gray-600 transition-colors hover:bg-gray-50 disabled:opacity-50 disabled:hover:bg-transparent",
+            children: "Previous"
+          }
+        ),
+        /* @__PURE__ */ jsx("div", { className: "flex flex-wrap items-center justify-center gap-1", children: visiblePages.map(
+          (page, index) => page === "..." ? /* @__PURE__ */ jsx("span", { className: "flex h-9 w-6 items-center justify-center text-gray-400", children: "..." }, `ellipsis-${index}`) : /* @__PURE__ */ jsx(
+            "button",
+            {
+              onClick: () => handlePageChange(page),
+              className: `flex h-9 w-9 items-center justify-center rounded-lg text-[13px] font-[var(--font-bold)] transition-colors ${currentPage === page ? "bg-[var(--core-primary)] text-white" : "text-gray-600 hover:bg-gray-100"}`,
+              children: page
+            },
+            page
+          )
+        ) }),
+        /* @__PURE__ */ jsx(
+          "button",
+          {
+            onClick: () => handlePageChange(Math.min(totalPages, currentPage + 1)),
+            disabled: currentPage === totalPages,
+            className: "flex h-9 items-center justify-center rounded-lg border border-gray-200 px-3 text-[13px] font-[var(--font-medium)] text-gray-600 transition-colors hover:bg-gray-50 disabled:opacity-50 disabled:hover:bg-transparent",
+            children: "Next"
+          }
+        )
+      ] })
+    ] })
+  ] });
+};
+var AccountOrderDetailContent = ({ order, id }) => {
+  const { formatCurrency } = useCurrencyFormat();
+  const { config } = useCore();
+  const [copied, setCopied] = useState(false);
+  if (!order) return null;
+  const o = order.cart || order;
+  const date = new Date(order.created_at || o.created_at || Date.now()).toLocaleDateString("en-US", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+  const status = order.order_status || order.payment_state || order.state || "placed";
+  const shippingAddress = order.shipping_address || o.shipping_address || {};
+  const lineItems = o.line_items || [];
+  const orderNumber = order.order_number || o.number || o.order_id || id;
+  const handleCopy = () => {
+    navigator.clipboard?.writeText(orderNumber);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2e3);
+  };
+  return /* @__PURE__ */ jsxs("div", { className: "animate-in fade-in w-full pb-6 duration-300", children: [
+    /* @__PURE__ */ jsxs("div", { className: "sticky top-0 z-10 mb-2 flex items-center gap-3 border-b border-gray-50/50 bg-white/95 py-2.5 backdrop-blur-md", children: [
+      /* @__PURE__ */ jsx(Link, { href: "/account/orders", className: "ml-[-4px] rounded-full p-1.5 transition hover:bg-gray-100", children: /* @__PURE__ */ jsx(AccountArrowLeftIcon, { className: "h-5 w-5 text-[#1C1C1C]" }) }),
+      /* @__PURE__ */ jsx("h1", { className: "text-[17px] font-[var(--font-bold)] text-[#1C1C1C]", children: "Order Details" })
+    ] }),
+    /* @__PURE__ */ jsxs("div", { className: "mb-2 flex flex-col gap-0.5 rounded-xl border border-gray-100 bg-white p-3 shadow-sm", children: [
+      /* @__PURE__ */ jsxs("div", { className: "flex items-start justify-between", children: [
+        /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-0.5", children: [
+          /* @__PURE__ */ jsx("span", { className: "text-[14px] font-[var(--font-bold)] text-black", children: status === "placed" ? "Order Placed" : status.charAt(0).toUpperCase() + status.slice(1) }),
+          /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
+            /* @__PURE__ */ jsxs("span", { className: "text-[11.5px] font-[var(--font-medium)] text-[#666666]", children: [
+              "Order ID: ",
+              orderNumber
+            ] }),
+            /* @__PURE__ */ jsxs("button", { onClick: handleCopy, className: "group relative rounded p-1 transition-colors hover:bg-gray-50", title: "Copy Order ID", children: [
+              copied ? /* @__PURE__ */ jsx(AccountCheckIcon, { className: "h-3 w-3 text-green-600" }) : /* @__PURE__ */ jsx(AccountCopyIcon, { className: "h-3 w-3 text-[#BBBBBB] group-hover:text-[var(--core-primary)]" }),
+              copied && /* @__PURE__ */ jsx("span", { className: "absolute -top-7 left-1/2 -translate-x-1/2 rounded bg-gray-800 px-2 py-1 text-[10px] text-white shadow-lg", children: "Copied!" })
+            ] })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsx("span", { className: "rounded-full bg-[#E8F5E9] px-2 py-0.5 text-[10px] font-[var(--font-bold)] uppercase tracking-tight text-[#2E7D32]", children: status })
+      ] }),
+      /* @__PURE__ */ jsxs("div", { className: "mt-1 flex items-center gap-1.5 text-[11px] font-[var(--font-medium)] text-[#888888]", children: [
+        /* @__PURE__ */ jsx(AccountCalendarIcon, { className: "h-3 w-3" }),
+        " Placed on ",
+        date
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxs("div", { className: "mb-2 overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm", children: [
+      /* @__PURE__ */ jsx("div", { className: "border-b border-gray-50 bg-gray-50/50 px-3 py-2", children: /* @__PURE__ */ jsxs("h2", { className: "flex items-center gap-2 text-[12px] font-[var(--font-bold)] text-[#1C1C1C]", children: [
+        /* @__PURE__ */ jsx(AccountPackageIcon, { className: "h-3.5 w-3.5 text-[var(--core-primary)]" }),
+        lineItems.length,
+        " ",
+        lineItems.length === 1 ? "Item" : "Items"
+      ] }) }),
+      /* @__PURE__ */ jsx("div", { className: "flex flex-col", children: lineItems.map((item, index) => {
+        const unitValue = item.line_itemable?.selling_quantity?.values?.[0]?.label;
+        const amount = item.display_price ?? item.line_itemable?.display_price ?? (item.line_itemable?.price || 0) / 100;
+        return /* @__PURE__ */ jsxs("div", { className: "flex gap-3 border-b border-gray-50 p-3 transition last:border-0 hover:bg-gray-50", children: [
+          /* @__PURE__ */ jsx("div", { className: "h-14 w-14 shrink-0 rounded-lg border border-gray-50 bg-[#F8F8F8] p-1", children: /* @__PURE__ */ jsx("img", { src: item.image || "/NoProductImage.png", alt: item.name || item.line_itemable?.name || "item", className: "h-full w-full object-contain" }) }),
+          /* @__PURE__ */ jsxs("div", { className: "flex flex-1 flex-col justify-center gap-0.5", children: [
+            /* @__PURE__ */ jsx("h3", { className: "line-clamp-1 text-[13px] font-[var(--font-semibold)] leading-snug text-[#1C1C1C]", children: item.name || item.line_itemable?.name }),
+            /* @__PURE__ */ jsxs("div", { className: "flex w-full items-center justify-between", children: [
+              /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
+                unitValue && /* @__PURE__ */ jsx("span", { className: "text-[11px] font-[var(--font-medium)] text-[#888888]", children: unitValue }),
+                /* @__PURE__ */ jsxs("span", { className: "text-[11px] font-[var(--font-medium)] text-[#888888]", children: [
+                  "x ",
+                  item.quantity || 1
+                ] })
+              ] }),
+              /* @__PURE__ */ jsx("span", { className: "text-[13px] font-[var(--font-bold)] text-[#1C1C1C]", children: formatCurrency(amount) })
+            ] })
+          ] })
+        ] }, item.id || index);
+      }) })
+    ] }),
+    /* @__PURE__ */ jsxs("div", { className: "mb-2 rounded-xl border border-gray-100 bg-white p-3 shadow-sm", children: [
+      /* @__PURE__ */ jsx("h2", { className: "mb-2.5 text-[13px] font-[var(--font-bold)] text-[#1C1C1C]", children: "Bill Details" }),
+      /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-2", children: [
+        /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-[12.5px] font-[var(--font-medium)] text-[#555555]", children: [
+          /* @__PURE__ */ jsx("span", { children: "Item Total" }),
+          /* @__PURE__ */ jsx("span", { children: formatCurrency(o.display_item_total ?? (o.item_total || 0) / 100) })
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-[12.5px] font-[var(--font-medium)] text-[#555555]", children: [
+          /* @__PURE__ */ jsx("span", { children: "Delivery Charge" }),
+          /* @__PURE__ */ jsx("span", { children: formatCurrency(o.display_ship_total ?? (o.ship_total || 0) / 100) })
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-[12.5px] font-[var(--font-medium)] text-[#555555]", children: [
+          /* @__PURE__ */ jsx("span", { children: "Taxes" }),
+          /* @__PURE__ */ jsx("span", { children: formatCurrency(o.display_tax_total ?? (o.tax_total || 0) / 100) })
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "mt-0.5 flex items-center justify-between border-t border-dashed border-gray-100 pt-2", children: [
+          /* @__PURE__ */ jsx("span", { className: "text-[14px] font-[var(--font-bold)] text-black", children: "Grand Total" }),
+          /* @__PURE__ */ jsx("span", { className: "text-[14px] font-[var(--font-bold)] text-black", children: formatCurrency(o.display_total ?? (o.total || 0) / 100) })
+        ] })
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxs("div", { className: "mb-10 rounded-xl border border-gray-100 bg-white p-3 shadow-sm", children: [
+      /* @__PURE__ */ jsx("h2", { className: "mb-3 text-[13px] font-[var(--font-bold)] text-[#1C1C1C]", children: "Order Details" }),
+      /* @__PURE__ */ jsxs("div", { className: "flex gap-3", children: [
+        /* @__PURE__ */ jsx("div", { className: "flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#F5F7FA]", children: /* @__PURE__ */ jsx(AccountMapPinIcon, { className: "h-3.5 w-3.5 text-[#888888]" }) }),
+        /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-0.5", children: [
+          /* @__PURE__ */ jsx("span", { className: "text-[11px] font-[var(--font-bold)] uppercase tracking-wide text-[#888888]", children: "Delivery Address" }),
+          /* @__PURE__ */ jsxs("div", { className: "text-[12.5px] font-[var(--font-medium)] leading-relaxed text-[#444444]", children: [
+            (shippingAddress.firstname || order.user?.first_name) && /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-bold)] text-[#1C1C1C]", children: [
+              shippingAddress.firstname || order.user?.first_name,
+              " ",
+              shippingAddress.lastname || order.user?.last_name
+            ] }),
+            /* @__PURE__ */ jsxs("p", { children: [
+              shippingAddress.address1,
+              shippingAddress.address2 ? `, ${shippingAddress.address2}` : ""
+            ] }),
+            /* @__PURE__ */ jsxs("p", { children: [
+              shippingAddress.city,
+              shippingAddress.zipcode ? ` - ${shippingAddress.zipcode}` : ""
+            ] })
+          ] })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxs("div", { className: "mt-4 pt-4 border-t border-gray-50 flex gap-3", children: [
+        /* @__PURE__ */ jsx("div", { className: "flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#F5F7FA]", children: /* @__PURE__ */ jsx(AccountPackageIcon, { className: "h-3.5 w-3.5 text-[#888888]" }) }),
+        /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-0.5 w-full", children: [
+          /* @__PURE__ */ jsx("span", { className: "text-[11px] font-[var(--font-bold)] uppercase tracking-wide text-[#888888]", children: "Order Information" }),
+          /* @__PURE__ */ jsxs("div", { className: "text-[12.5px] font-[var(--font-medium)] leading-relaxed text-[#444444] mt-1", children: [
+            /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
+              /* @__PURE__ */ jsxs("span", { children: [
+                "Order ID: ",
+                orderNumber
+              ] }),
+              /* @__PURE__ */ jsx("button", { onClick: handleCopy, className: "group relative rounded p-1 transition-colors hover:bg-gray-50", title: "Copy Order ID", children: copied ? /* @__PURE__ */ jsx(AccountCheckIcon, { className: "h-3 w-3 text-green-600" }) : /* @__PURE__ */ jsx(AccountCopyIcon, { className: "h-3 w-3 text-[#BBBBBB] group-hover:text-[var(--core-primary)]" }) })
+            ] }),
+            /* @__PURE__ */ jsxs("p", { children: [
+              "Payment: ",
+              order.payment_status || order.cart?.payment_state || "Pending"
+            ] })
+          ] })
+        ] })
+      ] })
+    ] })
+  ] });
+};
+var AccountWishlistPage = ({ products = [], isLoading = false, renderProduct }) => {
+  const router = useRouter();
+  if (isLoading) {
+    return /* @__PURE__ */ jsxs("div", { className: "flex min-h-[400px] flex-col items-center justify-center py-20", children: [
+      /* @__PURE__ */ jsx("div", { className: "h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-green-600" }),
+      /* @__PURE__ */ jsx("p", { className: "mt-4 font-[var(--font-medium)] text-gray-500", children: "Loading your wishlist..." })
+    ] });
+  }
+  return /* @__PURE__ */ jsxs("div", { className: "flex w-full flex-col animate-in fade-in duration-300", children: [
+    /* @__PURE__ */ jsxs("h1", { className: "mb-6 flex items-center gap-2 text-[20px] font-[var(--font-bold)] text-[#1C1C1C]", children: [
+      /* @__PURE__ */ jsx(AccountHeartIcon, { filled: true, className: "h-5 w-5 text-red-500" }),
+      "My Wishlist"
+    ] }),
+    products.length === 0 ? /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center justify-center rounded-xl border border-gray-100 bg-white p-12 text-center shadow-sm", children: [
+      /* @__PURE__ */ jsx("div", { className: "mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-50", children: /* @__PURE__ */ jsx(AccountHeartIcon, { className: "h-8 w-8 text-red-300", strokeWidth: 2 }) }),
+      /* @__PURE__ */ jsx("h2", { className: "mb-2 text-[18px] font-[var(--font-bold)] text-gray-800", children: "Your wishlist is empty" }),
+      /* @__PURE__ */ jsx("p", { className: "mb-6 text-[14px] font-[var(--font-medium)] text-gray-500", children: "Save items you love and buy them later." }),
+      /* @__PURE__ */ jsx("button", { onClick: () => router.push("/"), className: "rounded-lg bg-[var(--core-primary)] px-6 py-2.5 font-[var(--font-bold)] text-white shadow-sm transition hover:opacity-90", children: "Start Shopping" })
+    ] }) : /* @__PURE__ */ jsx("div", { className: "grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-5", children: products.map((product, index) => renderProduct ? renderProduct(product, index) : /* @__PURE__ */ jsxs("button", { onClick: () => router.push(`/product/${product.id}`), className: "overflow-hidden rounded-lg border border-gray-100 bg-white text-left shadow-sm transition hover:shadow-md", children: [
+      /* @__PURE__ */ jsx("img", { src: product.image || product.product_image_url || "/NoProductImage.png", alt: product.name || "Product", className: "h-40 w-full object-cover" }),
+      /* @__PURE__ */ jsx("div", { className: "p-3", children: /* @__PURE__ */ jsx("p", { className: "line-clamp-2 text-[13px] font-[var(--font-semibold)] text-[#1C1C1C]", children: product.name || "Product" }) })
+    ] }, product.id ?? index)) })
+  ] });
 };
 var DownloadIcon = () => /* @__PURE__ */ jsxs("svg", { width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: [
   /* @__PURE__ */ jsx("path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" }),
@@ -4852,10 +5523,10 @@ var Order = (props) => {
           children: [
             /* @__PURE__ */ jsx("div", { className: "mt-0.5 shrink-0", style: { color: "var(--core-secondary)" }, children: /* @__PURE__ */ jsx(OrderConfirmationIcon, {}) }),
             /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-1", children: [
-              /* @__PURE__ */ jsx("p", { className: "font-[Nunito-bold] text-[16px] text-[var(--core-primary)] uppercase tracking-wide", children: "Thank you. Your order has been received" }),
-              /* @__PURE__ */ jsxs("p", { className: "font-[Nunito-regular] text-[13px] text-gray-500", children: [
+              /* @__PURE__ */ jsx("p", { className: "font-[var(--font-bold)] text-[16px] text-[var(--core-primary)] uppercase tracking-wide", children: "Thank you. Your order has been received" }),
+              /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-regular)] text-[13px] text-gray-500", children: [
                 "Order\xA0",
-                /* @__PURE__ */ jsxs("span", { className: "font-[Nunito-bold] text-[var(--core-primary)]", children: [
+                /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-bold)] text-[var(--core-primary)]", children: [
                   "#",
                   order_number
                 ] }),
@@ -4867,11 +5538,11 @@ var Order = (props) => {
       ),
       /* @__PURE__ */ jsxs("div", { children: [
         /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center mb-4", children: [
-          /* @__PURE__ */ jsx("h3", { className: "font-[Nunito-bold] text-[18px] text-[var(--core-primary)] uppercase tracking-wider", children: "Order Details" }),
+          /* @__PURE__ */ jsx("h3", { className: "font-[var(--font-bold)] text-[18px] text-[var(--core-primary)] uppercase tracking-wider", children: "Order Details" }),
           /* @__PURE__ */ jsx(
             "button",
             {
-              className: "flex items-center gap-1.5 px-3 py-2 rounded font-[Nunito-bold] text-[13px] text-white transition-opacity hover:opacity-85 disabled:opacity-60 cursor-pointer",
+              className: "flex items-center gap-1.5 px-3 py-2 rounded font-[var(--font-bold)] text-[13px] text-white transition-opacity hover:opacity-85 disabled:opacity-60 cursor-pointer",
               style: { background: "var(--core-primary)" },
               onClick: onDownloadReceipt,
               disabled: isFetchingInvoice,
@@ -4885,15 +5556,15 @@ var Order = (props) => {
         /* @__PURE__ */ jsxs("div", { className: "border rounded-lg overflow-hidden", style: { borderColor: "color-mix(in srgb, var(--core-primary) 20%, #e8e5df)" }, children: [
           /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-2 divide-x", style: { divideColor: "color-mix(in srgb, var(--core-primary) 15%, #e8e5df)" }, children: [
             /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-1", children: [
-              /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest", children: "Order Number" }),
-              /* @__PURE__ */ jsx("p", { className: "font-[Nunito-bold] text-[14px] text-[var(--core-primary)]", children: order_number || "\u2014" })
+              /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Order Number" }),
+              /* @__PURE__ */ jsx("p", { className: "font-[var(--font-bold)] text-[14px] text-[var(--core-primary)]", children: order_number || "\u2014" })
             ] }),
             /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-1", children: [
-              /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest", children: "Order Status" }),
+              /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Order Status" }),
               /* @__PURE__ */ jsx(
                 "span",
                 {
-                  className: "inline-flex self-start font-[Nunito-bold] text-[12px] px-2.5 py-0.5 rounded-full uppercase tracking-wide",
+                  className: "inline-flex self-start font-[var(--font-bold)] text-[12px] px-2.5 py-0.5 rounded-full uppercase tracking-wide",
                   style: {
                     background: "color-mix(in srgb, var(--core-secondary) 15%, white)",
                     color: "var(--core-primary)",
@@ -4907,15 +5578,15 @@ var Order = (props) => {
           /* @__PURE__ */ jsx("div", { className: "border-t", style: { borderColor: "color-mix(in srgb, var(--core-primary) 12%, #e8e5df)" } }),
           /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-2 divide-x", style: { divideColor: "color-mix(in srgb, var(--core-primary) 15%, #e8e5df)" }, children: [
             /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-1", children: [
-              /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest", children: "Order Date" }),
-              /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-[14px] text-[var(--core-primary)]", children: orderDate || "\u2014" })
+              /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Order Date" }),
+              /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-[14px] text-[var(--core-primary)]", children: orderDate || "\u2014" })
             ] }),
             /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-1", children: [
-              /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest", children: "Payment Status" }),
+              /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Payment Status" }),
               /* @__PURE__ */ jsx(
                 "p",
                 {
-                  className: "font-[Nunito-bold] text-[13px] uppercase",
+                  className: "font-[var(--font-bold)] text-[13px] uppercase",
                   style: { color: payment_status === "paid" || payment_status === "received" ? "#16a34a" : "var(--core-secondary)" },
                   children: payment_status || "Pending"
                 }
@@ -4924,15 +5595,15 @@ var Order = (props) => {
           ] }),
           /* @__PURE__ */ jsx("div", { className: "border-t", style: { borderColor: "color-mix(in srgb, var(--core-primary) 12%, #e8e5df)" } }),
           order_type === "pickup" ? /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-1", children: [
-            /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest", children: "Pickup Address" }),
-            /* @__PURE__ */ jsx("p", { className: "font-[Nunito-medium] text-[14px] text-[var(--core-primary)]", children: storePickUpAddress || "\u2014" })
+            /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Pickup Address" }),
+            /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-[14px] text-[var(--core-primary)]", children: storePickUpAddress || "\u2014" })
           ] }) : /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x", style: { borderColor: "color-mix(in srgb, var(--core-primary) 12%, #e8e5df)" }, children: [
             /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-2", children: [
-              /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest", children: "Delivery Address" }),
+              /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Delivery Address" }),
               shipping_address?.label && /* @__PURE__ */ jsx(
                 "span",
                 {
-                  className: "self-start text-[10px] font-[Nunito-bold] px-2 py-0.5 rounded-full uppercase tracking-widest",
+                  className: "self-start text-[10px] font-[var(--font-bold)] px-2 py-0.5 rounded-full uppercase tracking-widest",
                   style: {
                     background: "color-mix(in srgb, var(--core-primary) 10%, white)",
                     color: "var(--core-primary)"
@@ -4941,22 +5612,22 @@ var Order = (props) => {
                 }
               ),
               /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-0.5", children: [
-                /* @__PURE__ */ jsxs("p", { className: "font-[Nunito-bold] text-[13px] text-[var(--core-primary)]", children: [
+                /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-bold)] text-[13px] text-[var(--core-primary)]", children: [
                   `${shipping_address?.firstname ?? ""} ${shipping_address?.lastname ?? ""}`.trim(),
-                  shipping_address?.phone && /* @__PURE__ */ jsxs("span", { className: "font-[Nunito-regular] text-gray-500", children: [
+                  shipping_address?.phone && /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-regular)] text-gray-500", children: [
                     " \xB7 ",
                     shipping_address.phone
                   ] })
                 ] }),
-                /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[13px] text-gray-500 leading-relaxed", children: fullShippingAddress })
+                /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[13px] text-gray-500 leading-relaxed", children: fullShippingAddress })
               ] })
             ] }),
             /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-2", children: [
-              /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[Nunito-bold] text-gray-400 uppercase tracking-widest", children: "Billing Address" }),
+              /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Billing Address" }),
               billing_address?.label && /* @__PURE__ */ jsx(
                 "span",
                 {
-                  className: "self-start text-[10px] font-[Nunito-bold] px-2 py-0.5 rounded-full uppercase tracking-widest",
+                  className: "self-start text-[10px] font-[var(--font-bold)] px-2 py-0.5 rounded-full uppercase tracking-widest",
                   style: {
                     background: "color-mix(in srgb, var(--core-primary) 10%, white)",
                     color: "var(--core-primary)"
@@ -4965,14 +5636,14 @@ var Order = (props) => {
                 }
               ),
               /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-0.5", children: [
-                /* @__PURE__ */ jsxs("p", { className: "font-[Nunito-bold] text-[13px] text-[var(--core-primary)]", children: [
+                /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-bold)] text-[13px] text-[var(--core-primary)]", children: [
                   `${billing_address?.firstname ?? ""} ${billing_address?.lastname ?? ""}`.trim(),
-                  billing_address?.phone && /* @__PURE__ */ jsxs("span", { className: "font-[Nunito-regular] text-gray-500", children: [
+                  billing_address?.phone && /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-regular)] text-gray-500", children: [
                     " \xB7 ",
                     billing_address.phone
                   ] })
                 ] }),
-                /* @__PURE__ */ jsx("p", { className: "font-[Nunito-regular] text-[13px] text-gray-500 leading-relaxed", children: fullBillingAddress })
+                /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[13px] text-gray-500 leading-relaxed", children: fullBillingAddress })
               ] })
             ] })
           ] })
@@ -4981,7 +5652,7 @@ var Order = (props) => {
       /* @__PURE__ */ jsx(
         "button",
         {
-          className: "text-white py-3 hidden md:block transition cursor-pointer font-[Nunito-bold] text-[14px] uppercase tracking-widest hover:opacity-85",
+          className: "text-white py-3 hidden md:block transition cursor-pointer font-[var(--font-bold)] text-[14px] uppercase tracking-widest hover:opacity-85",
           style: { background: "var(--core-primary)" },
           onClick: () => router.push("/"),
           children: "Continue Shopping"
@@ -4991,7 +5662,7 @@ var Order = (props) => {
     /* @__PURE__ */ jsx("div", { className: "border border-[#e8e5df] hidden md:block" }),
     /* @__PURE__ */ jsxs("div", { className: "flex-1 flex flex-col gap-8 mt-[32px] md:mt-0", children: [
       /* @__PURE__ */ jsxs("div", { children: [
-        /* @__PURE__ */ jsxs("h3", { className: "font-[Nunito-bold] text-[18px] text-[var(--core-primary)] uppercase tracking-wider mb-6", children: [
+        /* @__PURE__ */ jsxs("h3", { className: "font-[var(--font-bold)] text-[18px] text-[var(--core-primary)] uppercase tracking-wider mb-6", children: [
           "Ordered Items (",
           line_items?.length || 0,
           ")"
@@ -5014,42 +5685,42 @@ var Order = (props) => {
         }) })
       ] }),
       /* @__PURE__ */ jsxs("div", { className: "border rounded-lg overflow-hidden", style: { borderColor: "color-mix(in srgb, var(--core-primary) 20%, #e8e5df)" }, children: [
-        /* @__PURE__ */ jsx("div", { className: "px-4 py-3", style: { background: "color-mix(in srgb, var(--core-primary) 6%, white)" }, children: /* @__PURE__ */ jsx("h3", { className: "font-[Nunito-bold] text-[15px] text-[var(--core-primary)] uppercase tracking-wider", children: "Bill Summary" }) }),
+        /* @__PURE__ */ jsx("div", { className: "px-4 py-3", style: { background: "color-mix(in srgb, var(--core-primary) 6%, white)" }, children: /* @__PURE__ */ jsx("h3", { className: "font-[var(--font-bold)] text-[15px] text-[var(--core-primary)] uppercase tracking-wider", children: "Bill Summary" }) }),
         /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-3", children: [
           /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
-            /* @__PURE__ */ jsx("span", { className: "font-[Nunito-regular] text-[14px] text-gray-500", children: "Item Total" }),
-            /* @__PURE__ */ jsx("span", { className: "font-[Nunito-medium] text-[14px] text-[var(--core-primary)]", children: formatCurrency(display_item_total) })
+            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-regular)] text-[14px] text-gray-500", children: "Item Total" }),
+            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-medium)] text-[14px] text-[var(--core-primary)]", children: formatCurrency(display_item_total) })
           ] }),
           appliedDiscounts?.length > 0 ? appliedDiscounts?.map((coupon) => /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
-            /* @__PURE__ */ jsxs("span", { className: "font-[Nunito-medium] text-[14px] text-[#FF6500]", children: [
+            /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-medium)] text-[14px] text-[#FF6500]", children: [
               "Discount ",
               coupon.code ? `(${coupon.code})` : ""
             ] }),
-            /* @__PURE__ */ jsxs("span", { className: "font-[Nunito-medium] text-[14px] text-[#FF6500]", children: [
+            /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-medium)] text-[14px] text-[#FF6500]", children: [
               "-",
               formatCurrency(coupon.display_discount_amount || coupon.discount_amount / 100)
             ] })
           ] }, coupon.code || coupon.id)) : display_promo_total && display_promo_total !== "0.00" && display_promo_total !== 0 && display_promo_total !== "0" ? /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
-            /* @__PURE__ */ jsx("span", { className: "font-[Nunito-medium] text-[14px] text-[#FF6500]", children: "Discount" }),
-            /* @__PURE__ */ jsxs("span", { className: "font-[Nunito-medium] text-[14px] text-[#FF6500]", children: [
+            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-medium)] text-[14px] text-[#FF6500]", children: "Discount" }),
+            /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-medium)] text-[14px] text-[#FF6500]", children: [
               "-",
               formatCurrency(display_promo_total)
             ] })
           ] }) : null,
           /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
-            /* @__PURE__ */ jsx("span", { className: "font-[Nunito-regular] text-[14px] text-gray-500", children: "Tax" }),
-            /* @__PURE__ */ jsx("span", { className: "font-[Nunito-medium] text-[14px] text-[var(--core-primary)]", children: formatCurrency(display_tax_total) })
+            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-regular)] text-[14px] text-gray-500", children: "Tax" }),
+            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-medium)] text-[14px] text-[var(--core-primary)]", children: formatCurrency(display_tax_total) })
           ] }),
           order_type !== "pickup" && /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
-            /* @__PURE__ */ jsx("span", { className: "font-[Nunito-regular] text-[14px] text-gray-500", children: "Shipping" }),
-            /* @__PURE__ */ jsx("span", { className: "font-[Nunito-medium] text-[14px] text-[var(--core-primary)]", children: display_ship_total === "0.00" || display_ship_total === 0 || display_ship_total === "0" ? /* @__PURE__ */ jsx("span", { style: { color: "#16a34a" }, className: "font-[Nunito-bold]", children: "Free" }) : formatCurrency(display_ship_total) })
+            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-regular)] text-[14px] text-gray-500", children: "Shipping" }),
+            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-medium)] text-[14px] text-[var(--core-primary)]", children: display_ship_total === "0.00" || display_ship_total === 0 || display_ship_total === "0" ? /* @__PURE__ */ jsx("span", { style: { color: "#16a34a" }, className: "font-[var(--font-bold)]", children: "Free" }) : formatCurrency(display_ship_total) })
           ] }),
           /* @__PURE__ */ jsx("div", { className: "h-px my-1", style: { background: "color-mix(in srgb, var(--core-secondary) 35%, #e8e5df)" } }),
           /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
-            /* @__PURE__ */ jsx("span", { className: "font-[Nunito-bold] text-[15px] text-[var(--core-primary)]", children: "Total" }),
-            /* @__PURE__ */ jsx("span", { className: "font-[Nunito-bold] text-[17px] text-[var(--core-primary)]", children: formatCurrency(display_total) })
+            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-bold)] text-[15px] text-[var(--core-primary)]", children: "Total" }),
+            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-bold)] text-[17px] text-[var(--core-primary)]", children: formatCurrency(display_total) })
           ] }),
-          (appliedDiscounts?.length > 0 || display_promo_total && display_promo_total !== "0.00" && display_promo_total !== 0 && display_promo_total !== "0") && /* @__PURE__ */ jsxs("p", { className: "text-[13px] font-[Nunito-bold] text-[#16a34a] mt-[6px] text-right", children: [
+          (appliedDiscounts?.length > 0 || display_promo_total && display_promo_total !== "0.00" && display_promo_total !== 0 && display_promo_total !== "0") && /* @__PURE__ */ jsxs("p", { className: "text-[13px] font-[var(--font-bold)] text-[#16a34a] mt-[6px] text-right", children: [
             "You save ",
             formatCurrency(display_promo_total),
             " on this order \u{1F389}"
@@ -5060,7 +5731,7 @@ var Order = (props) => {
     /* @__PURE__ */ jsx(
       "button",
       {
-        className: "text-white py-3 mt-8 block md:hidden transition cursor-pointer font-[Nunito-bold] text-[14px] uppercase tracking-widest hover:opacity-85",
+        className: "text-white py-3 mt-8 block md:hidden transition cursor-pointer font-[var(--font-bold)] text-[14px] uppercase tracking-widest hover:opacity-85",
         style: { background: "var(--core-primary)" },
         onClick: () => router.push("/"),
         children: "Continue Shopping"
@@ -5074,6 +5745,6 @@ var Hello = () => {
   return /* @__PURE__ */ jsx("div", { children: isCartLoading ? "Loading..." : "Core Working \u2705" });
 };
 
-export { AccountPage, AddressCard2 as AddressCard, AddressForm, AuthManager, CartItem, CartPage, CartSummary, CoreProvider, CouponSection_default as CouponSection, CustomOTPAuth, EmptyState, Hello, Order, OrdersList, Popup, ProfileForm, Spinner, UserInfo, ViewCart, buildItem, buildMeta, clearEcommerce, initGtmConfig, initMetaPixelConfig, pushToDataLayer, trackAddPaymentInfo, trackAddShippingInfo, trackAddToCart, trackApplyCoupon, trackBeginCheckout, trackCustomEvent, trackMetaAddPaymentInfo, trackMetaAddToCart, trackMetaCompleteRegistration, trackMetaInitiateCheckout, trackMetaLead, trackMetaPageView, trackMetaPurchase, trackMetaSearch, trackMetaViewContent, trackPageView, trackPaymentFailed, trackPurchase, trackSearch, trackViewItem, useAddToCart, useAuth, useCart, userCartInfo_default as useCartInfo, useCore, useCurrencyFormat, useLogout, useVariantSelection };
+export { AccountAddressesPage, AccountLayout, AccountOrderDetailContent, AccountOrdersPage, AccountPage, AccountSidebar, AccountWishlistPage, AddressCard2 as AddressCard, AddressForm, AuthManager, CartItem, CartPage, CartSummary, CoreProvider, CouponSection_default as CouponSection, CustomOTPAuth, DEFAULT_NAV_ITEMS as DEFAULT_ACCOUNT_NAV_ITEMS, EmptyState, Hello, Order, OrdersList, Popup, ProfileForm, Spinner, UserInfo, ViewCart, buildItem, buildMeta, clearEcommerce, initGtmConfig, initMetaPixelConfig, pushToDataLayer, trackAddPaymentInfo, trackAddShippingInfo, trackAddToCart, trackApplyCoupon, trackBeginCheckout, trackCustomEvent, trackMetaAddPaymentInfo, trackMetaAddToCart, trackMetaCompleteRegistration, trackMetaInitiateCheckout, trackMetaLead, trackMetaPageView, trackMetaPurchase, trackMetaSearch, trackMetaViewContent, trackPageView, trackPaymentFailed, trackPurchase, trackSearch, trackViewItem, useAddToCart, useAuth, useCart, userCartInfo_default as useCartInfo, useCore, useCurrencyFormat, useLogout, useVariantSelection };
 //# sourceMappingURL=index.js.map
 //# sourceMappingURL=index.js.map

@@ -12,7 +12,7 @@ const ViewCustomizationModal = ({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
-        <h2 className="text-xl font-[Nunito-bold] text-[var(--main)] mb-4">
+        <h2 className="text-xl font-[var(--font-bold)] text-[var(--main)] mb-4">
           Customizations for {productName}
         </h2>
 
@@ -24,7 +24,7 @@ const ViewCustomizationModal = ({
                 key={`${customization.product_customization_id}-${index}`}
                 className="border border-[#e8e5df] rounded-md p-3"
               >
-                <p className="text-sm font-[Nunito-medium] text-[var(--main)]">
+                <p className="text-sm font-[var(--font-medium)] text-[var(--main)]">
                   {customization.name || `Custom ${index + 1}`}
                 </p>
                 <p className="text-sm text-gray-600 mt-1">
@@ -42,7 +42,7 @@ const ViewCustomizationModal = ({
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="w-full px-4 py-2 bg-[var(--core-primary)] text-white rounded-md text-sm font-[Nunito-medium] hover:bg-[var(--core-primary)]"
+          className="w-full px-4 py-2 bg-[var(--core-primary)] text-white rounded-md text-sm font-[var(--font-medium)] hover:bg-[var(--core-primary)]"
         >
           Close
         </button>
