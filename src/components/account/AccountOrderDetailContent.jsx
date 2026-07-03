@@ -110,6 +110,22 @@ export const AccountOrderDetailContent = ({ order, id }) => {
             </div>
           </div>
         </div>
+        
+        <div className="mt-4 pt-4 border-t border-gray-50 flex gap-3">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#F5F7FA]"><AccountPackageIcon className="h-3.5 w-3.5 text-[#888888]" /></div>
+          <div className="flex flex-col gap-0.5 w-full">
+            <span className="text-[11px] font-[var(--font-bold)] uppercase tracking-wide text-[#888888]">Order Information</span>
+            <div className="text-[12.5px] font-[var(--font-medium)] leading-relaxed text-[#444444] mt-1">
+              <div className="flex items-center gap-2">
+                <span>Order ID: {orderNumber}</span>
+                <button onClick={handleCopy} className="group relative rounded p-1 transition-colors hover:bg-gray-50" title="Copy Order ID">
+                  {copied ? <AccountCheckIcon className="h-3 w-3 text-green-600" /> : <AccountCopyIcon className="h-3 w-3 text-[#BBBBBB] group-hover:text-[var(--core-primary)]" />}
+                </button>
+              </div>
+              <p>Payment: {order.payment_status || order.cart?.payment_state || 'Pending'}</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

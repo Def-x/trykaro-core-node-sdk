@@ -27,7 +27,7 @@ export const OrdersList = ({ initialOrders }) => {
       try {
         if (actions?.getOrders) {
           const data = await actions.getOrders(config?.regionId);
-          setOrders(data || []);
+          setOrders(data?.orders || data || []);
         }
       } catch (error) {
         console.error("Error fetching orders:", error);
