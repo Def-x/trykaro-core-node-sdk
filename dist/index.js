@@ -1,6 +1,6 @@
 import { getPaymentGateway } from './chunk-UP7U6KB6.js';
-import React8, { createContext, useMemo, useState, useEffect, useCallback, useContext, useRef } from 'react';
-import { jsx, jsxs, Fragment } from 'react/jsx-runtime';
+import React8, { createContext, useEffect, useMemo, useState, useCallback, useContext, useRef } from 'react';
+import { jsxs, jsx, Fragment } from 'react/jsx-runtime';
 import { useRouter, usePathname, useSearchParams, useParams } from 'next/navigation';
 import Cookies from 'js-cookie';
 import { flatten, map, compact, filter, uniqBy } from 'lodash';
@@ -439,6 +439,147 @@ var removeDiscountById = async ({
   });
   return wrapResponse(res, "Failed to remove discount");
 };
+
+// src/lib/thirdPartyScripts.js
+function nameToSlug(name = "") {
+  const n = name.toLowerCase().trim();
+  if (n.includes("google analytics")) return "google-analytics";
+  if (n.includes("meta pixel")) return "meta-pixel";
+  if (n.includes("instagram shopping")) return "instagram-shopping";
+  if (n.includes("whatsapp business")) return "whatsapp-business";
+  if (n.includes("whatsapp")) return "whatsapp";
+  if (n.includes("shiprocket")) return "shiprocket";
+  if (n.includes("razorpay")) return "razorpay";
+  if (n.includes("stripe")) return "stripe";
+  if (n.includes("contentsquare") || n.includes("content square")) return "content-square";
+  if (n.includes("hotjar")) return "hotjar";
+  return n.replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+function injectOnce(id, fn) {
+  if (typeof document === "undefined") return;
+  if (document.getElementById(id)) return;
+  fn();
+}
+function injectContentSquare(rawScriptHtml) {
+  if (!rawScriptHtml || typeof rawScriptHtml !== "string") return;
+  const trimmed = rawScriptHtml.trim();
+  injectOnce("cs-tracking-script", () => {
+    try {
+      const script = document.createElement("script");
+      script.id = "cs-tracking-script";
+      script.async = true;
+      if (trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("//")) {
+        script.src = trimmed;
+      } else if (trimmed.includes("<script")) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(trimmed, "text/html");
+        const sourceScript = doc.querySelector("script");
+        if (sourceScript) {
+          Array.from(sourceScript.attributes).forEach((attr) => {
+            script.setAttribute(attr.name, attr.value);
+          });
+          if (sourceScript.src) {
+            script.src = sourceScript.src;
+          } else {
+            script.textContent = sourceScript.textContent || sourceScript.innerHTML;
+          }
+        } else {
+          script.textContent = trimmed;
+        }
+      } else {
+        script.textContent = trimmed;
+      }
+      document.head.appendChild(script);
+    } catch (err) {
+      console.error("[ThirdPartyScripts] ContentSquare injection failed:", err);
+    }
+  });
+}
+function injectHotjar(siteId, version = 6) {
+  if (!siteId) return;
+  injectOnce("hotjar-tracking-script", () => {
+    const script = document.createElement("script");
+    script.id = "hotjar-tracking-script";
+    script.textContent = [
+      `(function(h,o,t,j,a,r){`,
+      `  h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};`,
+      `  h._hjSettings={hjid:${siteId},hjsv:${version}};`,
+      `  a=o.getElementsByTagName('head')[0];`,
+      `  r=o.createElement('script');r.async=1;`,
+      `  r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;`,
+      `  a.appendChild(r);`,
+      `})(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');`
+    ].join("\n");
+    document.head.appendChild(script);
+  });
+}
+
+// src/components/tracking/ThirdPartyScripts.js
+function ThirdPartyScripts({
+  apiBaseUrl,
+  orgId,
+  marketplaces: prefetched,
+  orgData
+}) {
+  console.log({ orgData });
+  useEffect(() => {
+    async function run() {
+      let records = prefetched;
+      if (!records && orgData) {
+        const candidateArray = orgData.organization_marketplaces;
+        if (Array.isArray(candidateArray)) {
+          records = candidateArray;
+        }
+      }
+      const targetApiUrl = apiBaseUrl || (typeof process !== "undefined" ? process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL : "");
+      const targetOrgId = orgId || (typeof process !== "undefined" ? process.env.ORG_ID || process.env.NEXT_PUBLIC_ORG_ID : "");
+      if (!records && targetApiUrl && targetOrgId) {
+        try {
+          const res = await fetch(
+            `${targetApiUrl.replace(/\/$/, "")}/api/organization_marketplaces`,
+            {
+              headers: {
+                "Content-Type": "application/json",
+                accept: "application/vnd.defx-store.v2",
+                "Set-Organization": targetOrgId
+              },
+              cache: "no-store"
+            }
+          );
+          if (res.ok) {
+            records = await res.json();
+          }
+        } catch (err) {
+          console.warn(
+            "[ThirdPartyScripts] Failed to fetch marketplaces:",
+            err
+          );
+        }
+      }
+      if (!Array.isArray(records)) return;
+      records.forEach((record) => {
+        const json = record.market_place_json || record.market_place || record || {};
+        if (json.enabled === false) return;
+        const appName = record.market_place?.name || record.appName || json.appName || json.name || "";
+        const slug = nameToSlug(appName);
+        switch (slug) {
+          case "content-square":
+            if (json.trackingCode) {
+              injectContentSquare(json.trackingCode);
+            }
+            break;
+          case "hotjar":
+            if (json.siteId) {
+              injectHotjar(json.siteId, json.hotjarVersion || 6);
+            }
+            break;
+        }
+      });
+    }
+    run();
+  }, [apiBaseUrl, orgId, prefetched, orgData]);
+  return null;
+}
 var CoreContext = createContext(null);
 var inbuiltActions = {
   // Cart
@@ -662,16 +803,26 @@ var CoreProvider = ({
       secondaryColor
     ]
   );
-  return /* @__PURE__ */ jsx(CoreContext.Provider, { value, children: /* @__PURE__ */ jsx(
-    "div",
-    {
-      style: {
-        "--core-primary": primaryColor,
-        "--core-secondary": secondaryColor
-      },
-      children
-    }
-  ) });
+  return /* @__PURE__ */ jsxs(CoreContext.Provider, { value, children: [
+    /* @__PURE__ */ jsx(
+      ThirdPartyScripts,
+      {
+        apiBaseUrl: resolvedConfig?.apiBaseUrl || config?.apiBaseUrl,
+        orgId: resolvedConfig?.storeId || config?.storeId || resolvedConfig?.orgId,
+        orgData
+      }
+    ),
+    /* @__PURE__ */ jsx(
+      "div",
+      {
+        style: {
+          "--core-primary": primaryColor,
+          "--core-secondary": secondaryColor
+        },
+        children
+      }
+    )
+  ] });
 };
 var useCore = () => {
   const context = useContext(CoreContext);
@@ -3922,7 +4073,7 @@ var CouponSection = () => {
       /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-medium)] text-[14px] text-[var(--secondary)]", children: [
         "\u{1F3F7} Have a coupon code?",
         " ",
-        /* @__PURE__ */ jsx("span", { className: "text-[#FF6500] text-[12px] font-[var(--font-regular)]", children: "Sign in to apply" })
+        /* @__PURE__ */ jsx("span", { className: "text-[var(--core-primary)] text-[12px] font-[var(--font-regular)]", children: "Sign in to apply" })
       ] }),
       /* @__PURE__ */ jsx("span", { className: "text-[var(--secondary)] text-[16px]", children: "\u25BE" })
     ] }) });
@@ -3997,7 +4148,8 @@ var CouponSection = () => {
             {
               onClick: handleApply,
               disabled: isApplying || !inputValue.trim(),
-              className: "bg-[#FF6500] text-white text-[12px] font-[var(--font-bold)] px-4 py-2 rounded-lg border-none cursor-pointer tracking-wide disabled:opacity-60 shrink-0",
+              className: "text-white text-[12px] font-[var(--font-bold)] px-4 py-2 rounded-lg border-none cursor-pointer tracking-wide disabled:opacity-60 shrink-0",
+              style: { background: "var(--core-primary)" },
               children: isApplying ? "APPLYING..." : "APPLY"
             }
           )
@@ -4029,7 +4181,12 @@ var CouponSection = () => {
                         }
                       },
                       disabled: !eligible || isApplying,
-                      className: `bg-[#fff5ee] border border-dashed border-[#FF6500] text-[#FF6500] text-[11px] font-[var(--font-bold)] px-3 py-1 rounded ${!eligible || isApplying ? "opacity-40 cursor-not-allowed" : ""}`,
+                      className: `border border-dashed text-[11px] font-[var(--font-bold)] px-3 py-1 rounded ${!eligible || isApplying ? "opacity-40 cursor-not-allowed" : ""}`,
+                      style: {
+                        color: "var(--core-primary)",
+                        borderColor: "var(--core-primary)",
+                        backgroundColor: "color-mix(in srgb, var(--core-primary) 10%, transparent)"
+                      },
                       children: [
                         coupon.code ? `${coupon.code} \u2014 ` : "",
                         coupon.display_action_value || "Discount"
@@ -5745,6 +5902,6 @@ var Hello = () => {
   return /* @__PURE__ */ jsx("div", { children: isCartLoading ? "Loading..." : "Core Working \u2705" });
 };
 
-export { AccountAddressesPage, AccountLayout, AccountOrderDetailContent, AccountOrdersPage, AccountPage, AccountSidebar, AccountWishlistPage, AddressCard2 as AddressCard, AddressForm, AuthManager, CartItem, CartPage, CartSummary, CoreProvider, CouponSection_default as CouponSection, CustomOTPAuth, DEFAULT_NAV_ITEMS as DEFAULT_ACCOUNT_NAV_ITEMS, EmptyState, Hello, Order, OrdersList, Popup, ProfileForm, Spinner, UserInfo, ViewCart, buildItem, buildMeta, clearEcommerce, initGtmConfig, initMetaPixelConfig, pushToDataLayer, trackAddPaymentInfo, trackAddShippingInfo, trackAddToCart, trackApplyCoupon, trackBeginCheckout, trackCustomEvent, trackMetaAddPaymentInfo, trackMetaAddToCart, trackMetaCompleteRegistration, trackMetaInitiateCheckout, trackMetaLead, trackMetaPageView, trackMetaPurchase, trackMetaSearch, trackMetaViewContent, trackPageView, trackPaymentFailed, trackPurchase, trackSearch, trackViewItem, useAddToCart, useAuth, useCart, userCartInfo_default as useCartInfo, useCore, useCurrencyFormat, useLogout, useVariantSelection };
+export { AccountAddressesPage, AccountLayout, AccountOrderDetailContent, AccountOrdersPage, AccountPage, AccountSidebar, AccountWishlistPage, AddressCard2 as AddressCard, AddressForm, AuthManager, CartItem, CartPage, CartSummary, CoreProvider, CouponSection_default as CouponSection, CustomOTPAuth, DEFAULT_NAV_ITEMS as DEFAULT_ACCOUNT_NAV_ITEMS, EmptyState, Hello, Order, OrdersList, Popup, ProfileForm, Spinner, ThirdPartyScripts, UserInfo, ViewCart, buildItem, buildMeta, clearEcommerce, initGtmConfig, initMetaPixelConfig, injectContentSquare, injectHotjar, nameToSlug, pushToDataLayer, trackAddPaymentInfo, trackAddShippingInfo, trackAddToCart, trackApplyCoupon, trackBeginCheckout, trackCustomEvent, trackMetaAddPaymentInfo, trackMetaAddToCart, trackMetaCompleteRegistration, trackMetaInitiateCheckout, trackMetaLead, trackMetaPageView, trackMetaPurchase, trackMetaSearch, trackMetaViewContent, trackPageView, trackPaymentFailed, trackPurchase, trackSearch, trackViewItem, useAddToCart, useAuth, useCart, userCartInfo_default as useCartInfo, useCore, useCurrencyFormat, useLogout, useVariantSelection };
 //# sourceMappingURL=index.js.map
 //# sourceMappingURL=index.js.map

@@ -83,4 +83,13 @@ export {
   trackMetaLead,
 } from "./lib/metaPixel";
 
+// ─── Third-Party Script Injection ────────────────────────────────────────────
+export { ThirdPartyScripts } from "./components/tracking/ThirdPartyScripts";
+export {
+  nameToSlug,
+  injectContentSquare,
+  injectHotjar,
+} from "./lib/thirdPartyScripts";
+
+
 

@@ -1,0 +1,117 @@
+"use client";
+
+import { useEffect } from "react";
+import {
+  nameToSlug,
+  injectContentSquare,
+  injectHotjar,
+} from "../../lib/thirdPartyScripts";
+
+/**
+ * ThirdPartyScripts — @defx/storefront-core
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Fetches or extracts installed marketplace integrations (Hotjar, ContentSquare, etc.)
+ * from organization settings / backend API and injects their tracking scripts
+ * dynamically into the browser <head> at runtime.
+ *
+ * Automatically included in <CoreProvider /> and can also be rendered directly:
+ *   <ThirdPartyScripts apiBaseUrl={...} orgId={...} orgData={...} />
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+export function ThirdPartyScripts({
+  apiBaseUrl,
+  orgId,
+  marketplaces: prefetched,
+  orgData,
+}) {
+  console.log({ orgData });
+  useEffect(() => {
+    async function run() {
+      let records = prefetched;
+
+      // 1. Extract from orgData / organization settings if available
+      if (!records && orgData) {
+        const candidateArray = orgData.organization_marketplaces;
+
+        if (Array.isArray(candidateArray)) {
+          records = candidateArray;
+        }
+      }
+
+      // 2. Fallback: fetch from backend API if not in orgData/prefetched
+      const targetApiUrl =
+        apiBaseUrl ||
+        (typeof process !== "undefined"
+          ? process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL
+          : "");
+      const targetOrgId =
+        orgId ||
+        (typeof process !== "undefined"
+          ? process.env.ORG_ID || process.env.NEXT_PUBLIC_ORG_ID
+          : "");
+
+      if (!records && targetApiUrl && targetOrgId) {
+        try {
+          const res = await fetch(
+            `${targetApiUrl.replace(/\/$/, "")}/api/organization_marketplaces`,
+            {
+              headers: {
+                "Content-Type": "application/json",
+                accept: "application/vnd.defx-store.v2",
+                "Set-Organization": targetOrgId,
+              },
+              cache: "no-store",
+            },
+          );
+          if (res.ok) {
+            records = await res.json();
+          }
+        } catch (err) {
+          console.warn(
+            "[ThirdPartyScripts] Failed to fetch marketplaces:",
+            err,
+          );
+        }
+      }
+
+      if (!Array.isArray(records)) return;
+
+      records.forEach((record) => {
+        const json =
+          record.market_place_json || record.market_place || record || {};
+
+        // Skip disabled integrations
+        if (json.enabled === false) return;
+
+        const appName =
+          record.market_place?.name ||
+          record.appName ||
+          json.appName ||
+          json.name ||
+          "";
+        const slug = nameToSlug(appName);
+
+        switch (slug) {
+          case "content-square":
+            if (json.trackingCode) {
+              injectContentSquare(json.trackingCode);
+            }
+            break;
+
+          case "hotjar":
+            if (json.siteId) {
+              injectHotjar(json.siteId, json.hotjarVersion || 6);
+            }
+            break;
+
+          default:
+            break;
+        }
+      });
+    }
+
+    run();
+  }, [apiBaseUrl, orgId, prefetched, orgData]);
+
+  return null;
+}

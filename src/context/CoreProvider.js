@@ -10,6 +10,7 @@ import React, {
 } from "react";
 import * as storefrontActions from "../actions/storefrontActions";
 import * as discountActions from "../actions/discountActions";
+import { ThirdPartyScripts } from "../components/tracking/ThirdPartyScripts";
 
 const CoreContext = createContext(null);
 
@@ -315,6 +316,11 @@ export const CoreProvider = ({
 
   return (
     <CoreContext.Provider value={value}>
+      <ThirdPartyScripts
+        apiBaseUrl={resolvedConfig?.apiBaseUrl || config?.apiBaseUrl}
+        orgId={resolvedConfig?.storeId || config?.storeId || resolvedConfig?.orgId}
+        orgData={orgData}
+      />
       <div
         style={{
           "--core-primary": primaryColor,
