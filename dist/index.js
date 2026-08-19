@@ -442,17 +442,20 @@ var removeDiscountById = async ({
 
 // src/lib/thirdPartyScripts.js
 function nameToSlug(name = "") {
-  const n = name.toLowerCase().trim();
+  const n = String(name || "").toLowerCase().trim();
   if (n.includes("google analytics")) return "google-analytics";
+  if (n.includes("google search console")) return "google-search-console";
   if (n.includes("meta pixel")) return "meta-pixel";
   if (n.includes("instagram shopping")) return "instagram-shopping";
   if (n.includes("whatsapp business")) return "whatsapp-business";
+  if (n.includes("whatsapp catalog") || n.includes("whatsapp catelog")) return "whatsapp-catalog";
   if (n.includes("whatsapp")) return "whatsapp";
   if (n.includes("shiprocket")) return "shiprocket";
   if (n.includes("razorpay")) return "razorpay";
   if (n.includes("stripe")) return "stripe";
   if (n.includes("contentsquare") || n.includes("content square")) return "content-square";
   if (n.includes("hotjar")) return "hotjar";
+  if (n.includes("microsoft clarity") || n.includes("clarity")) return "microsoft-clarity";
   return n.replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 function injectOnce(id, fn) {
@@ -513,6 +516,31 @@ function injectHotjar(siteId, version = 6) {
     document.head.appendChild(script);
   });
 }
+function injectClarity(projectId) {
+  if (!projectId || typeof projectId !== "string") return;
+  const trimmed = projectId.trim();
+  if (!trimmed) return;
+  injectOnce("clarity-tracking-script", () => {
+    try {
+      const script = document.createElement("script");
+      script.id = "clarity-tracking-script";
+      script.type = "text/javascript";
+      script.textContent = [
+        `(function(c,l,a,r,i,t,y){`,
+        `  c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};`,
+        `  t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;`,
+        `  y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);`,
+        `})(window, document, "clarity", "script", "${trimmed}");`
+      ].join("\n");
+      document.head.appendChild(script);
+    } catch (err) {
+      console.error(
+        "[ThirdPartyScripts] Microsoft Clarity injection failed:",
+        err
+      );
+    }
+  });
+}
 
 // src/components/tracking/ThirdPartyScripts.js
 function ThirdPartyScripts({
@@ -559,18 +587,27 @@ function ThirdPartyScripts({
       if (!Array.isArray(records)) return;
       records.forEach((record) => {
         const json = record.market_place_json || record.market_place || record || {};
-        if (json.enabled === false) return;
-        const appName = record.market_place?.name || record.appName || json.appName || json.name || "";
-        const slug = nameToSlug(appName);
+        if (record.is_installed === false || json.enabled === false) return;
+        const name = record.market_place?.name || record.name || record.appName || json.name || json.appName || "";
+        const slug = nameToSlug(name);
         switch (slug) {
           case "content-square":
-            if (json.trackingCode) {
-              injectContentSquare(json.trackingCode);
+            const csCode = json.trackingCode || record.market_place?.metadata?.trackingCode;
+            if (csCode) {
+              injectContentSquare(csCode);
             }
             break;
           case "hotjar":
-            if (json.siteId) {
-              injectHotjar(json.siteId, json.hotjarVersion || 6);
+            const siteId = json.siteId || record.market_place?.metadata?.siteId;
+            if (siteId) {
+              injectHotjar(siteId, json.hotjarVersion || 6);
+            }
+            break;
+          case "microsoft-clarity":
+          case "clarity":
+            const clarityId = json.projectId || json.projectIdFromInput || json.clarityId || json.project_id || json.id || record.market_place?.metadata?.projectId || record.market_place?.metadata?.clarityId;
+            if (clarityId) {
+              injectClarity(clarityId);
             }
             break;
         }

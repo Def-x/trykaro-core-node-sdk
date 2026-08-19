@@ -11,21 +11,24 @@
 // ─── Slug resolver (mirrors admin-panel nameToSlug) ────────────────────────
 
 /**
- * Derives a canonical slug from a marketplace app name.
+ * Derives a canonical slug from a marketplace name (market_place.name or appName).
  * Must stay in sync with the admin panel's nameToSlug function.
  */
 export function nameToSlug(name = "") {
-  const n = name.toLowerCase().trim();
+  const n = String(name || "").toLowerCase().trim();
   if (n.includes("google analytics")) return "google-analytics";
+  if (n.includes("google search console")) return "google-search-console";
   if (n.includes("meta pixel"))       return "meta-pixel";
   if (n.includes("instagram shopping")) return "instagram-shopping";
   if (n.includes("whatsapp business")) return "whatsapp-business";
+  if (n.includes("whatsapp catalog") || n.includes("whatsapp catelog")) return "whatsapp-catalog";
   if (n.includes("whatsapp"))          return "whatsapp";
   if (n.includes("shiprocket"))        return "shiprocket";
   if (n.includes("razorpay"))          return "razorpay";
   if (n.includes("stripe"))            return "stripe";
   if (n.includes("contentsquare") || n.includes("content square")) return "content-square";
   if (n.includes("hotjar"))            return "hotjar";
+  if (n.includes("microsoft clarity") || n.includes("clarity")) return "microsoft-clarity";
   return n.replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
@@ -38,7 +41,7 @@ export function nameToSlug(name = "") {
  */
 function injectOnce(id, fn) {
   if (typeof document === "undefined") return; // SSR guard
-  if (document.getElementById(id)) return;      // already injected
+  if (document.getElementById(id)) return; // already injected
   fn();
 }
 
@@ -62,7 +65,11 @@ export function injectContentSquare(rawScriptHtml) {
       script.async = true;
 
       // 1. Direct URL case (e.g. "https://t.contentsquare.net/uxa/c266c22a9c683.js")
-      if (trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("//")) {
+      if (
+        trimmed.startsWith("http://") ||
+        trimmed.startsWith("https://") ||
+        trimmed.startsWith("//")
+      ) {
         script.src = trimmed;
       }
       // 2. Full HTML <script> tag case (e.g. '<script async src="https://t.contentsquare.net/uxa/c266c22a9c683.js"></script>')
@@ -79,7 +86,8 @@ export function injectContentSquare(rawScriptHtml) {
           if (sourceScript.src) {
             script.src = sourceScript.src;
           } else {
-            script.textContent = sourceScript.textContent || sourceScript.innerHTML;
+            script.textContent =
+              sourceScript.textContent || sourceScript.innerHTML;
           }
         } else {
           script.textContent = trimmed;
@@ -122,5 +130,40 @@ export function injectHotjar(siteId, version = 6) {
       `})(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');`,
     ].join("\n");
     document.head.appendChild(script);
+  });
+}
+
+// ─── Microsoft Clarity ─────────────────────────────────────────────────────────
+
+/**
+ * Injects the standard Microsoft Clarity tracking snippet into <head>.
+ *
+ * @param {string} projectId - Microsoft Clarity Project ID (e.g. "CL-99282-X" or "k3n9z8p1")
+ */
+export function injectClarity(projectId) {
+  if (!projectId || typeof projectId !== "string") return;
+
+  const trimmed = projectId.trim();
+  if (!trimmed) return;
+
+  injectOnce("clarity-tracking-script", () => {
+    try {
+      const script = document.createElement("script");
+      script.id = "clarity-tracking-script";
+      script.type = "text/javascript";
+      script.textContent = [
+        `(function(c,l,a,r,i,t,y){`,
+        `  c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};`,
+        `  t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;`,
+        `  y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);`,
+        `})(window, document, "clarity", "script", "${trimmed}");`,
+      ].join("\n");
+      document.head.appendChild(script);
+    } catch (err) {
+      console.error(
+        "[ThirdPartyScripts] Microsoft Clarity injection failed:",
+        err,
+      );
+    }
   });
 }
