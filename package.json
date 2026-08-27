@@ -54,9 +54,5 @@
     "tailwindcss": "^4.2.2",
     "tsup": "^8.5.1",
     "typescript": "^6.0.2"
-  },
-  "stableVersion": "1.0.0",
-  "dependencies": {
-    "react-razorpay": "^3.0.1"
   }
 }
