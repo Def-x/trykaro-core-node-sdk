@@ -24,6 +24,12 @@ export { default as CouponSection } from "./components/cart/CouponSection";
 
 // ─── Account Components ───────────────────────────────────────────────────────
 export { AccountPage } from "./components/account/AccountPage";
+export { AccountLayout } from "./components/account/AccountLayout";
+export { AccountSidebar, DEFAULT_ACCOUNT_NAV_ITEMS } from "./components/account/AccountSidebar";
+export { AccountAddressesPage } from "./components/account/AccountAddressesPage";
+export { AccountOrdersPage } from "./components/account/AccountOrdersPage";
+export { AccountOrderDetailContent } from "./components/account/AccountOrderDetailContent";
+export { AccountWishlistPage } from "./components/account/AccountWishlistPage";
 export { UserInfo } from "./components/account/UserInfo";
 export { AddressCard } from "./components/account/AddressCard";
 export { OrdersList } from "./components/account/OrdersList";
@@ -45,11 +51,13 @@ export { Hello } from "./components/hello";
 
 // ─── Analytics (GTM / GA4) ────────────────────────────────────────────────────
 export {
+  initGtmConfig,
   pushToDataLayer,
   clearEcommerce,
   buildMeta,
   buildItem,
   trackPageView,
+  trackSearch,
   trackViewItem,
   trackAddToCart,
   trackBeginCheckout,
@@ -60,3 +68,28 @@ export {
   trackPaymentFailed,
   trackCustomEvent,
 } from "./lib/gtm";
+
+// ─── Analytics (Meta Pixel) ──────────────────────────────────────────────────
+export {
+  initMetaPixelConfig,
+  trackMetaPageView,
+  trackMetaViewContent,
+  trackMetaSearch,
+  trackMetaAddToCart,
+  trackMetaInitiateCheckout,
+  trackMetaAddPaymentInfo,
+  trackMetaPurchase,
+  trackMetaCompleteRegistration,
+  trackMetaLead,
+} from "./lib/metaPixel";
+
+// ─── Third-Party Script Injection ────────────────────────────────────────────
+export { ThirdPartyScripts } from "./components/tracking/ThirdPartyScripts";
+export {
+  nameToSlug,
+  injectContentSquare,
+  injectHotjar,
+} from "./lib/thirdPartyScripts";
+
+
+

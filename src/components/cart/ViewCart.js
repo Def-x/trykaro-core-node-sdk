@@ -41,7 +41,11 @@ export const ViewCart = () => {
   const hasDeletedItems = deletedItems.length > 0;
 
   const appliedDiscounts = (cart?.cart_discounts || []).filter(
-    (coupon) => coupon.code || coupon.display_action_value || coupon.id || coupon.discount_id
+    (coupon) =>
+      coupon.code ||
+      coupon.display_action_value ||
+      coupon.id ||
+      coupon.discount_id,
   );
   const activeDiscountId = appliedDiscounts?.[0]?.id || cart?.discount_id;
 
@@ -73,37 +77,54 @@ export const ViewCart = () => {
       if (toast?.info) {
         toast.info("Coupon removed — conditions no longer met");
       } else {
-        console.log("Coupon removed — conditions no longer met");
       }
     }
     prevDiscountIdRef.current = activeDiscountId;
   }, [activeDiscountId, items?.length, toast]);
 
-  console.log({ cart, appliedDiscounts });
   return (
     <div className="mx-4 md:mx-[24px] my-[100px] flex justify-center">
       {isLoading ? (
         <div className="flex justify-center items-center w-full h-[400px]">
-          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2" style={{ borderColor: "var(--core-primary)" }}></div>
+          <div
+            className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2"
+            style={{ borderColor: "var(--core-primary)" }}
+          ></div>
         </div>
       ) : items.length === 0 ? (
         <div className="flex flex-col items-center justify-center p-12 bg-gray-50/50 border border-gray-100 rounded-2xl min-h-[400px] gap-y-6 max-w-[600px] w-full mx-auto">
           <div className="p-4 bg-white rounded-full shadow-sm border border-gray-100">
-            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--core-primary)" }}>
-              <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/>
-              <path d="M3 6h18"/>
-              <path d="M16 10a4 4 0 0 1-8 0"/>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{ color: "var(--core-primary)" }}
+            >
+              <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+              <path d="M3 6h18" />
+              <path d="M16 10a4 4 0 0 1-8 0" />
             </svg>
           </div>
           <div className="flex flex-col items-center gap-2 text-center">
-            <p className="font-[Nunito-bold] text-[22px] text-gray-800">
+            <p className="font-[var(--font-bold)] text-[22px] text-gray-800">
               Your cart is empty
             </p>
-            <p className="font-[Nunito-regular] text-[15px] text-gray-500 max-w-[400px]">
-              Looks like you haven't added anything to your cart yet. Explore our collections and find something you love!
+            <p className="font-[var(--font-regular)] text-[15px] text-gray-500 max-w-[400px]">
+              Looks like you haven't added anything to your cart yet. Explore
+              our collections and find something you love!
             </p>
           </div>
-          <a href="/" className="mt-4 px-8 py-3 rounded-full text-white font-[Nunito-medium] transition-opacity hover:opacity-90" style={{ backgroundColor: "var(--core-primary)" }}>
+          <a
+            href="/"
+            className="mt-4 px-8 py-3 rounded-full text-white font-[var(--font-medium)] transition-opacity hover:opacity-90"
+            style={{ backgroundColor: "var(--core-primary)" }}
+          >
             Continue Shopping
           </a>
         </div>
@@ -121,7 +142,7 @@ export const ViewCart = () => {
           <div className="flex-1 md:sticky top-4 self-start mt-[18px] md:mt-0 order-first md:order-last">
             {hasDeletedItems && (
               <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 mb-4">
-                <p className="text-sm text-yellow-800 font-[Nunito-medium]">
+                <p className="text-sm text-yellow-800 font-[var(--font-medium)]">
                   ⚠️ Some items in your cart are no longer available. Please
                   remove them before checkout.
                 </p>
@@ -130,7 +151,7 @@ export const ViewCart = () => {
 
             {/* Order items */}
             <div>
-              <div className="font-[Nunito-medium] text-[20px] text-[var(--main)]">
+              <div className="font-[var(--font-medium)] text-[20px] text-[var(--main)]">
                 ORDER ITEMS ({items.length})
               </div>
 
@@ -152,16 +173,16 @@ export const ViewCart = () => {
 
               {/* Bill Summary */}
               <div className="mt-8">
-                <p className="font-[Nunito-medium] text-[20px] text-[var(--main)]">
+                <p className="font-[var(--font-medium)] text-[20px] text-[var(--main)]">
                   Bill summary
                 </p>
 
                 <div className="mt-[24px] space-y-[8px]">
                   <div className="flex justify-between">
-                    <p className="font-[Nunito-regular] text-[14px] text-[var(--main)]">
+                    <p className="font-[var(--font-regular)] text-[14px] text-[var(--main)]">
                       Item total
                     </p>
-                    <p className="font-[Nunito-regular] text-[14px] text-[var(--main)]">
+                    <p className="font-[var(--font-regular)] text-[14px] text-[var(--main)]">
                       {display_item_total
                         ? formatCurrency(display_item_total)
                         : "—"}
@@ -171,18 +192,19 @@ export const ViewCart = () => {
                   {/* ── Discount dropdown row ── */}
                   {(appliedDiscounts?.length > 0 ||
                     cart?.promo_total > 0 ||
-                    parseFloat(cart?.display_promo_total) > 0) && (() => {
+                    parseFloat(cart?.display_promo_total) > 0) &&
+                    (() => {
                       // Compute total discount to show in the label
                       const totalDiscount =
                         appliedDiscounts?.length > 0
                           ? appliedDiscounts.reduce((sum, c) => {
-                            const amt =
-                              c.display_discount_amount ??
-                              (c.discount_amount != null
-                                ? c.discount_amount / 100
-                                : 0);
-                            return sum + parseFloat(amt || 0);
-                          }, 0)
+                              const amt =
+                                c.display_discount_amount ??
+                                (c.discount_amount != null
+                                  ? c.discount_amount / 100
+                                  : 0);
+                              return sum + parseFloat(amt || 0);
+                            }, 0)
                           : parseFloat(cart?.display_promo_total || 0);
 
                       return (
@@ -199,7 +221,10 @@ export const ViewCart = () => {
                               background: "none",
                               border: "none",
                               padding: 0,
-                              cursor: appliedDiscounts?.length > 1 ? "pointer" : "default",
+                              cursor:
+                                appliedDiscounts?.length > 1
+                                  ? "pointer"
+                                  : "default",
                             }}
                           >
                             <span
@@ -207,13 +232,13 @@ export const ViewCart = () => {
                                 display: "flex",
                                 alignItems: "center",
                                 gap: "4px",
-                                fontFamily: "Nunito-regular",
+                                fontFamily: "var(--font-regular)",
                                 fontSize: "14px",
                                 color: "#FF6500",
                               }}
                             >
                               {appliedDiscounts?.length === 1
-                                ? `Discount (${appliedDiscounts[0].code ? appliedDiscounts[0].code : (appliedDiscounts[0].display_action_value || "Coupon")})`
+                                ? `Discount (${appliedDiscounts[0].code ? appliedDiscounts[0].code : appliedDiscounts[0].display_action_value || "Coupon"})`
                                 : "Discount"}
                               {appliedDiscounts?.length > 1 && (
                                 <svg
@@ -238,7 +263,7 @@ export const ViewCart = () => {
                             </span>
                             <span
                               style={{
-                                fontFamily: "Nunito-regular",
+                                fontFamily: "var(--font-regular)",
                                 fontSize: "14px",
                                 color: "#FF6500",
                               }}
@@ -275,17 +300,20 @@ export const ViewCart = () => {
                                   >
                                     <span
                                       style={{
-                                        fontFamily: "Nunito-regular",
+                                        fontFamily: "var(--font-regular)",
                                         fontSize: "13px",
                                         color: "#FF6500",
                                         opacity: 0.85,
                                       }}
                                     >
-                                      {coupon.code ? `${coupon.code}` : (coupon.display_action_value || "Coupon")}
+                                      {coupon.code
+                                        ? `${coupon.code}`
+                                        : coupon.display_action_value ||
+                                          "Coupon"}
                                     </span>
                                     <span
                                       style={{
-                                        fontFamily: "Nunito-regular",
+                                        fontFamily: "var(--font-regular)",
                                         fontSize: "13px",
                                         color: "#FF6500",
                                         opacity: 0.85,
@@ -298,17 +326,15 @@ export const ViewCart = () => {
                               })}
                             </div>
                           )}
-
-
                         </div>
                       );
                     })()}
 
                   <div className="flex justify-between">
-                    <p className="font-[Nunito-regular] text-[14px] text-[var(--main)]">
+                    <p className="font-[var(--font-regular)] text-[14px] text-[var(--main)]">
                       Tax
                     </p>
-                    <p className="font-[Nunito-regular] text-[14px] text-[var(--main)]">
+                    <p className="font-[var(--font-regular)] text-[14px] text-[var(--main)]">
                       {display_tax_total
                         ? formatCurrency(display_tax_total)
                         : "—"}
@@ -317,12 +343,12 @@ export const ViewCart = () => {
 
                   {order_type !== "pickup" && (
                     <div className="flex justify-between">
-                      <p className="font-[Nunito-regular] text-[14px] text-[var(--main)]">
+                      <p className="font-[var(--font-regular)] text-[14px] text-[var(--main)]">
                         Shipping
                       </p>
-                      <p className="font-[Nunito-regular] text-[14px] text-[var(--main)]">
+                      <p className="font-[var(--font-regular)] text-[14px] text-[var(--main)]">
                         {display_ship_total === "0.00" ||
-                          display_ship_total === 0
+                        display_ship_total === 0
                           ? "Free"
                           : display_ship_total
                             ? formatCurrency(display_ship_total)
@@ -333,20 +359,20 @@ export const ViewCart = () => {
 
                   <div className="pt-[16px] border-t border-[var(--borders)]">
                     <div className="flex justify-between">
-                      <p className="font-[Nunito-medium] text-[16px] text-[var(--main)]">
+                      <p className="font-[var(--font-medium)] text-[16px] text-[var(--main)]">
                         Total payment
                       </p>
-                      <p className="font-[Nunito-bold] text-[16px] text-[var(--main)]">
+                      <p className="font-[var(--font-bold)] text-[16px] text-[var(--main)]">
                         {display_total ? formatCurrency(display_total) : "—"}
                       </p>
                     </div>
                     {(cart?.promo_total > 0 ||
                       parseFloat(cart?.display_promo_total) > 0) && (
-                        <p className="text-[13px] font-[Nunito-bold] text-[#00b300] mt-[6px] text-right">
-                          You save {formatCurrency(cart?.display_promo_total)} on
-                          this order 🎉
-                        </p>
-                      )}
+                      <p className="text-[13px] font-[var(--font-bold)] text-[#00b300] mt-[6px] text-right">
+                        You save {formatCurrency(cart?.display_promo_total)} on
+                        this order 🎉
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

@@ -8,5 +8,5 @@ function getPaymentGateway(name) {
 }
 
 export { getPaymentGateway, registerPaymentGateway };
-//# sourceMappingURL=chunk-ICFWQ2RM.js.map
-//# sourceMappingURL=chunk-ICFWQ2RM.js.map
+//# sourceMappingURL=chunk-UP7U6KB6.js.map
+//# sourceMappingURL=chunk-UP7U6KB6.js.map

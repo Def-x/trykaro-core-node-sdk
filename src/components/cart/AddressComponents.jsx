@@ -12,12 +12,12 @@ export const AddressFormInline = ({ refetch }) => {
 
   return (
     <div>
-      <p className="font-[Nunito-regular] text-[14px] text-[var(--secondary)] mb-3">
+      <p className="font-[var(--font-regular)] text-[14px] text-[var(--secondary)] mb-3">
         No addresses saved yet.
       </p>
       <button
         onClick={() => setIsOpen(true)}
-        className="font-[Nunito-medium] text-[var(--main)] underline text-sm"
+        className="font-[var(--font-medium)] text-[var(--main)] underline text-sm"
       >
         + Add your first address
       </button>
@@ -121,11 +121,11 @@ export const AddressSelection = ({
         {/* Shipping Address */}
         <div>
           <div className="flex justify-between items-center mb-4">
-            <h2 className="font-[Nunito-medium] text-[20px] text-[var(--main)] tracking-wide">
+            <h2 className="font-[var(--font-medium)] text-[20px] text-[var(--main)] tracking-wide">
               SHIPPING ADDRESS
             </h2>
             <button
-              className="text-base font-[Nunito-medium] text-[var(--main)] hover:underline"
+              className="text-base font-[var(--font-medium)] text-[var(--main)] hover:underline"
               onClick={() => setIsOpenAddAddress(true)}
             >
               Add new address
@@ -146,11 +146,11 @@ export const AddressSelection = ({
         {/* Billing Address */}
         <div>
           <div className="flex justify-between items-center mb-4">
-            <h2 className="font-[Nunito-medium] text-[20px] text-[var(--main)] tracking-wide">
+            <h2 className="font-[var(--font-medium)] text-[20px] text-[var(--main)] tracking-wide">
               BILLING ADDRESS
             </h2>
             <button
-              className="text-base font-[Nunito-medium] text-[var(--main)] hover:underline"
+              className="text-base font-[var(--font-medium)] text-[var(--main)] hover:underline"
               onClick={() => setIsOpenAddAddress(true)}
             >
               Add new address
@@ -165,7 +165,7 @@ export const AddressSelection = ({
               }`}
             onClick={onSwitchChange}
           >
-            <p className="font-[Nunito-medium] text-base text-[var(--main)]">
+            <p className="font-[var(--font-medium)] text-base text-[var(--main)]">
               Same as Shipping address
             </p>
             <div className="relative w-12 h-6 flex items-center">
@@ -241,21 +241,21 @@ export const AddressSelectionCard = ({
         : "border-gray-200 hover:border-gray-300"
         }`}
     >
-      <p className="font-[Nunito-medium] text-[var(--main)] text-base truncate">
+      <p className="font-[var(--font-medium)] text-[var(--main)] text-base truncate">
         {label}
         {isShippingAddress && (
-          <span className="font-[Nunito-regular] text-[14px] text-[var(--secondary)] ml-1">
+          <span className="font-[var(--font-regular)] text-[14px] text-[var(--secondary)] ml-1">
             (Current shipping address)
           </span>
         )}
       </p>
       <div className="border-t border-[var(--borders)]" />
-      <p className="font-[Nunito-regular] text-[14px] text-[var(--main)] break-words">
+      <p className="font-[var(--font-regular)] text-[14px] text-[var(--main)] break-words">
         {fullName} | {phone}
       </p>
       <div className="border-t border-[var(--borders)]" />
       <p
-        className="font-[Nunito-regular] text-[14px] text-[var(--main)] w-full break-words overflow-hidden text-ellipsis"
+        className="font-[var(--font-regular)] text-[14px] text-[var(--main)] w-full break-words overflow-hidden text-ellipsis"
         style={{
           display: "-webkit-box",
           WebkitLineClamp: 2,
@@ -275,8 +275,9 @@ export const AddressCard = ({
   type,
   isSelected,
   onClick,
+  paymentLabel,
 }) => {
-  const isPayment = type === "stripe";
+  const isPayment = type === "stripe" || type === "payment";
   return (
     <div
       className={`w-full border-2 p-[16px] transition-all duration-200 rounded-lg ${
@@ -289,11 +290,11 @@ export const AddressCard = ({
       {isPayment ? (
         <div className="flex flex-row items-center justify-between">
           <div className="flex flex-col justify-between">
-            <p className="font-[Nunito-medium] text-base text-[var(--main)]">
+            <p className="font-[var(--font-medium)] text-base text-[var(--main)]">
               {addressType}
             </p>
             <p
-              className="font-[Nunito-regular] text-[var(--main)] text-[14px] mt-[8px] break-words"
+              className="font-[var(--font-regular)] text-[var(--main)] text-[14px] mt-[8px] break-words"
               style={{
                 display: "-webkit-box",
                 WebkitLineClamp: 2,
@@ -307,8 +308,8 @@ export const AddressCard = ({
           <div className="ml-4 flex-shrink-0">
             {/* Razorpay logo placeholder */}
             <div className="w-[60px] h-[30px] bg-[var(--secondaryBg)] border border-[var(--borders)] rounded flex items-center justify-center">
-              <span className="text-[10px] font-[Nunito-bold] text-[var(--main)]">
-                Razorpay
+              <span className="text-[10px] font-[var(--font-bold)] text-[var(--main)]">
+                {paymentLabel ?? (type === "stripe" ? "Razorpay" : "Payment")}
               </span>
             </div>
           </div>
@@ -316,12 +317,12 @@ export const AddressCard = ({
       ) : (
         <div>
           <div className="flex flex-row justify-between items-center">
-            <p className="font-[Nunito-medium] text-base text-[var(--main)]">
+            <p className="font-[var(--font-medium)] text-base text-[var(--main)]">
               {addressType}
             </p>
           </div>
           <p
-            className="font-[Nunito-regular] text-[var(--main)] text-[14px] mt-[8px] break-words"
+            className="font-[var(--font-regular)] text-[var(--main)] text-[14px] mt-[8px] break-words"
             style={{
               display: "-webkit-box",
               WebkitLineClamp: 2,

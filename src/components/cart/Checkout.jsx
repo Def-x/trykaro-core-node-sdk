@@ -20,6 +20,11 @@ import {
   trackAddShippingInfo,
   trackAddPaymentInfo,
 } from "../../lib/gtm";
+import {
+  trackMetaInitiateCheckout,
+  trackMetaPurchase,
+  trackMetaAddPaymentInfo,
+} from "../../lib/metaPixel";
 
 // ─── Top-level Checkout ────────────────────────────────────────────────────────
 const Checkout = ({ hasDeletedItems }) => {
@@ -74,20 +79,79 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
   const { cart, setCart, actions, config, auth, orgData, primaryColor, toast } =
     useCore();
 
-  // Read StripeCheckout from the gateway registry.
-  const StripeCheckout = getPaymentGateway("stripe");
+  // ── Payment gateway detection ───────────────────────────────────────────
+  // Region-based: activeRegion.payment_gateway + activeRegion.payment_config
+  // Fallback: orgData.organization_setting.payment
+  const activeRegion = config?.activeRegion ?? config?.region ?? null;
 
-  // ── Payment gateway config derived from orgData ──────────────────────
-  const paymentConfig = orgData?.organization_setting?.payment ?? {};
-  const paymentMode = paymentConfig?.mode ?? "razorpay";
-  const razorpayKeyId = paymentConfig?.razor_pay_key_id ?? "";
-  const stripePublishableKey = paymentConfig?.stripe_publishable_key ?? "";
+  const orgPaymentConfig = orgData?.organization_setting?.payment ?? {};
+  // Region payment_config holds: stripe_publishable_key, razor_pay_key_id, etc.
+  const regionPaymentConfig = activeRegion?.payment_config ?? null;
+  const paymentConfig = regionPaymentConfig ?? orgPaymentConfig;
+
+  // payment_gateway is a top-level field on the region object (not inside payment_config)
+  const rawPaymentGateway =
+    activeRegion?.payment_gateway || // ← primary: region.payment_gateway
+    orgPaymentConfig?.mode ||
+    orgPaymentConfig?.gateway ||
+    "";
+
+  const paymentGateway = String(rawPaymentGateway || "razorpay").toLowerCase();
+  const isStripeGateway = paymentGateway === "stripe";
+
+  // Credentials from region's payment_config, fallback to org
+  const stripePublishableKey =
+    paymentConfig?.stripe_publishable_key ??
+    orgPaymentConfig?.stripe_publishable_key ??
+    "";
+  const razorpayKeyId =
+    paymentConfig?.razor_pay_key_id ?? orgPaymentConfig?.razor_pay_key_id ?? "";
+  const paymentGatewayLabel = paymentGateway
+    ? paymentGateway.charAt(0).toUpperCase() +
+      paymentGateway.slice(1).replace(/_/g, " ")
+    : "Razorpay";
+
+  // Load Stripe eagerly at mount so it's ready when the user clicks Checkout.
+  // Must wrap in () => to prevent React treating the component fn as a state updater.
+  const [StripeCheckout, setStripeCheckout] = useState(() =>
+    getPaymentGateway("stripe"),
+  );
 
   const [showStripeForm, setShowStripeForm] = useState(false);
   const [addresses, setAddresses] = useState([]);
   const [isAddressLoading, setIsAddressLoading] = useState(true);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+
+  // Load Stripe module if not already in registry.
+  // Runs eagerly at mount so the form is ready the instant the user clicks Checkout.
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadStripeGateway = async () => {
+      try {
+        await import("../../stripe");
+        if (isMounted) {
+          setStripeCheckout(() => getPaymentGateway("stripe"));
+        }
+      } catch (error) {
+        console.error("[Checkout] Failed to load Stripe gateway:", error);
+      }
+    };
+
+    // If already cached in registry, grab it immediately
+    const cached = getPaymentGateway("stripe");
+    if (cached) {
+      setStripeCheckout(() => cached);
+    } else {
+      loadStripeGateway();
+    }
+
+    return () => {
+      isMounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const isCartHaveBillingAddress = !!cart?.billing_address;
   const isCarthaveShippingAddress = !!cart?.shipping_address;
@@ -273,10 +337,12 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
               currency,
               metaOverrides: { source: "checkout" },
             });
+            // ── Meta Pixel ──
+            trackMetaPurchase(cart);
             // ─────────────────────────────────────────────────────────────
 
             setCart(null);
-            router.push(`/order/${order?.order_id}?show=true`);
+            router.push(`/account/orders/${order?.order_id}`);
           } else {
             // All 5 attempts failed — stop showing the processing screen
             setIsProcessingPayment(false);
@@ -331,7 +397,7 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
   const onPlaceOrder = async () => {
     if (hasDeletedItems || !cart?.id) return;
 
-    if (paymentMode === "stripe") {
+    if (isStripeGateway) {
       setShowStripeForm(true);
       return;
     }
@@ -354,6 +420,7 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
           transactionId: String(orderResponse?.id ?? ""),
           metaOverrides: { source: "checkout" },
         });
+        trackMetaInitiateCheckout(cart);
 
         // Step 2: add_shipping_info (address already set on cart at this point)
         trackAddShippingInfo({
@@ -368,10 +435,11 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
         trackAddPaymentInfo({
           userId,
           cart,
-          paymentType: "Razorpay",
+          paymentType: paymentGatewayLabel,
           currency,
           metaOverrides: { source: "checkout" },
         });
+        trackMetaAddPaymentInfo(cart);
         // ─────────────────────────────────────────────────────────────────
 
         onRazorPayHandler(orderResponse);
@@ -392,7 +460,7 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
   return (
     <div>
       {/* ── ORDER TYPE ── */}
-      <h1 className="font-[Nunito-medium] text-[20px] text-[var(--main)] leading-[24px]">
+      <h1 className="font-[var(--font-medium)] text-[20px] text-[var(--main)] leading-[24px]">
         ORDER TYPE
       </h1>
       <div className="mt-[16px] flex flex-col gap-y-[16px]">
@@ -409,7 +477,7 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
       {orderType !== "pickup" && (
         <div className="mt-[32px]">
           {isAddressLoading ? (
-            <div className="flex items-center gap-2 text-[var(--secondary)] text-sm font-[Nunito-regular]">
+            <div className="flex items-center gap-2 text-[var(--secondary)] text-sm font-[var(--font-regular)]">
               <div className="w-4 h-4 border-2 border-[var(--core-primary)] border-t-transparent rounded-full animate-spin" />
               Loading addresses…
             </div>
@@ -436,19 +504,20 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
 
       {/* ── PAYMENT ── */}
       <div className="mt-[32px]">
-        <h1 className="font-[Nunito-medium] text-[20px] text-[var(--main)]">
+        <h1 className="font-[var(--font-medium)] text-[20px] text-[var(--main)]">
           PAYMENT
         </h1>
-        <p className="font-[Nunito-regular] text-[14px] text-[var(--secondary)]">
+        <p className="font-[var(--font-regular)] text-[14px] text-[var(--secondary)]">
           All transactions are secure and encrypted.
         </p>
         <div className="mt-[16px]">
-          {paymentMode === "stripe" ? (
+          {isStripeGateway ? (
             <>
               <AddressCard
-                addressType="Pay with Stripe"
+                addressType={`Pay with ${paymentGatewayLabel}`}
                 address="Enter your card details securely via Stripe to complete your payment."
                 type="stripe"
+                paymentLabel={paymentGatewayLabel}
               />
               {showStripeForm && stripePublishableKey && StripeCheckout && (
                 <div className="mt-4">
@@ -458,12 +527,33 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
                     createStripePaymentIntent={
                       actions?.createStripePaymentIntent
                     }
-                    onSuccess={() => {
+                    amount={cart?.display_total ?? ""}
+                    currency={config?.currency ?? "INR"}
+                    onSuccess={async () => {
                       if (typeof window !== "undefined") {
                         localStorage.removeItem("cartid");
                       }
-                      setCart(null);
-                      router.push("/account/orders");
+                      // After Stripe payment, fetch the updated cart —
+                      // the backend sets order_id on the cart once payment is processed.
+                      try {
+                        const regionId = config?.regionId ?? null;
+                        const updatedCart = await actions?.getCart?.(regionId);
+                        const cartData = Array.isArray(updatedCart)
+                          ? updatedCart[0]
+                          : updatedCart;
+
+                        console.log({ regionId, updatedCart, cartData });
+                        const orderId = cartData?.order_id;
+                        setCart(null);
+                        if (orderId) {
+                          router.push(`/account/orders/${orderId}`);
+                        } else {
+                          router.push("/account/orders");
+                        }
+                      } catch {
+                        setCart(null);
+                        router.push("/account/orders");
+                      }
                     }}
                   />
                 </div>
@@ -480,21 +570,22 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
             </>
           ) : (
             <AddressCard
-              addressType="Pay with Razorpay"
-              address="Once you click Checkout, you'll be redirected to a secure Razorpay payment window to complete your payment."
+              addressType={`Pay with ${paymentGatewayLabel}`}
+              address={`Once you click Checkout, you'll be redirected to a secure ${paymentGatewayLabel} payment window to complete your payment.`}
               type="stripe"
+              paymentLabel={paymentGatewayLabel}
             />
           )}
         </div>
       </div>
 
       {/* ── CHECKOUT BUTTON ── */}
-      {!(paymentMode === "stripe" && showStripeForm) && (
+      {!(isStripeGateway && showStripeForm) && (
         <div className="mt-[32px]">
           <button
             onClick={onPlaceOrder}
             disabled={hasDeletedItems || isPlacingOrder || isAddressLoading}
-            className={`px-5 py-3 w-full rounded-lg cursor-pointer font-[Nunito-medium] text-[15px] transition-all duration-300 ${
+            className={`px-5 py-3 w-full rounded-lg cursor-pointer font-[var(--font-medium)] text-[15px] transition-all duration-300 ${
               hasDeletedItems || isPlacingOrder || isAddressLoading
                 ? "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none"
                 : "bg-[var(--core-primary)] text-white hover:opacity-90 hover:shadow-lg transform active:scale-[0.98]"
@@ -504,14 +595,14 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
               ? "Processing…"
               : hasDeletedItems
                 ? "Remove Deleted Items to Checkout"
-                : paymentMode === "stripe"
+                : isStripeGateway
                   ? "Proceed to Card Payment"
                   : "Checkout"}
           </button>
 
           {/* Policy Links */}
           <div className="mt-4 text-center">
-            <p className="text-[11px] text-[#8c92a4] font-[Nunito-regular] leading-relaxed">
+            <p className="text-[11px] text-[#8c92a4] font-[var(--font-regular)] leading-relaxed">
               By placing your order, you agree to our{" "}
               <Link
                 href="/terms-and-conditions"
@@ -539,7 +630,7 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
           </div>
 
           {hasDeletedItems && (
-            <p className="text-xs text-red-600 mt-2 font-[Nunito-regular]">
+            <p className="text-xs text-red-600 mt-2 font-[var(--font-regular)]">
               Please remove unavailable items before proceeding to checkout.
             </p>
           )}
@@ -567,11 +658,10 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
               </div>
 
               <div className="space-y-2">
-                <p className="font-[Nunito-medium] text-[#2d2d2d] text-base">
-                  We're finalizing your order with{" "}
-                  {paymentMode === "stripe" ? "Stripe" : "Razorpay"}.
+                <p className="font-[var(--font-medium)] text-[#2d2d2d] text-base">
+                  We're finalizing your order with {paymentGatewayLabel}.
                 </p>
-                <p className="font-[Nunito-regular] text-[#8c92a4] text-sm leading-relaxed">
+                <p className="font-[var(--font-regular)] text-[#8c92a4] text-sm leading-relaxed">
                   Please do not refresh the page or close this window. <br />
                   This will only take a moment.
                 </p>

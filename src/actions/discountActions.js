@@ -30,12 +30,14 @@ const buildHeaders = (token, orgId) => {
   return headers;
 };
 
-
 const wrapResponse = async (res, fallbackMessage) => {
   const data = await res.json().catch(() => null);
   if (!res.ok) {
     const err = new Error(
-      data?.error || data?.message || fallbackMessage || "Discount action failed"
+      data?.error ||
+        data?.message ||
+        fallbackMessage ||
+        "Discount action failed",
     );
     err.data = data;
     err.status = res.status;
@@ -51,8 +53,17 @@ const wrapResponse = async (res, fallbackMessage) => {
  *
  * @param {{ token: string, discount_id: string|number, region_id?: string }} params
  */
-export const removeDiscountById = async ({ token, discount_id, region_id, apiBaseUrl, orgId } = {}) => {
-  const baseUrl = apiBaseUrl || process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL;
+export const removeDiscountById = async ({
+  token,
+  discount_id,
+  region_id,
+  apiBaseUrl,
+  orgId,
+} = {}) => {
+  const baseUrl =
+    apiBaseUrl ||
+    process.env.API_BASE_URL ||
+    process.env.NEXT_PUBLIC_API_BASE_URL;
   if (!baseUrl) throw new Error("API base URL is not configured");
 
   const url = new URL(`${baseUrl}/api/discounts/remove`);
@@ -75,8 +86,19 @@ export const removeDiscountById = async ({ token, discount_id, region_id, apiBas
  *
  * @param {{ token: string, code?: string, discount_id?: string|number, source?: string, region_id?: string }} params
  */
-export const applyDiscount = async ({ token, code, discount_id, source, region_id, apiBaseUrl, orgId } = {}) => {
-  const baseUrl = apiBaseUrl || process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL;
+export const applyDiscount = async ({
+  token,
+  code,
+  discount_id,
+  source,
+  region_id,
+  apiBaseUrl,
+  orgId,
+} = {}) => {
+  const baseUrl =
+    apiBaseUrl ||
+    process.env.API_BASE_URL ||
+    process.env.NEXT_PUBLIC_API_BASE_URL;
   if (!baseUrl) throw new Error("API base URL is not configured");
 
   const url = new URL(`${baseUrl}/api/discounts/apply`);
@@ -96,6 +118,5 @@ export const applyDiscount = async ({ token, code, discount_id, source, region_i
     cache: "no-store",
   });
 
-  console.log({ res })
   return wrapResponse(res, "Failed to apply discount");
 };
