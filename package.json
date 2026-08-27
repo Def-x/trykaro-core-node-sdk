@@ -1,6 +1,6 @@
 {
   "name": "@defx/storefront-core",
-  "version": "1.1.0-dev.2",
+  "version": "1.2.0",
   "description": "Shared UI and logic for Defx multi-store ecommerce storefronts",
   "type": "module",
   "packageManager": "yarn@4.12.0",
