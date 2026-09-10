@@ -21,6 +21,10 @@ export { CartItem } from "./components/cart/CartItem";
 export { CartSummary } from "./components/cart/CartSummary";
 export { ViewCart } from "./components/cart/ViewCart";
 export { default as CouponSection } from "./components/cart/CouponSection";
+export { default as CartMismatchBanner } from "./components/cart/CartMismatchBanner";
+
+// ─── Cart Utilities ────────────────────────────────────────────────────────────
+export { validateCartTotal } from "./actions/storefrontActions";
 
 // ─── Account Components ───────────────────────────────────────────────────────
 export { AccountPage } from "./components/account/AccountPage";

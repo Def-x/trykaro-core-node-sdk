@@ -389,6 +389,41 @@ var trackDiscountEventAction = async (params = {}) => {
   );
   return wrapJsonResponse(res, "Failed to track discount event");
 };
+var validateCartTotal = async (cartId, clientTotal, options = {}) => {
+  if (!cartId) return { valid: false, reason: "no_cart_id" };
+  try {
+    const headers = await buildHeaders({ ...options, requireAuth: false });
+    const base = getApiBaseUrl(options);
+    const res = await fetch(`${base}/api/carts/${cartId}`, {
+      method: "GET",
+      headers,
+      cache: "no-store"
+    });
+    const resData = await res.json();
+    const cart = Array.isArray(resData) ? resData[0] : resData;
+    const serverTotal = cart?.display_total ?? cart?.total ?? cart?.grand_total ?? cart?.total_amount ?? null;
+    if (serverTotal === null) {
+      return { valid: true, serverTotal: null };
+    }
+    const tolerance = options?.tolerance ?? 0;
+    const diff = Math.abs(Number(serverTotal) - Number(clientTotal));
+    if (diff > tolerance) {
+      return {
+        valid: false,
+        reason: "price_mismatch",
+        display_total: cart?.display_total ?? serverTotal,
+        serverTotal: cart?.display_total ?? serverTotal,
+        clientTotal,
+        cart
+        // return the fresh cart so UI can update without an extra fetch
+      };
+    }
+    return { valid: true, serverTotal: cart?.display_total ?? serverTotal };
+  } catch (err) {
+    console.error("[validateCartTotal] Error:", err);
+    return { valid: true, reason: "validation_skipped" };
+  }
+};
 
 // src/actions/discountActions.js
 var buildHeaders2 = (token, orgId) => {
@@ -3419,6 +3454,158 @@ var AddressCard = ({
     }
   );
 };
+function CartMismatchBanner({
+  display_total,
+  serverTotal,
+  clientTotal,
+  freshCart,
+  onDismiss
+}) {
+  const { setCart } = useCart();
+  const { formatCurrency } = useCurrencyFormat();
+  const { actions, config } = useCore();
+  const updatedTotal = freshCart?.display_total ?? display_total ?? serverTotal;
+  const currentTotal = clientTotal;
+  const handleRefresh = async () => {
+    if (freshCart) {
+      setCart(freshCart);
+    } else if (actions?.getCart) {
+      try {
+        const updated = await actions.getCart(config?.regionId);
+        const resolvedCart = Array.isArray(updated) ? updated[0] : updated;
+        if (resolvedCart) setCart(resolvedCart);
+      } catch (err) {
+        console.error("[CartMismatchBanner] Failed to refresh cart:", err);
+      }
+    }
+    onDismiss?.();
+  };
+  return /* @__PURE__ */ jsxs(
+    "div",
+    {
+      role: "alert",
+      "aria-live": "assertive",
+      style: {
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 9999,
+        display: "flex",
+        alignItems: "flex-start",
+        gap: "12px",
+        backgroundColor: "#fffbeb",
+        borderBottom: "2px solid #f59e0b",
+        padding: "12px 20px",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.08)"
+      },
+      children: [
+        /* @__PURE__ */ jsx(
+          "span",
+          {
+            style: {
+              fontSize: "1.25rem",
+              lineHeight: 1,
+              marginTop: "2px",
+              flexShrink: 0
+            },
+            children: "\u26A0\uFE0F"
+          }
+        ),
+        /* @__PURE__ */ jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [
+          /* @__PURE__ */ jsx(
+            "p",
+            {
+              style: {
+                margin: 0,
+                fontWeight: 600,
+                color: "#78350f",
+                fontSize: "0.9rem"
+              },
+              children: "Your cart total has changed"
+            }
+          ),
+          /* @__PURE__ */ jsxs(
+            "p",
+            {
+              style: {
+                margin: "2px 0 0",
+                color: "#92400e",
+                fontSize: "0.8rem",
+                lineHeight: 1.4
+              },
+              children: [
+                "A coupon or offer on your cart has expired.",
+                updatedTotal != null && currentTotal != null ? /* @__PURE__ */ jsxs(Fragment, { children: [
+                  " ",
+                  "Your updated total is",
+                  " ",
+                  /* @__PURE__ */ jsx("strong", { children: formatCurrency(updatedTotal) }),
+                  " ",
+                  "(was ",
+                  formatCurrency(currentTotal),
+                  ")."
+                ] }) : null,
+                " ",
+                "Please refresh and review before paying."
+              ]
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxs(
+          "div",
+          {
+            style: {
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              flexShrink: 0,
+              marginTop: "2px"
+            },
+            children: [
+              /* @__PURE__ */ jsx(
+                "button",
+                {
+                  onClick: handleRefresh,
+                  style: {
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    backgroundColor: "#f59e0b",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "8px",
+                    padding: "6px 14px",
+                    fontSize: "0.8rem",
+                    fontWeight: 700,
+                    cursor: "pointer"
+                  },
+                  children: "\u{1F504} Refresh Cart"
+                }
+              ),
+              /* @__PURE__ */ jsx(
+                "button",
+                {
+                  onClick: onDismiss,
+                  "aria-label": "Dismiss",
+                  style: {
+                    background: "none",
+                    border: "none",
+                    color: "#b45309",
+                    fontSize: "1rem",
+                    cursor: "pointer",
+                    padding: "4px"
+                  },
+                  children: "\u2715"
+                }
+              )
+            ]
+          }
+        )
+      ]
+    }
+  );
+}
 var Checkout = ({ hasDeletedItems }) => {
   const { auth, config } = useCore();
   const { isSignedIn, isLoading } = auth || {};
@@ -3472,6 +3659,7 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
   const [isAddressLoading, setIsAddressLoading] = useState(true);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [cartMismatch, setCartMismatch] = useState(null);
   useEffect(() => {
     let isMounted = true;
     const loadStripeGateway = async () => {
@@ -3684,6 +3872,23 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
   };
   const onPlaceOrder = async () => {
     if (hasDeletedItems || !cart?.id) return;
+    const clientTotal = cart?.display_total ?? cart?.total ?? 0;
+    const validation = await validateCartTotal(cart.id, clientTotal, {
+      apiBaseUrl: config?.apiBaseUrl,
+      orgId: config?.storeId
+    });
+    if (!validation.valid && validation.reason === "price_mismatch") {
+      setCartMismatch({
+        display_total: validation.display_total ?? validation.serverTotal,
+        serverTotal: validation.serverTotal,
+        clientTotal: validation.clientTotal,
+        cart: validation.cart
+      });
+      toast?.error?.(
+        "Your cart total has changed \u2014 a coupon or offer has expired. Please refresh and try again."
+      );
+      return;
+    }
     if (isStripeGateway) {
       setShowStripeForm(true);
       return;
@@ -3732,6 +3937,17 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
     }
   };
   return /* @__PURE__ */ jsxs("div", { children: [
+    cartMismatch && /* @__PURE__ */ jsx(
+      CartMismatchBanner,
+      {
+        display_total: cartMismatch.display_total,
+        serverTotal: cartMismatch.serverTotal,
+        clientTotal: cartMismatch.clientTotal,
+        freshCart: cartMismatch.cart,
+        currency: config?.currency ?? "INR",
+        onDismiss: () => setCartMismatch(null)
+      }
+    ),
     /* @__PURE__ */ jsx("h1", { className: "font-[var(--font-medium)] text-[20px] text-[var(--main)] leading-[24px]", children: "ORDER TYPE" }),
     /* @__PURE__ */ jsx("div", { className: "mt-[16px] flex flex-col gap-y-[16px]", children: /* @__PURE__ */ jsx(
       AddressCard,
@@ -3781,7 +3997,26 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
           {
             cartId: cart?.id,
             publishableKey: stripePublishableKey,
-            createStripePaymentIntent: actions?.createStripePaymentIntent,
+            createStripePaymentIntent: actions?.createStripePaymentIntent ? async (cartId) => {
+              const clientTotal = cart?.display_total ?? cart?.total ?? 0;
+              const validation = await validateCartTotal(cartId, clientTotal, {
+                apiBaseUrl: config?.apiBaseUrl,
+                orgId: config?.storeId
+              });
+              if (!validation.valid && validation.reason === "price_mismatch") {
+                setCartMismatch({
+                  display_total: validation.display_total ?? validation.serverTotal,
+                  serverTotal: validation.serverTotal,
+                  clientTotal: validation.clientTotal,
+                  cart: validation.cart
+                });
+                setShowStripeForm(false);
+                throw new Error(
+                  "Your cart total has changed \u2014 a coupon or offer has expired. Please refresh and try again."
+                );
+              }
+              return actions.createStripePaymentIntent(cartId);
+            } : void 0,
             amount: cart?.display_total ?? "",
             currency: config?.currency ?? "INR",
             onSuccess: async () => {
@@ -5939,6 +6174,6 @@ var Hello = () => {
   return /* @__PURE__ */ jsx("div", { children: isCartLoading ? "Loading..." : "Core Working \u2705" });
 };
 
-export { AccountAddressesPage, AccountLayout, AccountOrderDetailContent, AccountOrdersPage, AccountPage, AccountSidebar, AccountWishlistPage, AddressCard2 as AddressCard, AddressForm, AuthManager, CartItem, CartPage, CartSummary, CoreProvider, CouponSection_default as CouponSection, CustomOTPAuth, DEFAULT_NAV_ITEMS as DEFAULT_ACCOUNT_NAV_ITEMS, EmptyState, Hello, Order, OrdersList, Popup, ProfileForm, Spinner, ThirdPartyScripts, UserInfo, ViewCart, buildItem, buildMeta, clearEcommerce, initGtmConfig, initMetaPixelConfig, injectContentSquare, injectHotjar, nameToSlug, pushToDataLayer, trackAddPaymentInfo, trackAddShippingInfo, trackAddToCart, trackApplyCoupon, trackBeginCheckout, trackCustomEvent, trackMetaAddPaymentInfo, trackMetaAddToCart, trackMetaCompleteRegistration, trackMetaInitiateCheckout, trackMetaLead, trackMetaPageView, trackMetaPurchase, trackMetaSearch, trackMetaViewContent, trackPageView, trackPaymentFailed, trackPurchase, trackSearch, trackViewItem, useAddToCart, useAuth, useCart, userCartInfo_default as useCartInfo, useCore, useCurrencyFormat, useLogout, useVariantSelection };
+export { AccountAddressesPage, AccountLayout, AccountOrderDetailContent, AccountOrdersPage, AccountPage, AccountSidebar, AccountWishlistPage, AddressCard2 as AddressCard, AddressForm, AuthManager, CartItem, CartMismatchBanner, CartPage, CartSummary, CoreProvider, CouponSection_default as CouponSection, CustomOTPAuth, DEFAULT_NAV_ITEMS as DEFAULT_ACCOUNT_NAV_ITEMS, EmptyState, Hello, Order, OrdersList, Popup, ProfileForm, Spinner, ThirdPartyScripts, UserInfo, ViewCart, buildItem, buildMeta, clearEcommerce, initGtmConfig, initMetaPixelConfig, injectContentSquare, injectHotjar, nameToSlug, pushToDataLayer, trackAddPaymentInfo, trackAddShippingInfo, trackAddToCart, trackApplyCoupon, trackBeginCheckout, trackCustomEvent, trackMetaAddPaymentInfo, trackMetaAddToCart, trackMetaCompleteRegistration, trackMetaInitiateCheckout, trackMetaLead, trackMetaPageView, trackMetaPurchase, trackMetaSearch, trackMetaViewContent, trackPageView, trackPaymentFailed, trackPurchase, trackSearch, trackViewItem, useAddToCart, useAuth, useCart, userCartInfo_default as useCartInfo, useCore, useCurrencyFormat, useLogout, useVariantSelection, validateCartTotal };
 //# sourceMappingURL=index.js.map
 //# sourceMappingURL=index.js.map

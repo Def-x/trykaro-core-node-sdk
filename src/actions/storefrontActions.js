@@ -497,3 +497,68 @@ export const trackDiscountEventAction = async (params = {}) => {
 
   return wrapJsonResponse(res, "Failed to track discount event");
 };
+
+/**
+ * validateCartTotal
+ *
+ * Fetches the latest cart from the server (cache: "no-store") and compares
+ * its total against the `clientTotal` the user currently sees in the UI.
+ *
+ * Called right before any payment gateway is opened so that a coupon that
+ * expired at the last second is caught before money moves.
+ *
+ * @param {string} cartId
+ * @param {number} clientTotal   – Total currently displayed in the UI
+ * @param {object} [options]     – { token, orgId, config, tolerance }
+ * @returns {{ valid: boolean, serverTotal?: number, clientTotal?: number, reason?: string, cart?: object }}
+ */
+export const validateCartTotal = async (cartId, clientTotal, options = {}) => {
+  if (!cartId) return { valid: false, reason: "no_cart_id" };
+
+  try {
+    const headers = await buildHeaders({ ...options, requireAuth: false });
+    const base = getApiBaseUrl(options);
+
+    const res = await fetch(`${base}/api/carts/${cartId}`, {
+      method: "GET",
+      headers,
+      cache: "no-store",
+    });
+
+    const resData = await res.json();
+    const cart = Array.isArray(resData) ? resData[0] : resData;
+
+    // Use display_total — the exact same key used to display cart totals across the storefront
+    const serverTotal =
+      cart?.display_total ??
+      cart?.total ??
+      cart?.grand_total ??
+      cart?.total_amount ??
+      null;
+
+    if (serverTotal === null) {
+      // Cannot determine the total — allow through; backend is the final guard
+      return { valid: true, serverTotal: null };
+    }
+
+    const tolerance = options?.tolerance ?? 0;
+    const diff = Math.abs(Number(serverTotal) - Number(clientTotal));
+
+    if (diff > tolerance) {
+      return {
+        valid: false,
+        reason: "price_mismatch",
+        display_total: cart?.display_total ?? serverTotal,
+        serverTotal: cart?.display_total ?? serverTotal,
+        clientTotal: clientTotal,
+        cart, // return the fresh cart so UI can update without an extra fetch
+      };
+    }
+
+    return { valid: true, serverTotal: cart?.display_total ?? serverTotal };
+  } catch (err) {
+    console.error("[validateCartTotal] Error:", err);
+    // On network error let the payment proceed; backend validates server-side
+    return { valid: true, reason: "validation_skipped" };
+  }
+};
