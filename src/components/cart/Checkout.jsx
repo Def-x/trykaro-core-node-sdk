@@ -25,6 +25,8 @@ import {
   trackMetaPurchase,
   trackMetaAddPaymentInfo,
 } from "../../lib/metaPixel";
+import { validateCartTotal } from "../../actions/storefrontActions";
+import CartMismatchBanner from "./CartMismatchBanner";
 
 // ─── Top-level Checkout ────────────────────────────────────────────────────────
 const Checkout = ({ hasDeletedItems }) => {
@@ -122,6 +124,9 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
   const [isAddressLoading, setIsAddressLoading] = useState(true);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+
+  // Cart price-mismatch guard state — set when a coupon expires at pay-time
+  const [cartMismatch, setCartMismatch] = useState(null);
 
   // Load Stripe module if not already in registry.
   // Runs eagerly at mount so the form is ready the instant the user clicks Checkout.
@@ -397,6 +402,29 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
   const onPlaceOrder = async () => {
     if (hasDeletedItems || !cart?.id) return;
 
+    // ── Pre-payment cart validation ──────────────────────────────────────────
+    // Fetch the latest cart from the server and compare totals.
+    // This catches the race condition where a coupon expires between the user
+    // viewing the cart and clicking Pay (e.g. expires at 6:00 PM, click at 5:59:59).
+    const clientTotal = Number(cart?.total ?? cart?.display_total ?? 0);
+    const validation = await validateCartTotal(cart.id, clientTotal, {
+      apiBaseUrl: config?.apiBaseUrl,
+      orgId: config?.storeId,
+    });
+
+    if (!validation.valid && validation.reason === "price_mismatch") {
+      setCartMismatch({
+        serverTotal: validation.serverTotal,
+        clientTotal: validation.clientTotal,
+        cart: validation.cart,
+      });
+      toast?.error?.(
+        "Your cart total has changed — a coupon or offer has expired. Please refresh and try again."
+      );
+      return; // abort — do NOT open any payment gateway
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     if (isStripeGateway) {
       setShowStripeForm(true);
       return;
@@ -459,6 +487,17 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
 
   return (
     <div>
+      {/* ── CART MISMATCH BANNER (coupon expired at pay-time) ── */}
+      {cartMismatch && (
+        <CartMismatchBanner
+          serverTotal={cartMismatch.serverTotal}
+          clientTotal={cartMismatch.clientTotal}
+          freshCart={cartMismatch.cart}
+          currency={config?.currency ?? "INR"}
+          onDismiss={() => setCartMismatch(null)}
+        />
+      )}
+
       {/* ── ORDER TYPE ── */}
       <h1 className="font-[var(--font-medium)] text-[20px] text-[var(--main)] leading-[24px]">
         ORDER TYPE
@@ -526,6 +565,29 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
                     publishableKey={stripePublishableKey}
                     createStripePaymentIntent={
                       actions?.createStripePaymentIntent
+                        ? async (cartId) => {
+                            // Guard: validate cart total before creating payment intent.
+                            // Critical for Stripe — the intent is created with a fixed amount.
+                            // If a coupon expired, the intent would charge the wrong amount.
+                            const clientTotal = Number(cart?.total ?? cart?.display_total ?? 0);
+                            const validation = await validateCartTotal(cartId, clientTotal, {
+                              apiBaseUrl: config?.apiBaseUrl,
+                              orgId: config?.storeId,
+                            });
+                            if (!validation.valid && validation.reason === "price_mismatch") {
+                              setCartMismatch({
+                                serverTotal: validation.serverTotal,
+                                clientTotal: validation.clientTotal,
+                                cart: validation.cart,
+                              });
+                              setShowStripeForm(false); // hide the Stripe form
+                              throw new Error(
+                                "Your cart total has changed — a coupon or offer has expired. Please refresh and try again."
+                              );
+                            }
+                            return actions.createStripePaymentIntent(cartId);
+                          }
+                        : undefined
                     }
                     amount={cart?.display_total ?? ""}
                     currency={config?.currency ?? "INR"}
