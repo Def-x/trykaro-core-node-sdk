@@ -406,7 +406,7 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
     // Fetch the latest cart from the server and compare totals.
     // This catches the race condition where a coupon expires between the user
     // viewing the cart and clicking Pay (e.g. expires at 6:00 PM, click at 5:59:59).
-    const clientTotal = cart?.display_total ?? cart?.total ?? 0;
+    const clientTotal = Number(cart?.total ?? cart?.display_total ?? 0);
     const validation = await validateCartTotal(cart.id, clientTotal, {
       apiBaseUrl: config?.apiBaseUrl,
       orgId: config?.storeId,
@@ -414,7 +414,6 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
 
     if (!validation.valid && validation.reason === "price_mismatch") {
       setCartMismatch({
-        display_total: validation.display_total ?? validation.serverTotal,
         serverTotal: validation.serverTotal,
         clientTotal: validation.clientTotal,
         cart: validation.cart,
@@ -491,7 +490,6 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
       {/* ── CART MISMATCH BANNER (coupon expired at pay-time) ── */}
       {cartMismatch && (
         <CartMismatchBanner
-          display_total={cartMismatch.display_total}
           serverTotal={cartMismatch.serverTotal}
           clientTotal={cartMismatch.clientTotal}
           freshCart={cartMismatch.cart}
@@ -571,14 +569,13 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
                             // Guard: validate cart total before creating payment intent.
                             // Critical for Stripe — the intent is created with a fixed amount.
                             // If a coupon expired, the intent would charge the wrong amount.
-                            const clientTotal = cart?.display_total ?? cart?.total ?? 0;
+                            const clientTotal = Number(cart?.total ?? cart?.display_total ?? 0);
                             const validation = await validateCartTotal(cartId, clientTotal, {
                               apiBaseUrl: config?.apiBaseUrl,
                               orgId: config?.storeId,
                             });
                             if (!validation.valid && validation.reason === "price_mismatch") {
                               setCartMismatch({
-                                display_total: validation.display_total ?? validation.serverTotal,
                                 serverTotal: validation.serverTotal,
                                 clientTotal: validation.clientTotal,
                                 cart: validation.cart,

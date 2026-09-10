@@ -528,12 +528,12 @@ export const validateCartTotal = async (cartId, clientTotal, options = {}) => {
     const resData = await res.json();
     const cart = Array.isArray(resData) ? resData[0] : resData;
 
-    // Use display_total — the exact same key used to display cart totals across the storefront
+    // Normalise: backend stores total in paise/cents
     const serverTotal =
-      cart?.display_total ??
       cart?.total ??
       cart?.grand_total ??
       cart?.total_amount ??
+      cart?.display_total ??
       null;
 
     if (serverTotal === null) {
@@ -548,14 +548,13 @@ export const validateCartTotal = async (cartId, clientTotal, options = {}) => {
       return {
         valid: false,
         reason: "price_mismatch",
-        display_total: cart?.display_total ?? serverTotal,
-        serverTotal: cart?.display_total ?? serverTotal,
-        clientTotal: clientTotal,
+        serverTotal: Number(serverTotal),
+        clientTotal: Number(clientTotal),
         cart, // return the fresh cart so UI can update without an extra fetch
       };
     }
 
-    return { valid: true, serverTotal: cart?.display_total ?? serverTotal };
+    return { valid: true, serverTotal: Number(serverTotal) };
   } catch (err) {
     console.error("[validateCartTotal] Error:", err);
     // On network error let the payment proceed; backend validates server-side

@@ -2,8 +2,6 @@
 
 import React from "react";
 import { useCart } from "../../hooks/useCart";
-import { useCurrencyFormat } from "../../hooks/useCurrencyFormat";
-import { useCore } from "../../context/CoreProvider";
 
 /**
  * CartMismatchBanner
@@ -11,47 +9,43 @@ import { useCore } from "../../context/CoreProvider";
  * Renders a fixed amber top-banner when the cart total changed between
  * the user viewing the cart and clicking Pay (e.g. a coupon expired).
  *
- * Uses the exact same `display_total` key displayed in the cart and
- * checkout views, and formats using `useCurrencyFormat`.
- *
  * Clicking "Refresh Cart" immediately hydrates CoreProvider's cart state
- * with the pre-fetched `freshCart` object — updating `display_total` in the UI.
+ * with the pre-fetched `freshCart` object — no extra API call needed.
  *
  * Props:
- *  display_total {number|string} – Fresh display_total from server
- *  serverTotal   {number|string} – Fresh total from server
- *  clientTotal   {number|string} – Stale display_total visible in UI
- *  freshCart     {object}        – Full cart object returned by validation fetch
- *  onDismiss     {function}      – Called when banner is dismissed
+ *  serverTotal  {number}   – Fresh total from the server (in paise/cents)
+ *  clientTotal  {number}   – Stale total that was visible in the UI (in paise/cents)
+ *  freshCart    {object}   – Full cart object returned by the validation fetch
+ *  onDismiss    {function} – Called when the banner is dismissed
+ *  currency     {string}   – e.g. "INR"  (default)
+ *  locale       {string}   – e.g. "en-IN" (default)
  */
 export default function CartMismatchBanner({
-  display_total,
   serverTotal,
   clientTotal,
   freshCart,
   onDismiss,
+  currency = "INR",
+  locale = "en-IN",
 }) {
   const { setCart } = useCart();
-  const { formatCurrency } = useCurrencyFormat();
-  const { actions, config } = useCore();
 
-  // Same key for display total as shown in cart: display_total
-  const updatedTotal = freshCart?.display_total ?? display_total ?? serverTotal;
-  const currentTotal = clientTotal;
-
-  const handleRefresh = async () => {
-    // Hydrate cart with freshCart containing updated display_total
-    if (freshCart) {
-      setCart(freshCart);
-    } else if (actions?.getCart) {
-      try {
-        const updated = await actions.getCart(config?.regionId);
-        const resolvedCart = Array.isArray(updated) ? updated[0] : updated;
-        if (resolvedCart) setCart(resolvedCart);
-      } catch (err) {
-        console.error("[CartMismatchBanner] Failed to refresh cart:", err);
-      }
+  const fmt = (amount) => {
+    if (amount == null) return "—";
+    try {
+      return new Intl.NumberFormat(locale, {
+        style: "currency",
+        currency,
+        maximumFractionDigits: 2,
+      }).format(amount);
+    } catch {
+      return `${currency} ${amount}`;
     }
+  };
+
+  const handleRefresh = () => {
+    // Use the cart we already fetched during validation — zero extra API calls.
+    if (freshCart) setCart(freshCart);
     onDismiss?.();
   };
 
@@ -107,13 +101,9 @@ export default function CartMismatchBanner({
           }}
         >
           A coupon or offer on your cart has expired.
-          {updatedTotal != null && currentTotal != null ? (
-            <>
-              {" "}Your updated total is{" "}
-              <strong>{formatCurrency(updatedTotal)}</strong>
-              {" "}(was {formatCurrency(currentTotal)}).
-            </>
-          ) : null}{" "}
+          {serverTotal != null && clientTotal != null
+            ? ` Your updated total is ${fmt(freshCart ? freshCart.display_total : serverTotal / 100)} (was ${fmt(clientTotal / 100)}).`
+            : ""}{" "}
           Please refresh and review before paying.
         </p>
       </div>

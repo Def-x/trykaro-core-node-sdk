@@ -401,7 +401,7 @@ var validateCartTotal = async (cartId, clientTotal, options = {}) => {
     });
     const resData = await res.json();
     const cart = Array.isArray(resData) ? resData[0] : resData;
-    const serverTotal = cart?.display_total ?? cart?.total ?? cart?.grand_total ?? cart?.total_amount ?? null;
+    const serverTotal = cart?.total ?? cart?.grand_total ?? cart?.total_amount ?? cart?.display_total ?? null;
     if (serverTotal === null) {
       return { valid: true, serverTotal: null };
     }
@@ -411,14 +411,13 @@ var validateCartTotal = async (cartId, clientTotal, options = {}) => {
       return {
         valid: false,
         reason: "price_mismatch",
-        display_total: cart?.display_total ?? serverTotal,
-        serverTotal: cart?.display_total ?? serverTotal,
-        clientTotal,
+        serverTotal: Number(serverTotal),
+        clientTotal: Number(clientTotal),
         cart
         // return the fresh cart so UI can update without an extra fetch
       };
     }
-    return { valid: true, serverTotal: cart?.display_total ?? serverTotal };
+    return { valid: true, serverTotal: Number(serverTotal) };
   } catch (err) {
     console.error("[validateCartTotal] Error:", err);
     return { valid: true, reason: "validation_skipped" };
@@ -3455,29 +3454,28 @@ var AddressCard = ({
   );
 };
 function CartMismatchBanner({
-  display_total,
   serverTotal,
   clientTotal,
   freshCart,
-  onDismiss
+  onDismiss,
+  currency = "INR",
+  locale = "en-IN"
 }) {
   const { setCart } = useCart();
-  const { formatCurrency } = useCurrencyFormat();
-  const { actions, config } = useCore();
-  const updatedTotal = freshCart?.display_total ?? display_total ?? serverTotal;
-  const currentTotal = clientTotal;
-  const handleRefresh = async () => {
-    if (freshCart) {
-      setCart(freshCart);
-    } else if (actions?.getCart) {
-      try {
-        const updated = await actions.getCart(config?.regionId);
-        const resolvedCart = Array.isArray(updated) ? updated[0] : updated;
-        if (resolvedCart) setCart(resolvedCart);
-      } catch (err) {
-        console.error("[CartMismatchBanner] Failed to refresh cart:", err);
-      }
+  const fmt = (amount) => {
+    if (amount == null) return "\u2014";
+    try {
+      return new Intl.NumberFormat(locale, {
+        style: "currency",
+        currency,
+        maximumFractionDigits: 2
+      }).format(amount);
+    } catch {
+      return `${currency} ${amount}`;
     }
+  };
+  const handleRefresh = () => {
+    if (freshCart) setCart(freshCart);
     onDismiss?.();
   };
   return /* @__PURE__ */ jsxs(
@@ -3536,16 +3534,7 @@ function CartMismatchBanner({
               },
               children: [
                 "A coupon or offer on your cart has expired.",
-                updatedTotal != null && currentTotal != null ? /* @__PURE__ */ jsxs(Fragment, { children: [
-                  " ",
-                  "Your updated total is",
-                  " ",
-                  /* @__PURE__ */ jsx("strong", { children: formatCurrency(updatedTotal) }),
-                  " ",
-                  "(was ",
-                  formatCurrency(currentTotal),
-                  ")."
-                ] }) : null,
+                serverTotal != null && clientTotal != null ? ` Your updated total is ${fmt(freshCart ? freshCart.display_total : serverTotal / 100)} (was ${fmt(clientTotal / 100)}).` : "",
                 " ",
                 "Please refresh and review before paying."
               ]
@@ -3872,14 +3861,13 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
   };
   const onPlaceOrder = async () => {
     if (hasDeletedItems || !cart?.id) return;
-    const clientTotal = cart?.display_total ?? cart?.total ?? 0;
+    const clientTotal = Number(cart?.total ?? cart?.display_total ?? 0);
     const validation = await validateCartTotal(cart.id, clientTotal, {
       apiBaseUrl: config?.apiBaseUrl,
       orgId: config?.storeId
     });
     if (!validation.valid && validation.reason === "price_mismatch") {
       setCartMismatch({
-        display_total: validation.display_total ?? validation.serverTotal,
         serverTotal: validation.serverTotal,
         clientTotal: validation.clientTotal,
         cart: validation.cart
@@ -3940,7 +3928,6 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
     cartMismatch && /* @__PURE__ */ jsx(
       CartMismatchBanner,
       {
-        display_total: cartMismatch.display_total,
         serverTotal: cartMismatch.serverTotal,
         clientTotal: cartMismatch.clientTotal,
         freshCart: cartMismatch.cart,
@@ -3998,14 +3985,13 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
             cartId: cart?.id,
             publishableKey: stripePublishableKey,
             createStripePaymentIntent: actions?.createStripePaymentIntent ? async (cartId) => {
-              const clientTotal = cart?.display_total ?? cart?.total ?? 0;
+              const clientTotal = Number(cart?.total ?? cart?.display_total ?? 0);
               const validation = await validateCartTotal(cartId, clientTotal, {
                 apiBaseUrl: config?.apiBaseUrl,
                 orgId: config?.storeId
               });
               if (!validation.valid && validation.reason === "price_mismatch") {
                 setCartMismatch({
-                  display_total: validation.display_total ?? validation.serverTotal,
                   serverTotal: validation.serverTotal,
                   clientTotal: validation.clientTotal,
                   cart: validation.cart
