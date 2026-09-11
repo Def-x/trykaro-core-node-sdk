@@ -82,12 +82,45 @@ export const Order = (props) => {
     display_tax_total,
     discount_id,
     display_promo_total,
+    promo_total,
     cart_detail_json,
   } = cart || {};
 
-  const appliedDiscounts = (cart?.cart_detail_json?.discounts || cart?.cart_discounts || []).filter(
-    (coupon) => coupon.code
-  );
+  const appliedDiscounts =
+    cart?.cart_discounts || cart?.cart_detail_json?.discounts || [];
+
+  const getDiscountAmount = (coupon) => {
+    if (coupon?.display_discount_amount != null && coupon?.display_discount_amount !== "") {
+      const num = Number(coupon.display_discount_amount);
+      if (!isNaN(num)) return num;
+    }
+    if (coupon?.discount_amount != null) {
+      return Number(coupon.discount_amount) / 100;
+    }
+    return null;
+  };
+
+  const hasPromoTotal =
+    (display_promo_total !== undefined &&
+      display_promo_total !== null &&
+      Number(display_promo_total) > 0 &&
+      display_promo_total !== "0.00" &&
+      display_promo_total !== "0") ||
+    (promo_total !== undefined &&
+      promo_total !== null &&
+      Number(promo_total) > 0);
+
+  const promoTotalAmount =
+    Number(display_promo_total) ||
+    (promo_total ? Number(promo_total) / 100 : 0);
+
+  const totalCalculatedDiscount = appliedDiscounts.reduce((sum, coupon) => {
+    const amt = getDiscountAmount(coupon);
+    return sum + (amt || 0);
+  }, 0);
+
+  const totalSavings = totalCalculatedDiscount > 0 ? totalCalculatedDiscount : promoTotalAmount;
+
 
   const fullShippingAddress = [
     shipping_address?.address1,
@@ -358,23 +391,41 @@ export const Order = (props) => {
                   </span>
                 </div>
                 {appliedDiscounts?.length > 0 ? (
-                  appliedDiscounts?.map((coupon) => (
-                    <div key={coupon.code || coupon.id} className="flex justify-between items-center">
-                      <span className="font-[var(--font-medium)] text-[14px] text-[#FF6500]">
-                        Discount {coupon.code ? `(${coupon.code})` : ""}
-                      </span>
-                      <span className="font-[var(--font-medium)] text-[14px] text-[#FF6500]">
-                        -{formatCurrency(coupon.display_discount_amount || (coupon.discount_amount / 100))}
-                      </span>
-                    </div>
-                  ))
-                ) : (display_promo_total && display_promo_total !== "0.00" && display_promo_total !== 0 && display_promo_total !== "0") ? (
-                  <div className="flex justify-between items-center">
-                    <span className="font-[var(--font-medium)] text-[14px] text-[#FF6500]">
+                  appliedDiscounts.map((coupon, idx) => {
+                    const amt =
+                      getDiscountAmount(coupon) ??
+                      (appliedDiscounts.length === 1 ? totalSavings : 0);
+                    return (
+                      <div
+                        key={coupon?.id || coupon?.discount_id || coupon?.code || idx}
+                        className="flex justify-between items-center text-[14px]"
+                      >
+                        <span className="font-[var(--font-medium)] text-[#FF6500] flex items-center gap-1.5 flex-wrap">
+                          <span>Discount</span>
+                          {coupon?.code && (
+                            <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-orange-50 text-[#FF6500] border border-orange-200">
+                              {coupon.code}
+                            </span>
+                          )}
+                          {coupon?.display_action_value && (
+                            <span className="text-xs text-[#FF6500]/90">
+                              ({coupon.display_action_value})
+                            </span>
+                          )}
+                        </span>
+                        <span className="font-[var(--font-medium)] text-[#FF6500]">
+                          -{formatCurrency(amt)}
+                        </span>
+                      </div>
+                    );
+                  })
+                ) : hasPromoTotal ? (
+                  <div className="flex justify-between items-center text-[14px]">
+                    <span className="font-[var(--font-medium)] text-[#FF6500]">
                       Discount
                     </span>
-                    <span className="font-[var(--font-medium)] text-[14px] text-[#FF6500]">
-                      -{formatCurrency(display_promo_total)}
+                    <span className="font-[var(--font-medium)] text-[#FF6500]">
+                      -{formatCurrency(promoTotalAmount)}
                     </span>
                   </div>
                 ) : null}
@@ -402,9 +453,9 @@ export const Order = (props) => {
                     {formatCurrency(display_total)}
                   </span>
                 </div>
-                {(appliedDiscounts?.length > 0 || (display_promo_total && display_promo_total !== "0.00" && display_promo_total !== 0 && display_promo_total !== "0")) && (
+                {totalSavings > 0 && (
                   <p className="text-[13px] font-[var(--font-bold)] text-[#16a34a] mt-[6px] text-right">
-                    You save {formatCurrency(display_promo_total)} on this order 🎉
+                    You save {formatCurrency(totalSavings)} on this order 🎉
                   </p>
                 )}
               </div>

@@ -5148,7 +5148,7 @@ var OrderCard = ({ order, formatCurrency }) => {
     "div",
     {
       className: "border border-gray-200 bg-white shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer rounded-lg overflow-hidden flex flex-col group/card",
-      onClick: () => router.push(`/order/${id}`),
+      onClick: () => router.push(`/account/orders/${id}`),
       children: [
         /* @__PURE__ */ jsxs("div", { className: "flex flex-col md:flex-row justify-between items-start md:items-center bg-gray-50/80 p-5 border-b border-gray-100 gap-4", children: [
           /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-1.5", children: [
@@ -5659,7 +5659,9 @@ var AccountOrderDetailContent = ({ order, id }) => {
   const [copied, setCopied] = useState(false);
   if (!order) return null;
   const o = order.cart || order;
-  const date = new Date(order.created_at || o.created_at || Date.now()).toLocaleDateString("en-US", {
+  const date = new Date(
+    order.created_at || o.created_at || Date.now()
+  ).toLocaleDateString("en-US", {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -5670,6 +5672,24 @@ var AccountOrderDetailContent = ({ order, id }) => {
   const shippingAddress = order.shipping_address || o.shipping_address || {};
   const lineItems = o.line_items || [];
   const orderNumber = order.order_number || o.number || o.order_id || id;
+  const appliedDiscounts = o?.cart_discounts || o?.cart_detail_json?.discounts || [];
+  const getDiscountAmount = (coupon) => {
+    if (coupon?.display_discount_amount != null && coupon?.display_discount_amount !== "") {
+      const num = Number(coupon.display_discount_amount);
+      if (!isNaN(num)) return num;
+    }
+    if (coupon?.discount_amount != null) {
+      return Number(coupon.discount_amount) / 100;
+    }
+    return null;
+  };
+  const promoTotal = Number(o.display_promo_total) || (o.promo_total ? Number(o.promo_total) / 100 : 0);
+  const hasPromo = promoTotal > 0 || o.display_promo_total && o.display_promo_total !== "0.00" && o.display_promo_total !== "0" && o.display_promo_total !== 0;
+  const totalCalculatedDiscount = appliedDiscounts.reduce((sum, coupon) => {
+    const amt = getDiscountAmount(coupon);
+    return sum + (amt || 0);
+  }, 0);
+  const totalSavings = totalCalculatedDiscount > 0 ? totalCalculatedDiscount : promoTotal;
   const handleCopy = () => {
     navigator.clipboard?.writeText(orderNumber);
     setCopied(true);
@@ -5677,7 +5697,14 @@ var AccountOrderDetailContent = ({ order, id }) => {
   };
   return /* @__PURE__ */ jsxs("div", { className: "animate-in fade-in w-full pb-6 duration-300", children: [
     /* @__PURE__ */ jsxs("div", { className: "sticky top-0 z-10 mb-2 flex items-center gap-3 border-b border-gray-50/50 bg-white/95 py-2.5 backdrop-blur-md", children: [
-      /* @__PURE__ */ jsx(Link, { href: "/account/orders", className: "ml-[-4px] rounded-full p-1.5 transition hover:bg-gray-100", children: /* @__PURE__ */ jsx(AccountArrowLeftIcon, { className: "h-5 w-5 text-[#1C1C1C]" }) }),
+      /* @__PURE__ */ jsx(
+        Link,
+        {
+          href: "/account/orders",
+          className: "ml-[-4px] rounded-full p-1.5 transition hover:bg-gray-100",
+          children: /* @__PURE__ */ jsx(AccountArrowLeftIcon, { className: "h-5 w-5 text-[#1C1C1C]" })
+        }
+      ),
       /* @__PURE__ */ jsx("h1", { className: "text-[17px] font-[var(--font-bold)] text-[#1C1C1C]", children: "Order Details" })
     ] }),
     /* @__PURE__ */ jsxs("div", { className: "mb-2 flex flex-col gap-0.5 rounded-xl border border-gray-100 bg-white p-3 shadow-sm", children: [
@@ -5689,10 +5716,18 @@ var AccountOrderDetailContent = ({ order, id }) => {
               "Order ID: ",
               orderNumber
             ] }),
-            /* @__PURE__ */ jsxs("button", { onClick: handleCopy, className: "group relative rounded p-1 transition-colors hover:bg-gray-50", title: "Copy Order ID", children: [
-              copied ? /* @__PURE__ */ jsx(AccountCheckIcon, { className: "h-3 w-3 text-green-600" }) : /* @__PURE__ */ jsx(AccountCopyIcon, { className: "h-3 w-3 text-[#BBBBBB] group-hover:text-[var(--core-primary)]" }),
-              copied && /* @__PURE__ */ jsx("span", { className: "absolute -top-7 left-1/2 -translate-x-1/2 rounded bg-gray-800 px-2 py-1 text-[10px] text-white shadow-lg", children: "Copied!" })
-            ] })
+            /* @__PURE__ */ jsxs(
+              "button",
+              {
+                onClick: handleCopy,
+                className: "group relative rounded p-1 transition-colors hover:bg-gray-50",
+                title: "Copy Order ID",
+                children: [
+                  copied ? /* @__PURE__ */ jsx(AccountCheckIcon, { className: "h-3 w-3 text-green-600" }) : /* @__PURE__ */ jsx(AccountCopyIcon, { className: "h-3 w-3 text-[#BBBBBB] group-hover:text-[var(--core-primary)]" }),
+                  copied && /* @__PURE__ */ jsx("span", { className: "absolute -top-7 left-1/2 -translate-x-1/2 rounded bg-gray-800 px-2 py-1 text-[10px] text-white shadow-lg", children: "Copied!" })
+                ]
+              }
+            )
           ] })
         ] }),
         /* @__PURE__ */ jsx("span", { className: "rounded-full bg-[#E8F5E9] px-2 py-0.5 text-[10px] font-[var(--font-bold)] uppercase tracking-tight text-[#2E7D32]", children: status })
@@ -5713,22 +5748,36 @@ var AccountOrderDetailContent = ({ order, id }) => {
       /* @__PURE__ */ jsx("div", { className: "flex flex-col", children: lineItems.map((item, index) => {
         const unitValue = item.line_itemable?.selling_quantity?.values?.[0]?.label;
         const amount = item.display_price ?? item.line_itemable?.display_price ?? (item.line_itemable?.price || 0) / 100;
-        return /* @__PURE__ */ jsxs("div", { className: "flex gap-3 border-b border-gray-50 p-3 transition last:border-0 hover:bg-gray-50", children: [
-          /* @__PURE__ */ jsx("div", { className: "h-14 w-14 shrink-0 rounded-lg border border-gray-50 bg-[#F8F8F8] p-1", children: /* @__PURE__ */ jsx("img", { src: item.image || "/NoProductImage.png", alt: item.name || item.line_itemable?.name || "item", className: "h-full w-full object-contain" }) }),
-          /* @__PURE__ */ jsxs("div", { className: "flex flex-1 flex-col justify-center gap-0.5", children: [
-            /* @__PURE__ */ jsx("h3", { className: "line-clamp-1 text-[13px] font-[var(--font-semibold)] leading-snug text-[#1C1C1C]", children: item.name || item.line_itemable?.name }),
-            /* @__PURE__ */ jsxs("div", { className: "flex w-full items-center justify-between", children: [
-              /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
-                unitValue && /* @__PURE__ */ jsx("span", { className: "text-[11px] font-[var(--font-medium)] text-[#888888]", children: unitValue }),
-                /* @__PURE__ */ jsxs("span", { className: "text-[11px] font-[var(--font-medium)] text-[#888888]", children: [
-                  "x ",
-                  item.quantity || 1
+        return /* @__PURE__ */ jsxs(
+          "div",
+          {
+            className: "flex gap-3 border-b border-gray-50 p-3 transition last:border-0 hover:bg-gray-50",
+            children: [
+              /* @__PURE__ */ jsx("div", { className: "h-14 w-14 shrink-0 rounded-lg border border-gray-50 bg-[#F8F8F8] p-1", children: /* @__PURE__ */ jsx(
+                "img",
+                {
+                  src: item.image || "/NoProductImage.png",
+                  alt: item.name || item.line_itemable?.name || "item",
+                  className: "h-full w-full object-contain"
+                }
+              ) }),
+              /* @__PURE__ */ jsxs("div", { className: "flex flex-1 flex-col justify-center gap-0.5", children: [
+                /* @__PURE__ */ jsx("h3", { className: "line-clamp-1 text-[13px] font-[var(--font-semibold)] leading-snug text-[#1C1C1C]", children: item.name || item.line_itemable?.name }),
+                /* @__PURE__ */ jsxs("div", { className: "flex w-full items-center justify-between", children: [
+                  /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
+                    unitValue && /* @__PURE__ */ jsx("span", { className: "text-[11px] font-[var(--font-medium)] text-[#888888]", children: unitValue }),
+                    /* @__PURE__ */ jsxs("span", { className: "text-[11px] font-[var(--font-medium)] text-[#888888]", children: [
+                      "x ",
+                      item.quantity || 1
+                    ] })
+                  ] }),
+                  /* @__PURE__ */ jsx("span", { className: "text-[13px] font-[var(--font-bold)] text-[#1C1C1C]", children: formatCurrency(amount) })
                 ] })
-              ] }),
-              /* @__PURE__ */ jsx("span", { className: "text-[13px] font-[var(--font-bold)] text-[#1C1C1C]", children: formatCurrency(amount) })
-            ] })
-          ] })
-        ] }, item.id || index);
+              ] })
+            ]
+          },
+          item.id || index
+        );
       }) })
     ] }),
     /* @__PURE__ */ jsxs("div", { className: "mb-2 rounded-xl border border-gray-100 bg-white p-3 shadow-sm", children: [
@@ -5736,11 +5785,46 @@ var AccountOrderDetailContent = ({ order, id }) => {
       /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-2", children: [
         /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-[12.5px] font-[var(--font-medium)] text-[#555555]", children: [
           /* @__PURE__ */ jsx("span", { children: "Item Total" }),
-          /* @__PURE__ */ jsx("span", { children: formatCurrency(o.display_item_total ?? (o.item_total || 0) / 100) })
+          /* @__PURE__ */ jsx("span", { children: formatCurrency(
+            o.display_item_total ?? (o.item_total || 0) / 100
+          ) })
         ] }),
+        appliedDiscounts?.length > 0 ? appliedDiscounts.map((coupon, idx) => {
+          const amt = getDiscountAmount(coupon) ?? (appliedDiscounts.length === 1 ? totalSavings : 0);
+          return /* @__PURE__ */ jsxs(
+            "div",
+            {
+              className: "flex justify-between text-[12.5px] font-[var(--font-medium)] text-[#FF6500]",
+              children: [
+                /* @__PURE__ */ jsxs("span", { className: "flex items-center gap-1.5 flex-wrap", children: [
+                  /* @__PURE__ */ jsx("span", { children: "Discount" }),
+                  coupon?.code && /* @__PURE__ */ jsx("span", { className: "font-mono text-[11px] font-semibold px-1.5 py-0.5 rounded bg-orange-50 text-[#FF6500] border border-orange-200", children: coupon.code }),
+                  coupon?.display_action_value && /* @__PURE__ */ jsxs("span", { className: "text-[11px] text-[#FF6500]/90", children: [
+                    "(",
+                    coupon.display_action_value,
+                    ")"
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxs("span", { children: [
+                  "-",
+                  formatCurrency(amt)
+                ] })
+              ]
+            },
+            coupon?.id || coupon?.discount_id || coupon?.code || idx
+          );
+        }) : hasPromo ? /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-[12.5px] font-[var(--font-medium)] text-[#FF6500]", children: [
+          /* @__PURE__ */ jsx("span", { children: "Discount" }),
+          /* @__PURE__ */ jsxs("span", { children: [
+            "-",
+            formatCurrency(promoTotal)
+          ] })
+        ] }) : null,
         /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-[12.5px] font-[var(--font-medium)] text-[#555555]", children: [
           /* @__PURE__ */ jsx("span", { children: "Delivery Charge" }),
-          /* @__PURE__ */ jsx("span", { children: formatCurrency(o.display_ship_total ?? (o.ship_total || 0) / 100) })
+          /* @__PURE__ */ jsx("span", { children: formatCurrency(
+            o.display_ship_total ?? (o.ship_total || 0) / 100
+          ) })
         ] }),
         /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-[12.5px] font-[var(--font-medium)] text-[#555555]", children: [
           /* @__PURE__ */ jsx("span", { children: "Taxes" }),
@@ -5749,6 +5833,11 @@ var AccountOrderDetailContent = ({ order, id }) => {
         /* @__PURE__ */ jsxs("div", { className: "mt-0.5 flex items-center justify-between border-t border-dashed border-gray-100 pt-2", children: [
           /* @__PURE__ */ jsx("span", { className: "text-[14px] font-[var(--font-bold)] text-black", children: "Grand Total" }),
           /* @__PURE__ */ jsx("span", { className: "text-[14px] font-[var(--font-bold)] text-black", children: formatCurrency(o.display_total ?? (o.total || 0) / 100) })
+        ] }),
+        totalSavings > 0 && /* @__PURE__ */ jsxs("p", { className: "text-[12px] font-[var(--font-bold)] text-[#16a34a] pt-1 text-right", children: [
+          "You save ",
+          formatCurrency(totalSavings),
+          " on this order \u{1F389}"
         ] })
       ] })
     ] }),
@@ -5785,10 +5874,19 @@ var AccountOrderDetailContent = ({ order, id }) => {
                 "Order ID: ",
                 orderNumber
               ] }),
-              /* @__PURE__ */ jsx("button", { onClick: handleCopy, className: "group relative rounded p-1 transition-colors hover:bg-gray-50", title: "Copy Order ID", children: copied ? /* @__PURE__ */ jsx(AccountCheckIcon, { className: "h-3 w-3 text-green-600" }) : /* @__PURE__ */ jsx(AccountCopyIcon, { className: "h-3 w-3 text-[#BBBBBB] group-hover:text-[var(--core-primary)]" }) })
+              /* @__PURE__ */ jsx(
+                "button",
+                {
+                  onClick: handleCopy,
+                  className: "group relative rounded p-1 transition-colors hover:bg-gray-50",
+                  title: "Copy Order ID",
+                  children: copied ? /* @__PURE__ */ jsx(AccountCheckIcon, { className: "h-3 w-3 text-green-600" }) : /* @__PURE__ */ jsx(AccountCopyIcon, { className: "h-3 w-3 text-[#BBBBBB] group-hover:text-[var(--core-primary)]" })
+                }
+              )
             ] }),
             /* @__PURE__ */ jsxs("p", { children: [
-              "Payment: ",
+              "Payment:",
+              " ",
               order.payment_status || order.cart?.payment_state || "Pending"
             ] })
           ] })
@@ -5882,11 +5980,27 @@ var Order = (props) => {
     display_tax_total,
     discount_id,
     display_promo_total,
+    promo_total,
     cart_detail_json
   } = cart || {};
-  const appliedDiscounts = (cart?.cart_detail_json?.discounts || cart?.cart_discounts || []).filter(
-    (coupon) => coupon.code
-  );
+  const appliedDiscounts = cart?.cart_discounts || cart?.cart_detail_json?.discounts || [];
+  const getDiscountAmount = (coupon) => {
+    if (coupon?.display_discount_amount != null && coupon?.display_discount_amount !== "") {
+      const num = Number(coupon.display_discount_amount);
+      if (!isNaN(num)) return num;
+    }
+    if (coupon?.discount_amount != null) {
+      return Number(coupon.discount_amount) / 100;
+    }
+    return null;
+  };
+  const hasPromoTotal = display_promo_total !== void 0 && display_promo_total !== null && Number(display_promo_total) > 0 && display_promo_total !== "0.00" && display_promo_total !== "0" || promo_total !== void 0 && promo_total !== null && Number(promo_total) > 0;
+  const promoTotalAmount = Number(display_promo_total) || (promo_total ? Number(promo_total) / 100 : 0);
+  const totalCalculatedDiscount = appliedDiscounts.reduce((sum, coupon) => {
+    const amt = getDiscountAmount(coupon);
+    return sum + (amt || 0);
+  }, 0);
+  const totalSavings = totalCalculatedDiscount > 0 ? totalCalculatedDiscount : promoTotalAmount;
   const fullShippingAddress = [
     shipping_address?.address1,
     shipping_address?.address2,
@@ -6106,20 +6220,35 @@ var Order = (props) => {
             /* @__PURE__ */ jsx("span", { className: "font-[var(--font-regular)] text-[14px] text-gray-500", children: "Item Total" }),
             /* @__PURE__ */ jsx("span", { className: "font-[var(--font-medium)] text-[14px] text-[var(--core-primary)]", children: formatCurrency(display_item_total) })
           ] }),
-          appliedDiscounts?.length > 0 ? appliedDiscounts?.map((coupon) => /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
-            /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-medium)] text-[14px] text-[#FF6500]", children: [
-              "Discount ",
-              coupon.code ? `(${coupon.code})` : ""
-            ] }),
-            /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-medium)] text-[14px] text-[#FF6500]", children: [
+          appliedDiscounts?.length > 0 ? appliedDiscounts.map((coupon, idx) => {
+            const amt = getDiscountAmount(coupon) ?? (appliedDiscounts.length === 1 ? totalSavings : 0);
+            return /* @__PURE__ */ jsxs(
+              "div",
+              {
+                className: "flex justify-between items-center text-[14px]",
+                children: [
+                  /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-medium)] text-[#FF6500] flex items-center gap-1.5 flex-wrap", children: [
+                    /* @__PURE__ */ jsx("span", { children: "Discount" }),
+                    coupon?.code && /* @__PURE__ */ jsx("span", { className: "font-mono text-xs font-semibold px-2 py-0.5 rounded bg-orange-50 text-[#FF6500] border border-orange-200", children: coupon.code }),
+                    coupon?.display_action_value && /* @__PURE__ */ jsxs("span", { className: "text-xs text-[#FF6500]/90", children: [
+                      "(",
+                      coupon.display_action_value,
+                      ")"
+                    ] })
+                  ] }),
+                  /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-medium)] text-[#FF6500]", children: [
+                    "-",
+                    formatCurrency(amt)
+                  ] })
+                ]
+              },
+              coupon?.id || coupon?.discount_id || coupon?.code || idx
+            );
+          }) : hasPromoTotal ? /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center text-[14px]", children: [
+            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-medium)] text-[#FF6500]", children: "Discount" }),
+            /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-medium)] text-[#FF6500]", children: [
               "-",
-              formatCurrency(coupon.display_discount_amount || coupon.discount_amount / 100)
-            ] })
-          ] }, coupon.code || coupon.id)) : display_promo_total && display_promo_total !== "0.00" && display_promo_total !== 0 && display_promo_total !== "0" ? /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
-            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-medium)] text-[14px] text-[#FF6500]", children: "Discount" }),
-            /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-medium)] text-[14px] text-[#FF6500]", children: [
-              "-",
-              formatCurrency(display_promo_total)
+              formatCurrency(promoTotalAmount)
             ] })
           ] }) : null,
           /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
@@ -6135,9 +6264,9 @@ var Order = (props) => {
             /* @__PURE__ */ jsx("span", { className: "font-[var(--font-bold)] text-[15px] text-[var(--core-primary)]", children: "Total" }),
             /* @__PURE__ */ jsx("span", { className: "font-[var(--font-bold)] text-[17px] text-[var(--core-primary)]", children: formatCurrency(display_total) })
           ] }),
-          (appliedDiscounts?.length > 0 || display_promo_total && display_promo_total !== "0.00" && display_promo_total !== 0 && display_promo_total !== "0") && /* @__PURE__ */ jsxs("p", { className: "text-[13px] font-[var(--font-bold)] text-[#16a34a] mt-[6px] text-right", children: [
+          totalSavings > 0 && /* @__PURE__ */ jsxs("p", { className: "text-[13px] font-[var(--font-bold)] text-[#16a34a] mt-[6px] text-right", children: [
             "You save ",
-            formatCurrency(display_promo_total),
+            formatCurrency(totalSavings),
             " on this order \u{1F389}"
           ] })
         ] })

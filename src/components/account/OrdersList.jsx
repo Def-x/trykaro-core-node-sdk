@@ -109,7 +109,7 @@ const OrderCard = ({ order, formatCurrency }) => {
   return (
     <div
       className="border border-gray-200 bg-white shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer rounded-lg overflow-hidden flex flex-col group/card"
-      onClick={() => router.push(`/order/${id}`)}
+      onClick={() => router.push(`/account/orders/${id}`)}
     >
       {/* Header Info Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-gray-50/80 p-5 border-b border-gray-100 gap-4">
