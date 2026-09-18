@@ -1,5 +1,6 @@
 import { getPaymentGateway } from './chunk-UP7U6KB6.js';
-import React8, { createContext, useEffect, useMemo, useState, useCallback, useContext, useRef } from 'react';
+import React8, { createContext, useEffect, useMemo, useState, useCallback, useContext, useRef, Component } from 'react';
+import posthog from 'posthog-js';
 import { jsxs, jsx, Fragment } from 'react/jsx-runtime';
 import { useRouter, usePathname, useSearchParams, useParams } from 'next/navigation';
 import Cookies from 'js-cookie';
@@ -446,7 +447,7 @@ var wrapResponse = async (res, fallbackMessage) => {
   const data = await res.json().catch(() => null);
   if (!res.ok) {
     const err = new Error(
-      data?.error || data?.message || fallbackMessage
+      data?.error || data?.message || fallbackMessage || "Discount action failed"
     );
     err.data = data;
     err.status = res.status;
@@ -472,6 +473,32 @@ var removeDiscountById = async ({
     cache: "no-store"
   });
   return wrapResponse(res, "Failed to remove discount");
+};
+var applyDiscount = async ({
+  token,
+  code,
+  discount_id,
+  source,
+  region_id,
+  apiBaseUrl,
+  orgId
+} = {}) => {
+  const baseUrl = apiBaseUrl || process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL;
+  if (!baseUrl) throw new Error("API base URL is not configured");
+  const url = new URL(`${baseUrl}/api/discounts/apply`);
+  const payload = {
+    source: source || "web"
+  };
+  if (code) payload.code = code;
+  if (discount_id) payload.discount_id = discount_id;
+  if (region_id) payload.region_id = region_id;
+  const res = await fetch(url.toString(), {
+    method: "POST",
+    headers: buildHeaders2(token, orgId),
+    body: JSON.stringify(payload),
+    cache: "no-store"
+  });
+  return wrapResponse(res, "Failed to apply discount");
 };
 
 // src/lib/thirdPartyScripts.js
@@ -651,6 +678,215 @@ function ThirdPartyScripts({
   }, [apiBaseUrl, orgId, prefetched, orgData]);
   return null;
 }
+var POSTHOG_INSTANCES = {
+  DEVELOPER: "developer",
+  MERCHANT: "merchant"
+};
+var instanceRegistry = {
+  developer: null,
+  merchant: null
+};
+var globalListenersAttached = false;
+function getPostHogModule() {
+  if (posthog && typeof posthog.init === "function") return posthog;
+  if (posthog?.default && typeof posthog.default.init === "function") {
+    return posthog.default;
+  }
+  return posthog;
+}
+function sanitizePostHogToken(token) {
+  if (!token || typeof token !== "string") return "";
+  return token.trim();
+}
+function attachGlobalErrorListeners() {
+  if (globalListenersAttached || typeof window === "undefined") return;
+  window.addEventListener("error", (event) => {
+    try {
+      const error = event.error || new Error(event.message || "Unhandled Window Error");
+      captureDeveloperException(error, {
+        source: "window.onerror",
+        filename: event.filename,
+        lineno: event.lineno,
+        colno: event.colno
+      });
+    } catch (_) {
+    }
+  });
+  window.addEventListener("unhandledrejection", (event) => {
+    try {
+      const reason = event.reason;
+      const error = reason instanceof Error ? reason : new Error(typeof reason === "string" ? reason : "Unhandled Promise Rejection");
+      captureDeveloperException(error, {
+        source: "window.onunhandledrejection",
+        reason: typeof reason === "object" ? JSON.stringify(reason) : String(reason)
+      });
+    } catch (_) {
+    }
+  });
+  globalListenersAttached = true;
+}
+function initPostHog(instanceName, config = {}) {
+  if (typeof window === "undefined") return null;
+  if (instanceRegistry[instanceName]) {
+    return instanceRegistry[instanceName];
+  }
+  const isProd = typeof process !== "undefined" && process.env?.NODE_ENV === "production";
+  const forceEnable = config.enabledInDev || config.forceEnable || typeof process !== "undefined" && process.env?.NEXT_PUBLIC_POSTHOG_DEVELOPER_ENABLE_IN_DEV === "true";
+  if (!isProd && !forceEnable) {
+    return null;
+  }
+  const rawToken = config.token;
+  const token = sanitizePostHogToken(rawToken);
+  if (!token) {
+    if (process.env.NODE_ENV === "development") {
+      console.warn(
+        `[PostHog] No token provided for "${instanceName}" instance. Telemetry will be disabled.`
+      );
+    }
+    return null;
+  }
+  const apiHost = config.apiHost || config.host || typeof process !== "undefined" && process.env.NEXT_PUBLIC_POSTHOG_HOST_DEVELOPER || "https://us.i.posthog.com";
+  try {
+    const isDeveloper = instanceName === POSTHOG_INSTANCES.DEVELOPER;
+    const options = {
+      api_host: apiHost,
+      // Use isolated storage key so developer instance never clashes with merchant session
+      persistence_name: isDeveloper ? "ph_developer" : "ph_merchant",
+      autocapture: config.autocapture ?? false,
+      capture_pageview: config.capturePageview ?? false,
+      capture_exceptions: config.captureExceptions ?? (isDeveloper ? {
+        capture_unhandled_errors: true,
+        capture_unhandled_rejections: true,
+        capture_console_errors: true
+      } : true),
+      disable_session_recording: config.disableSessionRecording ?? true,
+      loaded: (phInstance) => {
+        if (process.env.NODE_ENV === "development") {
+          phInstance.debug();
+        }
+        if (typeof config.onLoaded === "function") {
+          config.onLoaded(phInstance);
+        }
+      },
+      ...config.customOptions
+    };
+    const ph = getPostHogModule();
+    const client = ph.init(token, options, instanceName);
+    instanceRegistry[instanceName] = client || ph?.[instanceName] || null;
+    if (isDeveloper && instanceRegistry[instanceName]) {
+      attachGlobalErrorListeners();
+      if (typeof window !== "undefined") {
+        window.__posthog_developer = instanceRegistry[instanceName];
+        window.devLogger = devLogger;
+      }
+    }
+    return instanceRegistry[instanceName];
+  } catch (err) {
+    console.error(`[PostHog] Failed to initialize "${instanceName}" instance:`, err);
+    return null;
+  }
+}
+function initDeveloperPostHog(options = {}) {
+  const token = options.token || (typeof process !== "undefined" ? process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN_DEVELOPER : null);
+  const apiHost = options.apiHost || options.host || (typeof process !== "undefined" ? process.env.NEXT_PUBLIC_POSTHOG_HOST_DEVELOPER : null) || "https://us.i.posthog.com";
+  return initPostHog(POSTHOG_INSTANCES.DEVELOPER, {
+    ...options,
+    token,
+    apiHost
+  });
+}
+function initMerchantPostHog(options = {}) {
+  return initPostHog(POSTHOG_INSTANCES.MERCHANT, options);
+}
+function getPostHogInstance(instanceName) {
+  if (typeof window === "undefined") return null;
+  const ph = getPostHogModule();
+  return instanceRegistry[instanceName] || ph?.[instanceName] || null;
+}
+function getDeveloperPostHog() {
+  return getPostHogInstance(POSTHOG_INSTANCES.DEVELOPER);
+}
+function getMerchantPostHog() {
+  return getPostHogInstance(POSTHOG_INSTANCES.MERCHANT);
+}
+function setDeveloperSuperProperties(properties = {}) {
+  const client = getDeveloperPostHog();
+  if (client && typeof client.register === "function") {
+    client.register(properties);
+  }
+}
+function identifyDeveloperUser(userId, userProperties = {}) {
+  const client = getDeveloperPostHog();
+  if (client && userId && typeof client.identify === "function") {
+    client.identify(String(userId), userProperties);
+  }
+}
+function resetDeveloperPostHog() {
+  const client = getDeveloperPostHog();
+  if (client && typeof client.reset === "function") {
+    client.reset();
+  }
+}
+function captureDeveloperException(error, properties = {}) {
+  const client = getDeveloperPostHog();
+  const errObj = error instanceof Error ? error : new Error(typeof error === "string" ? error : "Unknown Developer Error");
+  const payload = {
+    $exception_message: errObj.message,
+    $exception_type: errObj.name || "Error",
+    $exception_stack_trace_raw: errObj.stack || null,
+    timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+    url: typeof window !== "undefined" ? window.location.href : null,
+    ...properties
+  };
+  if (client) {
+    if (typeof client.captureException === "function") {
+      client.captureException(errObj, payload);
+    } else {
+      client.capture("$exception", payload);
+    }
+  } else {
+    if (process.env.NODE_ENV === "development") {
+      console.error("[DeveloperError - Unreported]", errObj, properties);
+    }
+  }
+}
+function logDeveloper(message, level = "info", properties = {}) {
+  const client = getDeveloperPostHog();
+  const logPayload = {
+    level,
+    message: typeof message === "string" ? message : JSON.stringify(message),
+    timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+    url: typeof window !== "undefined" ? window.location.href : null,
+    ...properties
+  };
+  if (client) {
+    if (typeof client.log === "function") {
+      try {
+        client.log(logPayload.message, level === "debug" ? "log" : level);
+      } catch (_) {
+      }
+    }
+    client.capture("developer_log", logPayload);
+  }
+  if (level === "error" && properties?.error) {
+    captureDeveloperException(properties.error, {
+      logMessage: message,
+      ...properties
+    });
+  }
+}
+var devLogger = {
+  debug: (message, meta = {}) => logDeveloper(message, "debug", meta),
+  info: (message, meta = {}) => logDeveloper(message, "info", meta),
+  warn: (message, meta = {}) => logDeveloper(message, "warn", meta),
+  error: (message, errorOrMeta = null, extraMeta = {}) => {
+    if (errorOrMeta instanceof Error) {
+      logDeveloper(message, "error", { ...extraMeta, error: errorOrMeta });
+    } else {
+      logDeveloper(message, "error", { ...errorOrMeta, ...extraMeta });
+    }
+  }
+};
 var CoreContext = createContext(null);
 var inbuiltActions = {
   // Cart
@@ -789,6 +1025,47 @@ var CoreProvider = ({
     };
   }, [authType, injectedAuth, authState, setAuth, clearAuth]);
   useEffect(() => {
+    const devToken = resolvedConfig?.posthogDeveloperToken || config?.posthogDeveloperToken || (typeof process !== "undefined" ? process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN_DEVELOPER : null);
+    const devHost = resolvedConfig?.posthogDeveloperHost || config?.posthogDeveloperHost || (typeof process !== "undefined" ? process.env.NEXT_PUBLIC_POSTHOG_HOST_DEVELOPER : null) || "https://us.i.posthog.com";
+    if (devToken) {
+      const devPh = initDeveloperPostHog({
+        token: devToken,
+        apiHost: devHost,
+        enabledInDev: resolvedConfig?.enablePosthogInDev || config?.enablePosthogInDev
+      });
+      if (devPh) {
+        setDeveloperSuperProperties({
+          storeId: resolvedConfig?.storeId || resolvedConfig?.orgId || null,
+          regionId: resolvedRegionId,
+          currency: resolvedCurrency,
+          locale: resolvedLocale,
+          authType,
+          environment: typeof process !== "undefined" && process.env?.NODE_ENV ? process.env.NODE_ENV : "unknown"
+        });
+      }
+    }
+  }, [
+    resolvedConfig?.posthogDeveloperToken,
+    resolvedConfig?.posthogDeveloperHost,
+    resolvedConfig?.storeId,
+    resolvedConfig?.orgId,
+    resolvedRegionId,
+    resolvedCurrency,
+    resolvedLocale,
+    authType,
+    config?.posthogDeveloperToken,
+    config?.posthogDeveloperHost
+  ]);
+  useEffect(() => {
+    const userId = auth?.user?.id || auth?.userId || null;
+    if (userId) {
+      identifyDeveloperUser(userId, {
+        phone: auth?.user?.phone || null,
+        email: auth?.user?.email || null
+      });
+    }
+  }, [auth?.user?.id, auth?.userId, auth?.user?.phone, auth?.user?.email]);
+  useEffect(() => {
     if (!resolvedActions?.getCart) return;
     if (resolvedConfig?.isRegion && !resolvedConfig?.regionId) {
       return;
@@ -813,6 +1090,11 @@ var CoreProvider = ({
         setCart(resolvedCart ?? null);
       } catch (err) {
         console.error("[CoreProvider] cart load error:", err);
+        captureDeveloperException(err, {
+          source: "CoreProvider.loadCart",
+          regionId: resolvedConfig?.regionId,
+          isSignedIn: auth?.isSignedIn ?? false
+        });
       } finally {
         setIsCartLoading(false);
       }
@@ -856,7 +1138,10 @@ var CoreProvider = ({
       // consumers call useCore().config — key must be "config"
       orgData,
       primaryColor,
-      secondaryColor
+      secondaryColor,
+      devLogger,
+      captureDeveloperException,
+      posthogDeveloper: getDeveloperPostHog()
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
@@ -3985,11 +4270,17 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
             cartId: cart?.id,
             publishableKey: stripePublishableKey,
             createStripePaymentIntent: actions?.createStripePaymentIntent ? async (cartId) => {
-              const clientTotal = Number(cart?.total ?? cart?.display_total ?? 0);
-              const validation = await validateCartTotal(cartId, clientTotal, {
-                apiBaseUrl: config?.apiBaseUrl,
-                orgId: config?.storeId
-              });
+              const clientTotal = Number(
+                cart?.total ?? cart?.display_total ?? 0
+              );
+              const validation = await validateCartTotal(
+                cartId,
+                clientTotal,
+                {
+                  apiBaseUrl: config?.apiBaseUrl,
+                  orgId: config?.storeId
+                }
+              );
               if (!validation.valid && validation.reason === "price_mismatch") {
                 setCartMismatch({
                   serverTotal: validation.serverTotal,
@@ -4064,7 +4355,8 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
           /* @__PURE__ */ jsx(
             Link,
             {
-              href: "/terms-and-conditions",
+              href: config?.termsUrl || "/term-conditions",
+              prefetch: false,
               className: "text-[var(--core-primary)] underline hover:text-[var(--core-secondary)] transition-colors",
               children: "Terms & Conditions"
             }
@@ -4075,7 +4367,8 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
           /* @__PURE__ */ jsx(
             Link,
             {
-              href: "/privacy-policy",
+              href: config?.privacyUrl || "/privacy-policy",
+              prefetch: false,
               className: "text-[var(--core-primary)] underline hover:text-[var(--core-secondary)] transition-colors",
               children: "Privacy Policy"
             }
@@ -4085,7 +4378,8 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
         /* @__PURE__ */ jsx("div", { className: "mt-2 flex justify-center gap-3", children: /* @__PURE__ */ jsx(
           Link,
           {
-            href: "/refund-policy",
+            href: config?.refundUrl || config?.returnUrl || "/return-policy",
+            prefetch: false,
             className: "text-[10px] text-[#8c92a4] hover:text-[var(--core-primary)] transition-colors underline uppercase tracking-wider",
             children: "Refund Policy"
           }
@@ -6288,7 +6582,56 @@ var Hello = () => {
   console.log("Cart:", cart, isCartLoading);
   return /* @__PURE__ */ jsx("div", { children: isCartLoading ? "Loading..." : "Core Working \u2705" });
 };
+var DeveloperErrorBoundary = class extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    captureDeveloperException(error, {
+      componentStack: errorInfo?.componentStack,
+      source: "DeveloperErrorBoundary",
+      name: this.props.name || "UnnamedBoundary"
+    });
+    if (typeof this.props.onError === "function") {
+      this.props.onError(error, errorInfo);
+    }
+  }
+  render() {
+    if (this.state.hasError) {
+      if (this.props.fallback) {
+        return typeof this.props.fallback === "function" ? this.props.fallback(this.state.error) : this.props.fallback;
+      }
+      if (process.env.NODE_ENV === "development") {
+        return /* @__PURE__ */ jsxs(
+          "div",
+          {
+            style: {
+              padding: "16px",
+              margin: "12px 0",
+              border: "1px solid #ef4444",
+              borderRadius: "8px",
+              backgroundColor: "#fef2f2",
+              color: "#991b1b",
+              fontFamily: "monospace",
+              fontSize: "13px"
+            },
+            children: [
+              /* @__PURE__ */ jsx("strong", { children: "Developer Error Caught:" }),
+              /* @__PURE__ */ jsx("p", { style: { margin: "6px 0 0 0" }, children: this.state.error?.message })
+            ]
+          }
+        );
+      }
+      return null;
+    }
+    return this.props.children;
+  }
+};
 
-export { AccountAddressesPage, AccountLayout, AccountOrderDetailContent, AccountOrdersPage, AccountPage, AccountSidebar, AccountWishlistPage, AddressCard2 as AddressCard, AddressForm, AuthManager, CartItem, CartMismatchBanner, CartPage, CartSummary, CoreProvider, CouponSection_default as CouponSection, CustomOTPAuth, DEFAULT_NAV_ITEMS as DEFAULT_ACCOUNT_NAV_ITEMS, EmptyState, Hello, Order, OrdersList, Popup, ProfileForm, Spinner, ThirdPartyScripts, UserInfo, ViewCart, buildItem, buildMeta, clearEcommerce, initGtmConfig, initMetaPixelConfig, injectContentSquare, injectHotjar, nameToSlug, pushToDataLayer, trackAddPaymentInfo, trackAddShippingInfo, trackAddToCart, trackApplyCoupon, trackBeginCheckout, trackCustomEvent, trackMetaAddPaymentInfo, trackMetaAddToCart, trackMetaCompleteRegistration, trackMetaInitiateCheckout, trackMetaLead, trackMetaPageView, trackMetaPurchase, trackMetaSearch, trackMetaViewContent, trackPageView, trackPaymentFailed, trackPurchase, trackSearch, trackViewItem, useAddToCart, useAuth, useCart, userCartInfo_default as useCartInfo, useCore, useCurrencyFormat, useLogout, useVariantSelection, validateCartTotal };
+export { AccountAddressesPage, AccountLayout, AccountOrderDetailContent, AccountOrdersPage, AccountPage, AccountSidebar, AccountWishlistPage, AddressCard2 as AddressCard, AddressForm, AuthManager, CartItem, CartMismatchBanner, CartPage, CartSummary, CoreProvider, CouponSection_default as CouponSection, CustomOTPAuth, DEFAULT_NAV_ITEMS as DEFAULT_ACCOUNT_NAV_ITEMS, DeveloperErrorBoundary, EmptyState, Hello, Order, OrdersList, POSTHOG_INSTANCES, Popup, ProfileForm, Spinner, ThirdPartyScripts, UserInfo, ViewCart, applyDiscount, applyDiscountAction, buildItem, buildMeta, captureDeveloperException, clearEcommerce, createAddressAction, createCartAction, createLineItemAction, createRazorpayOrderAction, deleteAddressAction, deleteLineItemAction, devLogger, getAddressesAction, getAvailableDiscountsAction, getCartAction, getCartByIdAction, getDeveloperPostHog, getMerchantPostHog, getOrderByIdAction, getOrderInvoiceAction, getOrdersAction, getPostHogInstance, getUserAction, identifyDeveloperUser, initDeveloperPostHog, initGtmConfig, initMerchantPostHog, initMetaPixelConfig, initPostHog, injectContentSquare, injectHotjar, logDeveloper, loginUser, nameToSlug, pushToDataLayer, removeDiscountAction, removeDiscountById, resetDeveloperPostHog, sanitizePostHogToken, setDeveloperSuperProperties, signUpUser, trackAddPaymentInfo, trackAddShippingInfo, trackAddToCart, trackApplyCoupon, trackBeginCheckout, trackCustomEvent, trackDiscountEventAction, trackMetaAddPaymentInfo, trackMetaAddToCart, trackMetaCompleteRegistration, trackMetaInitiateCheckout, trackMetaLead, trackMetaPageView, trackMetaPurchase, trackMetaSearch, trackMetaViewContent, trackPageView, trackPaymentFailed, trackPurchase, trackSearch, trackViewItem, updateAddressAction, updateCartAction, updateCartIdLineItemsAction, updateLineItemAction, updateRazorpayPaymentAction, updateUserAction, useAddToCart, useAuth, useCart, userCartInfo_default as useCartInfo, useCore, useCurrencyFormat, useLogout, useVariantSelection, validateCartTotal, verifyOtp };
 //# sourceMappingURL=index.js.map
 //# sourceMappingURL=index.js.map

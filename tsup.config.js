@@ -28,6 +28,8 @@ export default defineConfig({
     "@stripe/react-stripe-js",
     // Icon library used by StripeCheckout
     "lucide-react",
+    // Analytics & Telemetry
+    "posthog-js",
   ],
   // Handle .js files as JSX
   loader: {

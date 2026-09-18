@@ -30,6 +30,7 @@
     "js-cookie": "^3.0.5",
     "lodash": ">=4",
     "lucide-react": ">=0.300.0",
+    "posthog-js": ">=1.0.0",
     "react": "^18 || ^19",
     "react-dom": "^18 || ^19"
   },
@@ -45,10 +46,14 @@
     },
     "lucide-react": {
       "optional": true
+    },
+    "posthog-js": {
+      "optional": true
     }
   },
   "devDependencies": {
     "lodash": "^4.18.1",
+    "posthog-js": "^1.360.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "tailwindcss": "^4.2.2",
