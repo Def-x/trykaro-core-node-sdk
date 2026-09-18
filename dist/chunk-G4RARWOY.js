@@ -575,14 +575,18 @@ var getCurrentUserLikedProductsAction = async (page = 1, perPage = 100, options 
   if (pp) queryParts.push(`per_page=${pp}`);
   const queryStr = queryParts.length ? `?${queryParts.join("&")}` : "";
   const url = `${getApiBaseUrl(opt)}/api/current_user_liked_products${queryStr}`;
+  const fetchConfig = {
+    method: "GET",
+    headers: await buildHeaders({ ...opt, token })
+  };
+  if (typeof window === "undefined") {
+    fetchConfig.next = { tags: ["LikedProducts"], revalidate: 300 };
+  } else {
+    fetchConfig.cache = opt.cache || "no-store";
+  }
   return requestJson(
     url,
-    {
-      method: "GET",
-      headers: await buildHeaders({ ...opt, token }),
-      cache: opt.cache || "no-store",
-      ...typeof window === "undefined" ? { next: { revalidate: 300, tags: ["LikedProducts"] } } : {}
-    },
+    fetchConfig,
     "Failed to fetch current user liked products"
   );
 };
@@ -703,5 +707,5 @@ var applyDiscount = async ({
 };
 
 export { applyDiscount, applyDiscountAction, createAddressAction, createCartAction, createLineItemAction, createRazorpayOrderAction, deleteAddressAction, deleteLineItemAction, getAddressesAction, getAllTaxonsAction, getAvailableDiscountsAction, getCartAction, getCartByIdAction, getCurrentUserLikedProductsAction, getLikedProductsAction, getOrderByIdAction, getOrderInvoiceAction, getOrdersAction, getOrgVideosAction, getOrganizationAction, getProductByIdAction, getProductsAction, getProductsByIdsAction, getProductsFilterAction, getRecentlyViewedProductsAction, getRelatedProductsAction, getTaxonByIdAction, getTaxonomiesAction, getUserAction, likeProductAction, loginUser, removeDiscountAction, removeDiscountById, signUpUser, trackDiscountEventAction, unlikeProductAction, updateAddressAction, updateCartAction, updateCartIdLineItemsAction, updateLineItemAction, updateRazorpayPaymentAction, updateUserAction, validateCartTotal, verifyOtp };
-//# sourceMappingURL=chunk-QHSCMGIH.js.map
-//# sourceMappingURL=chunk-QHSCMGIH.js.map
+//# sourceMappingURL=chunk-G4RARWOY.js.map
+//# sourceMappingURL=chunk-G4RARWOY.js.map

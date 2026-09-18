@@ -1,5 +1,5 @@
-import { trackDiscountEventAction, removeDiscountById, removeDiscountAction, applyDiscountAction, getAvailableDiscountsAction, getOrderInvoiceAction, getOrderByIdAction, getOrdersAction, updateUserAction, getUserAction, deleteAddressAction, updateAddressAction, createAddressAction, getAddressesAction, updateRazorpayPaymentAction, createRazorpayOrderAction, deleteLineItemAction, updateLineItemAction, createLineItemAction, updateCartIdLineItemsAction, updateCartAction, createCartAction, getCartByIdAction, getCartAction, getCurrentUserLikedProductsAction, verifyOtp, signUpUser, loginUser, validateCartTotal } from './chunk-QHSCMGIH.js';
-export { applyDiscount, applyDiscountAction, createAddressAction, createCartAction, createLineItemAction, createRazorpayOrderAction, deleteAddressAction, deleteLineItemAction, getAddressesAction, getAllTaxonsAction, getAvailableDiscountsAction, getCartAction, getCartByIdAction, getCurrentUserLikedProductsAction, getLikedProductsAction, getOrderByIdAction, getOrderInvoiceAction, getOrdersAction, getOrgVideosAction, getOrganizationAction, getProductByIdAction, getProductsAction, getProductsByIdsAction, getProductsFilterAction, getRecentlyViewedProductsAction, getRelatedProductsAction, getTaxonByIdAction, getTaxonomiesAction, getUserAction, likeProductAction, loginUser, removeDiscountAction, removeDiscountById, signUpUser, trackDiscountEventAction, unlikeProductAction, updateAddressAction, updateCartAction, updateCartIdLineItemsAction, updateLineItemAction, updateRazorpayPaymentAction, updateUserAction, validateCartTotal, verifyOtp } from './chunk-QHSCMGIH.js';
+import { trackDiscountEventAction, removeDiscountById, removeDiscountAction, applyDiscountAction, getAvailableDiscountsAction, getOrderInvoiceAction, getOrderByIdAction, getOrdersAction, updateUserAction, getUserAction, deleteAddressAction, updateAddressAction, createAddressAction, getAddressesAction, updateRazorpayPaymentAction, createRazorpayOrderAction, deleteLineItemAction, updateLineItemAction, createLineItemAction, updateCartIdLineItemsAction, updateCartAction, createCartAction, getCartByIdAction, getCartAction, getCurrentUserLikedProductsAction, verifyOtp, signUpUser, loginUser, validateCartTotal } from './chunk-G4RARWOY.js';
+export { applyDiscount, applyDiscountAction, createAddressAction, createCartAction, createLineItemAction, createRazorpayOrderAction, deleteAddressAction, deleteLineItemAction, getAddressesAction, getAllTaxonsAction, getAvailableDiscountsAction, getCartAction, getCartByIdAction, getCurrentUserLikedProductsAction, getLikedProductsAction, getOrderByIdAction, getOrderInvoiceAction, getOrdersAction, getOrgVideosAction, getOrganizationAction, getProductByIdAction, getProductsAction, getProductsByIdsAction, getProductsFilterAction, getRecentlyViewedProductsAction, getRelatedProductsAction, getTaxonByIdAction, getTaxonomiesAction, getUserAction, likeProductAction, loginUser, removeDiscountAction, removeDiscountById, signUpUser, trackDiscountEventAction, unlikeProductAction, updateAddressAction, updateCartAction, updateCartIdLineItemsAction, updateLineItemAction, updateRazorpayPaymentAction, updateUserAction, validateCartTotal, verifyOtp } from './chunk-G4RARWOY.js';
 import { getPaymentGateway } from './chunk-ZXSZ7SQJ.js';
 import React8, { createContext, useEffect, useMemo, useState, useCallback, useContext, useRef, Component } from 'react';
 import posthog from 'posthog-js';
@@ -5796,8 +5796,33 @@ var AccountOrderDetailContent = ({ order, id }) => {
     ] })
   ] });
 };
-var AccountWishlistPage = ({ products = [], isLoading = false, renderProduct }) => {
+var AccountWishlistPage = ({
+  products = [],
+  pagination,
+  isLoading = false,
+  renderProduct
+}) => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const itemsPerPage = 12;
+  const isServerPaginated = pagination && pagination.total_pages !== void 0;
+  const currentPage = isServerPaginated ? pagination.current_page : parseInt(searchParams?.get("page") || "1", 10);
+  const totalPages = isServerPaginated ? pagination.total_pages : Math.ceil(products.length / itemsPerPage) || 1;
+  const currentProducts = isServerPaginated ? products : products.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const handlePageChange = (page) => {
+    const params = new URLSearchParams(searchParams?.toString() || "");
+    params.set("page", page.toString());
+    router.push(`${pathname}?${params.toString()}`);
+  };
+  const getVisiblePages = (current, total) => {
+    if (total <= 5) return Array.from({ length: total }, (_, i) => i + 1);
+    if (current <= 3) return [1, 2, 3, 4, 5, "...", total];
+    if (current >= total - 2)
+      return [1, "...", total - 4, total - 3, total - 2, total - 1, total];
+    return [1, "...", current - 1, current, current + 1, "...", total];
+  };
+  const visiblePages = getVisiblePages(currentPage, totalPages);
   if (isLoading) {
     return /* @__PURE__ */ jsxs("div", { className: "flex min-h-[400px] flex-col items-center justify-center py-20", children: [
       /* @__PURE__ */ jsx("div", { className: "h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-green-600" }),
@@ -5810,14 +5835,84 @@ var AccountWishlistPage = ({ products = [], isLoading = false, renderProduct }) 
       "My Wishlist"
     ] }),
     products.length === 0 ? /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center justify-center rounded-xl border border-gray-100 bg-white p-12 text-center shadow-sm", children: [
-      /* @__PURE__ */ jsx("div", { className: "mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-50", children: /* @__PURE__ */ jsx(AccountHeartIcon, { className: "h-8 w-8 text-red-300", strokeWidth: 2 }) }),
+      /* @__PURE__ */ jsx("div", { className: "mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-50", children: /* @__PURE__ */ jsx(
+        AccountHeartIcon,
+        {
+          className: "h-8 w-8 text-red-300",
+          strokeWidth: 2
+        }
+      ) }),
       /* @__PURE__ */ jsx("h2", { className: "mb-2 text-[18px] font-[var(--font-bold)] text-gray-800", children: "Your wishlist is empty" }),
       /* @__PURE__ */ jsx("p", { className: "mb-6 text-[14px] font-[var(--font-medium)] text-gray-500", children: "Save items you love and buy them later." }),
-      /* @__PURE__ */ jsx("button", { onClick: () => router.push("/"), className: "rounded-lg bg-[var(--core-primary)] px-6 py-2.5 font-[var(--font-bold)] text-white shadow-sm transition hover:opacity-90", children: "Start Shopping" })
-    ] }) : /* @__PURE__ */ jsx("div", { className: "grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-5", children: products.map((product, index) => renderProduct ? renderProduct(product, index) : /* @__PURE__ */ jsxs("button", { onClick: () => router.push(`/product/${product.id}`), className: "overflow-hidden rounded-lg border border-gray-100 bg-white text-left shadow-sm transition hover:shadow-md", children: [
-      /* @__PURE__ */ jsx("img", { src: product.image || product.product_image_url || "/NoProductImage.png", alt: product.name || "Product", className: "h-40 w-full object-cover" }),
-      /* @__PURE__ */ jsx("div", { className: "p-3", children: /* @__PURE__ */ jsx("p", { className: "line-clamp-2 text-[13px] font-[var(--font-semibold)] text-[#1C1C1C]", children: product.name || "Product" }) })
-    ] }, product.id ?? index)) })
+      /* @__PURE__ */ jsx(
+        "button",
+        {
+          onClick: () => router.push("/"),
+          className: "rounded-lg bg-[var(--core-primary)] px-6 py-2.5 font-[var(--font-bold)] text-white shadow-sm transition hover:opacity-90",
+          children: "Start Shopping"
+        }
+      )
+    ] }) : /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-6", children: [
+      /* @__PURE__ */ jsx("div", { className: "grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-5", children: currentProducts.map(
+        (product, index) => renderProduct ? renderProduct(product, index) : /* @__PURE__ */ jsxs(
+          "button",
+          {
+            onClick: () => router.push(`/product/${product.id}`),
+            className: "overflow-hidden rounded-lg border border-gray-100 bg-white text-left shadow-sm transition hover:shadow-md",
+            children: [
+              /* @__PURE__ */ jsx(
+                "img",
+                {
+                  src: product.image || product.product_image_url || "/NoProductImage.png",
+                  alt: product.name || "Product",
+                  className: "h-40 w-full object-cover"
+                }
+              ),
+              /* @__PURE__ */ jsx("div", { className: "p-3", children: /* @__PURE__ */ jsx("p", { className: "line-clamp-2 text-[13px] font-[var(--font-semibold)] text-[#1C1C1C]", children: product.name || "Product" }) })
+            ]
+          },
+          product.id ?? index
+        )
+      ) }),
+      totalPages > 1 && /* @__PURE__ */ jsxs("div", { className: "mt-4 flex flex-wrap items-center justify-center gap-2 md:gap-4", children: [
+        /* @__PURE__ */ jsx(
+          "button",
+          {
+            onClick: () => handlePageChange(Math.max(1, currentPage - 1)),
+            disabled: currentPage === 1,
+            className: "flex h-9 items-center justify-center rounded-lg border border-gray-200 px-3 text-[13px] font-[var(--font-medium)] text-gray-600 transition-colors hover:bg-gray-50 disabled:opacity-50 disabled:hover:bg-transparent",
+            children: "Previous"
+          }
+        ),
+        /* @__PURE__ */ jsx("div", { className: "flex flex-wrap items-center justify-center gap-1", children: visiblePages.map(
+          (page, index) => page === "..." ? /* @__PURE__ */ jsx(
+            "span",
+            {
+              className: "flex h-9 w-6 items-center justify-center text-gray-400",
+              children: "..."
+            },
+            `ellipsis-${index}`
+          ) : /* @__PURE__ */ jsx(
+            "button",
+            {
+              onClick: () => handlePageChange(page),
+              className: `flex h-9 w-9 items-center justify-center rounded-lg text-[13px] font-[var(--font-bold)] transition-colors ${currentPage === page ? "bg-[var(--core-primary)] text-white" : "text-gray-600 hover:bg-gray-100"}`,
+              children: page
+            },
+            page
+          )
+        ) }),
+        /* @__PURE__ */ jsx(
+          "button",
+          {
+            onClick: () => handlePageChange(Math.min(totalPages, currentPage + 1)),
+            disabled: currentPage === totalPages,
+            className: "flex h-9 items-center justify-center rounded-lg border border-gray-200 px-3 text-[13px] font-[var(--font-medium)] text-gray-600 transition-colors hover:bg-gray-50 disabled:opacity-50 disabled:hover:bg-transparent",
+            children: "Next"
+          }
+        )
+      ] })
+    ] })
   ] });
 };
 var DownloadIcon = () => /* @__PURE__ */ jsxs("svg", { width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: [

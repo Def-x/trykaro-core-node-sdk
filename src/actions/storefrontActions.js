@@ -275,7 +275,11 @@ export const createAddressAction = async (addressData, options = {}) =>
     "Failed to create address",
   );
 
-export const updateAddressAction = async (addressId, addressData, options = {}) =>
+export const updateAddressAction = async (
+  addressId,
+  addressData,
+  options = {},
+) =>
   requestJson(
     `${getApiBaseUrl(options)}/api/addresses/${addressId}`,
     {
@@ -588,7 +592,7 @@ export const getProductsAction = async (query = {}, options = {}) => {
       headers: await buildHeaders(options),
       cache: "no-store",
     },
-    "Failed to fetch products"
+    "Failed to fetch products",
   );
 };
 
@@ -601,13 +605,14 @@ export const getProductByIdAction = async (productId, options = {}) => {
       headers: await buildHeaders(options),
       cache: "no-store",
     },
-    "Failed to fetch product"
+    "Failed to fetch product",
   );
 };
 
 export const getRelatedProductsAction = async (taxonId, options = {}) => {
   const queryStr =
-    typeof taxonId === "string" && (taxonId.includes("=") || taxonId.startsWith("?"))
+    typeof taxonId === "string" &&
+    (taxonId.includes("=") || taxonId.startsWith("?"))
       ? taxonId.startsWith("?")
         ? taxonId
         : `?${taxonId}`
@@ -621,7 +626,7 @@ export const getRelatedProductsAction = async (taxonId, options = {}) => {
       headers: await buildHeaders(options),
       cache: "no-store",
     },
-    "Failed to fetch related products"
+    "Failed to fetch related products",
   );
 };
 
@@ -634,12 +639,17 @@ export const getTaxonByIdAction = async (taxonId, options = {}) => {
       headers: await buildHeaders(options),
       cache: "no-store",
     },
-    "Failed to fetch taxon"
+    "Failed to fetch taxon",
   );
 };
 
 export const getAllTaxonsAction = async (params = "", options = {}) => {
-  const queryStr = typeof params === "string" ? (params.startsWith("?") ? params : `?${params}`) : "";
+  const queryStr =
+    typeof params === "string"
+      ? params.startsWith("?")
+        ? params
+        : `?${params}`
+      : "";
   const url = `${getApiBaseUrl(options)}/api/taxons${queryStr}`;
   return requestJson(
     url,
@@ -648,12 +658,17 @@ export const getAllTaxonsAction = async (params = "", options = {}) => {
       headers: await buildHeaders(options),
       cache: "no-store",
     },
-    "Failed to fetch taxons"
+    "Failed to fetch taxons",
   );
 };
 
 export const getTaxonomiesAction = async (params = "", options = {}) => {
-  const queryStr = typeof params === "string" ? (params.startsWith("?") ? params : `?${params}`) : "";
+  const queryStr =
+    typeof params === "string"
+      ? params.startsWith("?")
+        ? params
+        : `?${params}`
+      : "";
   const url = `${getApiBaseUrl(options)}/api/taxonomies${queryStr}`;
   return requestJson(
     url,
@@ -662,7 +677,7 @@ export const getTaxonomiesAction = async (params = "", options = {}) => {
       headers: await buildHeaders(options),
       cache: "no-store",
     },
-    "Failed to fetch taxonomies"
+    "Failed to fetch taxonomies",
   );
 };
 
@@ -675,7 +690,7 @@ export const getProductsFilterAction = async (options = {}) => {
       headers: await buildHeaders(options),
       cache: "no-store",
     },
-    "Failed to fetch products filter"
+    "Failed to fetch products filter",
   );
 };
 
@@ -688,7 +703,7 @@ export const getRecentlyViewedProductsAction = async (options = {}) => {
       headers: await buildHeaders(options),
       cache: "no-store",
     },
-    "Failed to fetch recently viewed products"
+    "Failed to fetch recently viewed products",
   );
 };
 
@@ -701,7 +716,7 @@ export const getLikedProductsAction = async (options = {}) => {
       headers: await buildHeaders(options),
       cache: "no-store",
     },
-    "Failed to fetch liked products"
+    "Failed to fetch liked products",
   );
 };
 
@@ -715,7 +730,7 @@ export const likeProductAction = async (body, options = {}) => {
       body: JSON.stringify(body),
       cache: "no-store",
     },
-    "Failed to like product"
+    "Failed to like product",
   );
 };
 
@@ -728,11 +743,15 @@ export const unlikeProductAction = async (id, options = {}) => {
       headers: await buildHeaders(options),
       cache: "no-store",
     },
-    "Failed to unlike product"
+    "Failed to unlike product",
   );
 };
 
-export const getCurrentUserLikedProductsAction = async (page = 1, perPage = 100, options = {}) => {
+export const getCurrentUserLikedProductsAction = async (
+  page = 1,
+  perPage = 100,
+  options = {},
+) => {
   let opt = options;
   let p = page;
   let pp = perPage;
@@ -750,22 +769,25 @@ export const getCurrentUserLikedProductsAction = async (page = 1, perPage = 100,
   if (p) queryParts.push(`page=${p}`);
   if (pp) queryParts.push(`per_page=${pp}`);
   const queryStr = queryParts.length ? `?${queryParts.join("&")}` : "";
-
   const url = `${getApiBaseUrl(opt)}/api/current_user_liked_products${queryStr}`;
+
+  const fetchConfig = {
+    method: "GET",
+    headers: await buildHeaders({ ...opt, token }),
+  };
+
+  if (typeof window === "undefined") {
+    fetchConfig.next = { tags: ["LikedProducts"], revalidate: 300 };
+  } else {
+    fetchConfig.cache = opt.cache || "no-store";
+  }
+
   return requestJson(
     url,
-    {
-      method: "GET",
-      headers: await buildHeaders({ ...opt, token }),
-      cache: opt.cache || "no-store",
-      ...(typeof window === "undefined"
-        ? { next: { revalidate: 300, tags: ["LikedProducts"] } }
-        : {}),
-    },
-    "Failed to fetch current user liked products"
+    fetchConfig,
+    "Failed to fetch current user liked products",
   );
 };
-
 
 export const getProductsByIdsAction = async (productIds = [], options = {}) => {
   if (!productIds.length) return [];
@@ -778,7 +800,7 @@ export const getProductsByIdsAction = async (productIds = [], options = {}) => {
       headers: await buildHeaders(options),
       cache: "no-store",
     },
-    "Failed to fetch products by ids"
+    "Failed to fetch products by ids",
   );
   return data?.products ?? data?.data ?? (Array.isArray(data) ? data : []);
 };
@@ -794,7 +816,7 @@ export const getOrganizationAction = async (options = {}) => {
       headers: await buildHeaders(options),
       cache: "no-store",
     },
-    "Failed to fetch organization"
+    "Failed to fetch organization",
   );
 };
 
@@ -807,7 +829,6 @@ export const getOrgVideosAction = async (options = {}) => {
       headers: await buildHeaders(options),
       cache: "no-store",
     },
-    "Failed to fetch organization videos"
+    "Failed to fetch organization videos",
   );
 };
-
