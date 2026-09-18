@@ -11,6 +11,14 @@ import React, {
 import * as storefrontActions from "../actions/storefrontActions";
 import * as discountActions from "../actions/discountActions";
 import { ThirdPartyScripts } from "../components/tracking/ThirdPartyScripts";
+import {
+  initDeveloperPostHog,
+  getDeveloperPostHog,
+  captureDeveloperException,
+  setDeveloperSuperProperties,
+  identifyDeveloperUser,
+  devLogger,
+} from "../lib/posthog";
 
 const CoreContext = createContext(null);
 
@@ -213,6 +221,69 @@ export const CoreProvider = ({
     };
   }, [authType, injectedAuth, authState, setAuth, clearAuth]);
 
+  // ── PostHog Developer Instance Initialization ──────────────────────────────
+  useEffect(() => {
+    const devToken =
+      resolvedConfig?.posthogDeveloperToken ||
+      config?.posthogDeveloperToken ||
+      (typeof process !== "undefined"
+        ? process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN_DEVELOPER
+        : null);
+
+    const devHost =
+      resolvedConfig?.posthogDeveloperHost ||
+      config?.posthogDeveloperHost ||
+      (typeof process !== "undefined"
+        ? process.env.NEXT_PUBLIC_POSTHOG_HOST_DEVELOPER
+        : null) ||
+      "https://us.i.posthog.com";
+
+    if (devToken) {
+      const devPh = initDeveloperPostHog({
+        token: devToken,
+        apiHost: devHost,
+        enabledInDev:
+          resolvedConfig?.enablePosthogInDev || config?.enablePosthogInDev,
+      });
+
+      if (devPh) {
+        setDeveloperSuperProperties({
+          storeId: resolvedConfig?.storeId || resolvedConfig?.orgId || null,
+          regionId: resolvedRegionId,
+          currency: resolvedCurrency,
+          locale: resolvedLocale,
+          authType,
+          environment:
+            typeof process !== "undefined" && process.env?.NODE_ENV
+              ? process.env.NODE_ENV
+              : "unknown",
+        });
+      }
+    }
+  }, [
+    resolvedConfig?.posthogDeveloperToken,
+    resolvedConfig?.posthogDeveloperHost,
+    resolvedConfig?.storeId,
+    resolvedConfig?.orgId,
+    resolvedRegionId,
+    resolvedCurrency,
+    resolvedLocale,
+    authType,
+    config?.posthogDeveloperToken,
+    config?.posthogDeveloperHost,
+  ]);
+
+  // Sync user identity to developer PostHog when user logs in or is available
+  useEffect(() => {
+    const userId = auth?.user?.id || auth?.userId || null;
+    if (userId) {
+      identifyDeveloperUser(userId, {
+        phone: auth?.user?.phone || null,
+        email: auth?.user?.email || null,
+      });
+    }
+  }, [auth?.user?.id, auth?.userId, auth?.user?.phone, auth?.user?.email]);
+
   useEffect(() => {
     if (!resolvedActions?.getCart) return;
 
@@ -249,6 +320,11 @@ export const CoreProvider = ({
         setCart(resolvedCart ?? null);
       } catch (err) {
         console.error("[CoreProvider] cart load error:", err);
+        captureDeveloperException(err, {
+          source: "CoreProvider.loadCart",
+          regionId: resolvedConfig?.regionId,
+          isSignedIn: auth?.isSignedIn ?? false,
+        });
       } finally {
         setIsCartLoading(false);
       }
@@ -298,6 +374,9 @@ export const CoreProvider = ({
       orgData,
       primaryColor,
       secondaryColor,
+      devLogger,
+      captureDeveloperException,
+      posthogDeveloper: getDeveloperPostHog(),
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [

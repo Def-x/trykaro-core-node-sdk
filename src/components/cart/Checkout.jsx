@@ -419,7 +419,7 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
         cart: validation.cart,
       });
       toast?.error?.(
-        "Your cart total has changed — a coupon or offer has expired. Please refresh and try again."
+        "Your cart total has changed — a coupon or offer has expired. Please refresh and try again.",
       );
       return; // abort — do NOT open any payment gateway
     }
@@ -569,12 +569,21 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
                             // Guard: validate cart total before creating payment intent.
                             // Critical for Stripe — the intent is created with a fixed amount.
                             // If a coupon expired, the intent would charge the wrong amount.
-                            const clientTotal = Number(cart?.total ?? cart?.display_total ?? 0);
-                            const validation = await validateCartTotal(cartId, clientTotal, {
-                              apiBaseUrl: config?.apiBaseUrl,
-                              orgId: config?.storeId,
-                            });
-                            if (!validation.valid && validation.reason === "price_mismatch") {
+                            const clientTotal = Number(
+                              cart?.total ?? cart?.display_total ?? 0,
+                            );
+                            const validation = await validateCartTotal(
+                              cartId,
+                              clientTotal,
+                              {
+                                apiBaseUrl: config?.apiBaseUrl,
+                                orgId: config?.storeId,
+                              },
+                            );
+                            if (
+                              !validation.valid &&
+                              validation.reason === "price_mismatch"
+                            ) {
                               setCartMismatch({
                                 serverTotal: validation.serverTotal,
                                 clientTotal: validation.clientTotal,
@@ -582,7 +591,7 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
                               });
                               setShowStripeForm(false); // hide the Stripe form
                               throw new Error(
-                                "Your cart total has changed — a coupon or offer has expired. Please refresh and try again."
+                                "Your cart total has changed — a coupon or offer has expired. Please refresh and try again.",
                               );
                             }
                             return actions.createStripePaymentIntent(cartId);
@@ -667,14 +676,16 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
             <p className="text-[11px] text-[#8c92a4] font-[var(--font-regular)] leading-relaxed">
               By placing your order, you agree to our{" "}
               <Link
-                href="/terms-and-conditions"
+                href={config?.termsUrl || "/term-conditions"}
+                prefetch={false}
                 className="text-[var(--core-primary)] underline hover:text-[var(--core-secondary)] transition-colors"
               >
                 Terms & Conditions
               </Link>{" "}
               and{" "}
               <Link
-                href="/privacy-policy"
+                href={config?.privacyUrl || "/privacy-policy"}
+                prefetch={false}
                 className="text-[var(--core-primary)] underline hover:text-[var(--core-secondary)] transition-colors"
               >
                 Privacy Policy
@@ -683,7 +694,10 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
             </p>
             <div className="mt-2 flex justify-center gap-3">
               <Link
-                href="/refund-policy"
+                href={
+                  config?.refundUrl || config?.returnUrl || "/return-policy"
+                }
+                prefetch={false}
                 className="text-[10px] text-[#8c92a4] hover:text-[var(--core-primary)] transition-colors underline uppercase tracking-wider"
               >
                 Refund Policy

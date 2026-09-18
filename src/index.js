@@ -23,8 +23,9 @@ export { ViewCart } from "./components/cart/ViewCart";
 export { default as CouponSection } from "./components/cart/CouponSection";
 export { default as CartMismatchBanner } from "./components/cart/CartMismatchBanner";
 
-// ─── Cart Utilities ────────────────────────────────────────────────────────────
-export { validateCartTotal } from "./actions/storefrontActions";
+// ─── Actions & Cart Utilities ──────────────────────────────────────────────────
+export * from "./actions/storefrontActions";
+export * from "./actions/discountActions";
 
 // ─── Account Components ───────────────────────────────────────────────────────
 export { AccountPage } from "./components/account/AccountPage";
@@ -94,6 +95,26 @@ export {
   injectContentSquare,
   injectHotjar,
 } from "./lib/thirdPartyScripts";
+
+// ─── PostHog Multi-Instance & Developer Telemetry ────────────────────────────
+export {
+  POSTHOG_INSTANCES,
+  sanitizePostHogToken,
+  initPostHog,
+  initDeveloperPostHog,
+  initMerchantPostHog,
+  getPostHogInstance,
+  getDeveloperPostHog,
+  getMerchantPostHog,
+  setDeveloperSuperProperties,
+  identifyDeveloperUser,
+  resetDeveloperPostHog,
+  captureDeveloperException,
+  logDeveloper,
+  devLogger,
+} from "./lib/posthog";
+export { DeveloperErrorBoundary } from "./components/posthog/DeveloperErrorBoundary";
+
 
 
 
