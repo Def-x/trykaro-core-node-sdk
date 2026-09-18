@@ -14,6 +14,10 @@
     "./stripe": {
       "import": "./dist/stripe.js",
       "default": "./dist/stripe.js"
+    },
+    "./actions": {
+      "import": "./dist/actions.js",
+      "default": "./dist/actions.js"
     }
   },
   "files": [

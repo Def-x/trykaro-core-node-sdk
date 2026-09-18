@@ -28,7 +28,11 @@ const getServerToken = async (token) => {
   if (token) return token;
 
   if (typeof window !== "undefined") {
-    return window.localStorage?.getItem("access_token") || null;
+    return (
+      window.localStorage?.getItem("access_token") ||
+      window.localStorage?.getItem("token") ||
+      null
+    );
   }
 
   try {
@@ -561,3 +565,249 @@ export const validateCartTotal = async (cartId, clientTotal, options = {}) => {
     return { valid: true, reason: "validation_skipped" };
   }
 };
+
+// ─── Products & Taxons ────────────────────────────────────────────────────────
+
+export const getProductsAction = async (query = {}, options = {}) => {
+  let queryString = "";
+  if (typeof query === "string") {
+    queryString = query.startsWith("?") ? query.slice(1) : query;
+  } else if (query && typeof query === "object") {
+    const sp = new URLSearchParams();
+    Object.entries(query).forEach(([k, v]) => {
+      if (v !== undefined && v !== null) sp.append(k, v);
+    });
+    queryString = sp.toString();
+  }
+
+  const url = `${getApiBaseUrl(options)}/api/products${queryString ? `?${queryString}` : ""}`;
+  return requestJson(
+    url,
+    {
+      method: "GET",
+      headers: await buildHeaders(options),
+      cache: "no-store",
+    },
+    "Failed to fetch products"
+  );
+};
+
+export const getProductByIdAction = async (productId, options = {}) => {
+  const url = `${getApiBaseUrl(options)}/api/products/${productId}`;
+  return requestJson(
+    url,
+    {
+      method: "GET",
+      headers: await buildHeaders(options),
+      cache: "no-store",
+    },
+    "Failed to fetch product"
+  );
+};
+
+export const getRelatedProductsAction = async (taxonId, options = {}) => {
+  const queryStr =
+    typeof taxonId === "string" && (taxonId.includes("=") || taxonId.startsWith("?"))
+      ? taxonId.startsWith("?")
+        ? taxonId
+        : `?${taxonId}`
+      : `?taxon_id=${taxonId}`;
+
+  const url = `${getApiBaseUrl(options)}/api/products${queryStr}`;
+  return requestJson(
+    url,
+    {
+      method: "GET",
+      headers: await buildHeaders(options),
+      cache: "no-store",
+    },
+    "Failed to fetch related products"
+  );
+};
+
+export const getTaxonByIdAction = async (taxonId, options = {}) => {
+  const url = `${getApiBaseUrl(options)}/api/taxons/${taxonId}`;
+  return requestJson(
+    url,
+    {
+      method: "GET",
+      headers: await buildHeaders(options),
+      cache: "no-store",
+    },
+    "Failed to fetch taxon"
+  );
+};
+
+export const getAllTaxonsAction = async (params = "", options = {}) => {
+  const queryStr = typeof params === "string" ? (params.startsWith("?") ? params : `?${params}`) : "";
+  const url = `${getApiBaseUrl(options)}/api/taxons${queryStr}`;
+  return requestJson(
+    url,
+    {
+      method: "GET",
+      headers: await buildHeaders(options),
+      cache: "no-store",
+    },
+    "Failed to fetch taxons"
+  );
+};
+
+export const getTaxonomiesAction = async (params = "", options = {}) => {
+  const queryStr = typeof params === "string" ? (params.startsWith("?") ? params : `?${params}`) : "";
+  const url = `${getApiBaseUrl(options)}/api/taxonomies${queryStr}`;
+  return requestJson(
+    url,
+    {
+      method: "GET",
+      headers: await buildHeaders(options),
+      cache: "no-store",
+    },
+    "Failed to fetch taxonomies"
+  );
+};
+
+export const getProductsFilterAction = async (options = {}) => {
+  const url = `${getApiBaseUrl(options)}/api/filterable`;
+  return requestJson(
+    url,
+    {
+      method: "GET",
+      headers: await buildHeaders(options),
+      cache: "no-store",
+    },
+    "Failed to fetch products filter"
+  );
+};
+
+export const getRecentlyViewedProductsAction = async (options = {}) => {
+  const url = `${getApiBaseUrl(options)}/api/recently_viewed_products`;
+  return requestJson(
+    url,
+    {
+      method: "GET",
+      headers: await buildHeaders(options),
+      cache: "no-store",
+    },
+    "Failed to fetch recently viewed products"
+  );
+};
+
+export const getLikedProductsAction = async (options = {}) => {
+  const url = `${getApiBaseUrl(options)}/api/product_likes`;
+  return requestJson(
+    url,
+    {
+      method: "GET",
+      headers: await buildHeaders(options),
+      cache: "no-store",
+    },
+    "Failed to fetch liked products"
+  );
+};
+
+export const likeProductAction = async (body, options = {}) => {
+  const url = `${getApiBaseUrl(options)}/api/product_likes`;
+  return requestJson(
+    url,
+    {
+      method: "POST",
+      headers: await buildHeaders(options),
+      body: JSON.stringify(body),
+      cache: "no-store",
+    },
+    "Failed to like product"
+  );
+};
+
+export const unlikeProductAction = async (id, options = {}) => {
+  const url = `${getApiBaseUrl(options)}/api/product_likes/${id}`;
+  return requestJson(
+    url,
+    {
+      method: "DELETE",
+      headers: await buildHeaders(options),
+      cache: "no-store",
+    },
+    "Failed to unlike product"
+  );
+};
+
+export const getCurrentUserLikedProductsAction = async (page = 1, perPage = 100, options = {}) => {
+  let opt = options;
+  let p = page;
+  let pp = perPage;
+  if (typeof page === "object" && page !== null) {
+    opt = page;
+    p = opt.page || 1;
+    pp = opt.perPage || opt.per_page || 100;
+  }
+
+  // Guard: skip the API call entirely if no token is available
+  const token = await getServerToken(opt.token);
+  if (!token) return [];
+
+  const queryParts = [];
+  if (p) queryParts.push(`page=${p}`);
+  if (pp) queryParts.push(`per_page=${pp}`);
+  const queryStr = queryParts.length ? `?${queryParts.join("&")}` : "";
+
+  const url = `${getApiBaseUrl(opt)}/api/current_user_liked_products${queryStr}`;
+  return requestJson(
+    url,
+    {
+      method: "GET",
+      headers: await buildHeaders({ ...opt, token }),
+      cache: opt.cache || "no-store",
+      ...(typeof window === "undefined"
+        ? { next: { revalidate: 300, tags: ["LikedProducts"] } }
+        : {}),
+    },
+    "Failed to fetch current user liked products"
+  );
+};
+
+
+export const getProductsByIdsAction = async (productIds = [], options = {}) => {
+  if (!productIds.length) return [];
+  const params = productIds.map((pid) => `ids[]=${pid}`).join("&");
+  const url = `${getApiBaseUrl(options)}/api/products?${params}&per_page=${productIds.length}`;
+  const data = await requestJson(
+    url,
+    {
+      method: "GET",
+      headers: await buildHeaders(options),
+      cache: "no-store",
+    },
+    "Failed to fetch products by ids"
+  );
+  return data?.products ?? data?.data ?? (Array.isArray(data) ? data : []);
+};
+
+// ─── Organization ─────────────────────────────────────────────────────────────
+
+export const getOrganizationAction = async (options = {}) => {
+  const url = `${getApiBaseUrl(options)}/api/organizations`;
+  return requestJson(
+    url,
+    {
+      method: "GET",
+      headers: await buildHeaders(options),
+      cache: "no-store",
+    },
+    "Failed to fetch organization"
+  );
+};
+
+export const getOrgVideosAction = async (options = {}) => {
+  const url = `${getApiBaseUrl(options)}/api/organization_videos`;
+  return requestJson(
+    url,
+    {
+      method: "GET",
+      headers: await buildHeaders(options),
+      cache: "no-store",
+    },
+    "Failed to fetch organization videos"
+  );
+};
+
