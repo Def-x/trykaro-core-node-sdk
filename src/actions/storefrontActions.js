@@ -113,6 +113,60 @@ const requestJsonFromResponse = async (res, fallback) => {
   return res.json();
 };
 
+const buildQueryString = (params) => {
+  if (!params) return "";
+  if (typeof params === "string") {
+    return params.startsWith("?") ? params : `?${params}`;
+  }
+  if (typeof params === "object") {
+    const sp = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null) {
+        if (Array.isArray(v)) {
+          v.forEach((val) => sp.append(`${k}[]`, val));
+        } else {
+          sp.append(k, v);
+        }
+      }
+    });
+    const s = sp.toString();
+    return s ? `?${s}` : "";
+  }
+  return "";
+};
+
+const buildCachedFetchConfig = async (
+  defaultTags = [],
+  defaultTtl = 86400,
+  options = {},
+) => {
+  const headers = await buildHeaders(options);
+  const shouldBypassCache =
+    options.cache === "no-store" ||
+    options.revalidation === true ||
+    options.forceRevalidate === true ||
+    options.revalidate === 0;
+
+  if (typeof window === "undefined" && !shouldBypassCache) {
+    const tags = Array.isArray(options.tags)
+      ? [...defaultTags, ...options.tags]
+      : defaultTags;
+    const revalidate =
+      typeof options.revalidate === "number" ? options.revalidate : defaultTtl;
+    return {
+      method: "GET",
+      headers,
+      next: { tags, revalidate },
+    };
+  }
+
+  return {
+    method: "GET",
+    headers,
+    cache: options.cache || "no-store",
+  };
+};
+
 // ─── Cart ────────────────────────────────────────────────────────────────────
 
 export const createCartAction = async (body = {}, options = {}) => {
@@ -631,54 +685,99 @@ export const getRelatedProductsAction = async (taxonId, options = {}) => {
 };
 
 export const getTaxonByIdAction = async (taxonId, options = {}) => {
+  if (!taxonId) return null;
   const url = `${getApiBaseUrl(options)}/api/taxons/${taxonId}`;
-  return requestJson(
-    url,
-    {
-      method: "GET",
-      headers: await buildHeaders(options),
-      cache: "no-store",
-    },
-    "Failed to fetch taxon",
+  const fetchConfig = await buildCachedFetchConfig(
+    ["taxons", `taxon-${taxonId}`],
+    86400,
+    options,
   );
+  return requestJson(url, fetchConfig, "Failed to fetch taxon");
 };
 
 export const getAllTaxonsAction = async (params = "", options = {}) => {
-  const queryStr =
-    typeof params === "string"
-      ? params.startsWith("?")
-        ? params
-        : `?${params}`
-      : "";
-  const url = `${getApiBaseUrl(options)}/api/taxons${queryStr}`;
-  return requestJson(
-    url,
-    {
-      method: "GET",
-      headers: await buildHeaders(options),
-      cache: "no-store",
-    },
-    "Failed to fetch taxons",
-  );
+  let query = params;
+  let opt = { ...options };
+
+  if (params && typeof params === "object") {
+    const {
+      cache,
+      revalidate,
+      revalidation,
+      forceRevalidate,
+      tags,
+      token,
+      config,
+      orgId,
+      apiBaseUrl,
+      ...queryParams
+    } = params;
+
+    if (cache !== undefined) opt.cache = cache;
+    if (revalidate !== undefined) opt.revalidate = revalidate;
+    if (revalidation !== undefined) opt.revalidation = revalidation;
+    if (forceRevalidate !== undefined) opt.forceRevalidate = forceRevalidate;
+    if (tags !== undefined) opt.tags = tags;
+    if (token !== undefined) opt.token = token;
+    if (config !== undefined) opt.config = config;
+    if (orgId !== undefined) opt.orgId = orgId;
+    if (apiBaseUrl !== undefined) opt.apiBaseUrl = apiBaseUrl;
+
+    query = queryParams;
+  }
+
+  const queryStr = buildQueryString(query);
+  const url = `${getApiBaseUrl(opt)}/api/taxons${queryStr}`;
+  const fetchConfig = await buildCachedFetchConfig(["taxons"], 86400, opt);
+  return requestJson(url, fetchConfig, "Failed to fetch taxons");
 };
 
 export const getTaxonomiesAction = async (params = "", options = {}) => {
-  const queryStr =
-    typeof params === "string"
-      ? params.startsWith("?")
-        ? params
-        : `?${params}`
-      : "";
-  const url = `${getApiBaseUrl(options)}/api/taxonomies${queryStr}`;
-  return requestJson(
-    url,
-    {
-      method: "GET",
-      headers: await buildHeaders(options),
-      cache: "no-store",
-    },
-    "Failed to fetch taxonomies",
+  let query = params;
+  let opt = { ...options };
+
+  if (params && typeof params === "object") {
+    const {
+      cache,
+      revalidate,
+      revalidation,
+      forceRevalidate,
+      tags,
+      token,
+      config,
+      orgId,
+      apiBaseUrl,
+      ...queryParams
+    } = params;
+
+    if (cache !== undefined) opt.cache = cache;
+    if (revalidate !== undefined) opt.revalidate = revalidate;
+    if (revalidation !== undefined) opt.revalidation = revalidation;
+    if (forceRevalidate !== undefined) opt.forceRevalidate = forceRevalidate;
+    if (tags !== undefined) opt.tags = tags;
+    if (token !== undefined) opt.token = token;
+    if (config !== undefined) opt.config = config;
+    if (orgId !== undefined) opt.orgId = orgId;
+    if (apiBaseUrl !== undefined) opt.apiBaseUrl = apiBaseUrl;
+
+    query = queryParams;
+  }
+
+  const queryStr = buildQueryString(query);
+  const url = `${getApiBaseUrl(opt)}/api/taxonomies${queryStr}`;
+  const fetchConfig = await buildCachedFetchConfig(["taxonomies"], 86400, opt);
+  return requestJson(url, fetchConfig, "Failed to fetch taxonomies");
+};
+
+export const getTaxonomyByIdAction = async (taxonomyId, options = {}) => {
+  if (!taxonomyId) return null;
+  const url = `${getApiBaseUrl(options)}/api/taxonomies/${taxonomyId}`;
+  const fetchConfig = await buildCachedFetchConfig(
+    ["taxonomies", `taxonomy-${taxonomyId}`],
+    86400,
+    options,
   );
+  return requestJson(url, fetchConfig, "Failed to fetch taxonomy");
 };
 
 export const getProductsFilterAction = async (options = {}) => {

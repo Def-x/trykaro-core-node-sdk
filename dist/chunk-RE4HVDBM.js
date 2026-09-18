@@ -68,6 +68,45 @@ var requestJsonFromResponse = async (res, fallback) => {
   if (res.status === 204) return true;
   return res.json();
 };
+var buildQueryString = (params) => {
+  if (!params) return "";
+  if (typeof params === "string") {
+    return params.startsWith("?") ? params : `?${params}`;
+  }
+  if (typeof params === "object") {
+    const sp = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== void 0 && v !== null) {
+        if (Array.isArray(v)) {
+          v.forEach((val) => sp.append(`${k}[]`, val));
+        } else {
+          sp.append(k, v);
+        }
+      }
+    });
+    const s = sp.toString();
+    return s ? `?${s}` : "";
+  }
+  return "";
+};
+var buildCachedFetchConfig = async (defaultTags = [], defaultTtl = 86400, options = {}) => {
+  const headers = await buildHeaders(options);
+  const shouldBypassCache = options.cache === "no-store" || options.revalidation === true || options.forceRevalidate === true || options.revalidate === 0;
+  if (typeof window === "undefined" && !shouldBypassCache) {
+    const tags = Array.isArray(options.tags) ? [...defaultTags, ...options.tags] : defaultTags;
+    const revalidate = typeof options.revalidate === "number" ? options.revalidate : defaultTtl;
+    return {
+      method: "GET",
+      headers,
+      next: { tags, revalidate }
+    };
+  }
+  return {
+    method: "GET",
+    headers,
+    cache: options.cache || "no-store"
+  };
+};
 var createCartAction = async (body = {}, options = {}) => {
   const res = await fetch(`${getApiBaseUrl(options)}/api/carts`, {
     method: "POST",
@@ -461,42 +500,88 @@ var getRelatedProductsAction = async (taxonId, options = {}) => {
   );
 };
 var getTaxonByIdAction = async (taxonId, options = {}) => {
+  if (!taxonId) return null;
   const url = `${getApiBaseUrl(options)}/api/taxons/${taxonId}`;
-  return requestJson(
-    url,
-    {
-      method: "GET",
-      headers: await buildHeaders(options),
-      cache: "no-store"
-    },
-    "Failed to fetch taxon"
+  const fetchConfig = await buildCachedFetchConfig(
+    ["taxons", `taxon-${taxonId}`],
+    86400,
+    options
   );
+  return requestJson(url, fetchConfig, "Failed to fetch taxon");
 };
 var getAllTaxonsAction = async (params = "", options = {}) => {
-  const queryStr = typeof params === "string" ? params.startsWith("?") ? params : `?${params}` : "";
-  const url = `${getApiBaseUrl(options)}/api/taxons${queryStr}`;
-  return requestJson(
-    url,
-    {
-      method: "GET",
-      headers: await buildHeaders(options),
-      cache: "no-store"
-    },
-    "Failed to fetch taxons"
-  );
+  let query = params;
+  let opt = { ...options };
+  if (params && typeof params === "object") {
+    const {
+      cache,
+      revalidate,
+      revalidation,
+      forceRevalidate,
+      tags,
+      token,
+      config,
+      orgId,
+      apiBaseUrl,
+      ...queryParams
+    } = params;
+    if (cache !== void 0) opt.cache = cache;
+    if (revalidate !== void 0) opt.revalidate = revalidate;
+    if (revalidation !== void 0) opt.revalidation = revalidation;
+    if (forceRevalidate !== void 0) opt.forceRevalidate = forceRevalidate;
+    if (tags !== void 0) opt.tags = tags;
+    if (token !== void 0) opt.token = token;
+    if (config !== void 0) opt.config = config;
+    if (orgId !== void 0) opt.orgId = orgId;
+    if (apiBaseUrl !== void 0) opt.apiBaseUrl = apiBaseUrl;
+    query = queryParams;
+  }
+  const queryStr = buildQueryString(query);
+  const url = `${getApiBaseUrl(opt)}/api/taxons${queryStr}`;
+  const fetchConfig = await buildCachedFetchConfig(["taxons"], 86400, opt);
+  return requestJson(url, fetchConfig, "Failed to fetch taxons");
 };
 var getTaxonomiesAction = async (params = "", options = {}) => {
-  const queryStr = typeof params === "string" ? params.startsWith("?") ? params : `?${params}` : "";
-  const url = `${getApiBaseUrl(options)}/api/taxonomies${queryStr}`;
-  return requestJson(
-    url,
-    {
-      method: "GET",
-      headers: await buildHeaders(options),
-      cache: "no-store"
-    },
-    "Failed to fetch taxonomies"
+  let query = params;
+  let opt = { ...options };
+  if (params && typeof params === "object") {
+    const {
+      cache,
+      revalidate,
+      revalidation,
+      forceRevalidate,
+      tags,
+      token,
+      config,
+      orgId,
+      apiBaseUrl,
+      ...queryParams
+    } = params;
+    if (cache !== void 0) opt.cache = cache;
+    if (revalidate !== void 0) opt.revalidate = revalidate;
+    if (revalidation !== void 0) opt.revalidation = revalidation;
+    if (forceRevalidate !== void 0) opt.forceRevalidate = forceRevalidate;
+    if (tags !== void 0) opt.tags = tags;
+    if (token !== void 0) opt.token = token;
+    if (config !== void 0) opt.config = config;
+    if (orgId !== void 0) opt.orgId = orgId;
+    if (apiBaseUrl !== void 0) opt.apiBaseUrl = apiBaseUrl;
+    query = queryParams;
+  }
+  const queryStr = buildQueryString(query);
+  const url = `${getApiBaseUrl(opt)}/api/taxonomies${queryStr}`;
+  const fetchConfig = await buildCachedFetchConfig(["taxonomies"], 86400, opt);
+  return requestJson(url, fetchConfig, "Failed to fetch taxonomies");
+};
+var getTaxonomyByIdAction = async (taxonomyId, options = {}) => {
+  if (!taxonomyId) return null;
+  const url = `${getApiBaseUrl(options)}/api/taxonomies/${taxonomyId}`;
+  const fetchConfig = await buildCachedFetchConfig(
+    ["taxonomies", `taxonomy-${taxonomyId}`],
+    86400,
+    options
   );
+  return requestJson(url, fetchConfig, "Failed to fetch taxonomy");
 };
 var getProductsFilterAction = async (options = {}) => {
   const url = `${getApiBaseUrl(options)}/api/filterable`;
@@ -706,6 +791,6 @@ var applyDiscount = async ({
   return wrapResponse(res, "Failed to apply discount");
 };
 
-export { applyDiscount, applyDiscountAction, createAddressAction, createCartAction, createLineItemAction, createRazorpayOrderAction, deleteAddressAction, deleteLineItemAction, getAddressesAction, getAllTaxonsAction, getAvailableDiscountsAction, getCartAction, getCartByIdAction, getCurrentUserLikedProductsAction, getLikedProductsAction, getOrderByIdAction, getOrderInvoiceAction, getOrdersAction, getOrgVideosAction, getOrganizationAction, getProductByIdAction, getProductsAction, getProductsByIdsAction, getProductsFilterAction, getRecentlyViewedProductsAction, getRelatedProductsAction, getTaxonByIdAction, getTaxonomiesAction, getUserAction, likeProductAction, loginUser, removeDiscountAction, removeDiscountById, signUpUser, trackDiscountEventAction, unlikeProductAction, updateAddressAction, updateCartAction, updateCartIdLineItemsAction, updateLineItemAction, updateRazorpayPaymentAction, updateUserAction, validateCartTotal, verifyOtp };
-//# sourceMappingURL=chunk-G4RARWOY.js.map
-//# sourceMappingURL=chunk-G4RARWOY.js.map
+export { applyDiscount, applyDiscountAction, createAddressAction, createCartAction, createLineItemAction, createRazorpayOrderAction, deleteAddressAction, deleteLineItemAction, getAddressesAction, getAllTaxonsAction, getAvailableDiscountsAction, getCartAction, getCartByIdAction, getCurrentUserLikedProductsAction, getLikedProductsAction, getOrderByIdAction, getOrderInvoiceAction, getOrdersAction, getOrgVideosAction, getOrganizationAction, getProductByIdAction, getProductsAction, getProductsByIdsAction, getProductsFilterAction, getRecentlyViewedProductsAction, getRelatedProductsAction, getTaxonByIdAction, getTaxonomiesAction, getTaxonomyByIdAction, getUserAction, likeProductAction, loginUser, removeDiscountAction, removeDiscountById, signUpUser, trackDiscountEventAction, unlikeProductAction, updateAddressAction, updateCartAction, updateCartIdLineItemsAction, updateLineItemAction, updateRazorpayPaymentAction, updateUserAction, validateCartTotal, verifyOtp };
+//# sourceMappingURL=chunk-RE4HVDBM.js.map
+//# sourceMappingURL=chunk-RE4HVDBM.js.map
