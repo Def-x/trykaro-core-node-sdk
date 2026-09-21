@@ -794,17 +794,29 @@ export const getProductsFilterAction = async (options = {}) => {
 };
 
 export const getRecentlyViewedProductsAction = async (options = {}) => {
+  // Guard: skip the API call entirely if no token is available (matching getCurrentUserLikedProductsAction)
+  const token = await getServerToken(options.token);
+  if (!token) return { recently_viewed_products: [] };
+
   const url = `${getApiBaseUrl(options)}/api/recently_viewed_products`;
+  const fetchConfig = {
+    method: "GET",
+    headers: await buildHeaders({ ...options, token }),
+  };
+
+  if (typeof window === "undefined") {
+    fetchConfig.next = { tags: ["recently-viewed-products"], revalidate: 300 };
+  } else {
+    fetchConfig.cache = options.cache || "no-store";
+  }
+
   return requestJson(
     url,
-    {
-      method: "GET",
-      headers: await buildHeaders(options),
-      cache: "no-store",
-    },
+    fetchConfig,
     "Failed to fetch recently viewed products",
   );
 };
+
 
 export const getLikedProductsAction = async (options = {}) => {
   const url = `${getApiBaseUrl(options)}/api/product_likes`;

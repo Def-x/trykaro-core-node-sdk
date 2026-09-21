@@ -596,14 +596,21 @@ var getProductsFilterAction = async (options = {}) => {
   );
 };
 var getRecentlyViewedProductsAction = async (options = {}) => {
+  const token = await getServerToken(options.token);
+  if (!token) return { recently_viewed_products: [] };
   const url = `${getApiBaseUrl(options)}/api/recently_viewed_products`;
+  const fetchConfig = {
+    method: "GET",
+    headers: await buildHeaders({ ...options, token })
+  };
+  if (typeof window === "undefined") {
+    fetchConfig.next = { tags: ["recently-viewed-products"], revalidate: 300 };
+  } else {
+    fetchConfig.cache = options.cache || "no-store";
+  }
   return requestJson(
     url,
-    {
-      method: "GET",
-      headers: await buildHeaders(options),
-      cache: "no-store"
-    },
+    fetchConfig,
     "Failed to fetch recently viewed products"
   );
 };
@@ -786,5 +793,5 @@ var applyDiscount = async ({
 };
 
 export { applyDiscount, applyDiscountAction, createAddressAction, createCartAction, createLineItemAction, createRazorpayOrderAction, deleteAddressAction, deleteLineItemAction, getAddressesAction, getAllTaxonsAction, getAvailableDiscountsAction, getCartAction, getCartByIdAction, getCurrentUserLikedProductsAction, getLikedProductsAction, getOrderByIdAction, getOrderInvoiceAction, getOrdersAction, getOrgVideosAction, getOrganizationAction, getProductByIdAction, getProductsAction, getProductsByIdsAction, getProductsFilterAction, getRecentlyViewedProductsAction, getRelatedProductsAction, getTaxonByIdAction, getTaxonomiesAction, getTaxonomyByIdAction, getUserAction, likeProductAction, loginUser, removeDiscountAction, removeDiscountById, signUpUser, trackDiscountEventAction, unlikeProductAction, updateAddressAction, updateCartAction, updateCartIdLineItemsAction, updateLineItemAction, updateRazorpayPaymentAction, updateUserAction, validateCartTotal, verifyOtp };
-//# sourceMappingURL=chunk-7HMAVJYM.js.map
-//# sourceMappingURL=chunk-7HMAVJYM.js.map
+//# sourceMappingURL=chunk-4J7TRQZY.js.map
+//# sourceMappingURL=chunk-4J7TRQZY.js.map
