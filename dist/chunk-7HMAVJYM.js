@@ -692,27 +692,21 @@ var getProductsByIdsAction = async (productIds = [], options = {}) => {
 };
 var getOrganizationAction = async (options = {}) => {
   const url = `${getApiBaseUrl(options)}/api/organizations`;
-  return requestJson(
-    url,
-    {
-      method: "GET",
-      headers: await buildHeaders(options),
-      cache: "no-store"
-    },
-    "Failed to fetch organization"
+  const fetchConfig = await buildCachedFetchConfig(
+    ["organizations"],
+    86400,
+    options
   );
+  return requestJson(url, fetchConfig, "Failed to fetch organization");
 };
 var getOrgVideosAction = async (options = {}) => {
   const url = `${getApiBaseUrl(options)}/api/organization_videos`;
-  return requestJson(
-    url,
-    {
-      method: "GET",
-      headers: await buildHeaders(options),
-      cache: "no-store"
-    },
-    "Failed to fetch organization videos"
+  const fetchConfig = await buildCachedFetchConfig(
+    ["organization-videos"],
+    86400,
+    options
   );
+  return requestJson(url, fetchConfig, "Failed to fetch organization videos");
 };
 
 // src/actions/discountActions.js
@@ -792,5 +786,5 @@ var applyDiscount = async ({
 };
 
 export { applyDiscount, applyDiscountAction, createAddressAction, createCartAction, createLineItemAction, createRazorpayOrderAction, deleteAddressAction, deleteLineItemAction, getAddressesAction, getAllTaxonsAction, getAvailableDiscountsAction, getCartAction, getCartByIdAction, getCurrentUserLikedProductsAction, getLikedProductsAction, getOrderByIdAction, getOrderInvoiceAction, getOrdersAction, getOrgVideosAction, getOrganizationAction, getProductByIdAction, getProductsAction, getProductsByIdsAction, getProductsFilterAction, getRecentlyViewedProductsAction, getRelatedProductsAction, getTaxonByIdAction, getTaxonomiesAction, getTaxonomyByIdAction, getUserAction, likeProductAction, loginUser, removeDiscountAction, removeDiscountById, signUpUser, trackDiscountEventAction, unlikeProductAction, updateAddressAction, updateCartAction, updateCartIdLineItemsAction, updateLineItemAction, updateRazorpayPaymentAction, updateUserAction, validateCartTotal, verifyOtp };
-//# sourceMappingURL=chunk-RE4HVDBM.js.map
-//# sourceMappingURL=chunk-RE4HVDBM.js.map
+//# sourceMappingURL=chunk-7HMAVJYM.js.map
+//# sourceMappingURL=chunk-7HMAVJYM.js.map

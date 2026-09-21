@@ -908,26 +908,20 @@ export const getProductsByIdsAction = async (productIds = [], options = {}) => {
 
 export const getOrganizationAction = async (options = {}) => {
   const url = `${getApiBaseUrl(options)}/api/organizations`;
-  return requestJson(
-    url,
-    {
-      method: "GET",
-      headers: await buildHeaders(options),
-      cache: "no-store",
-    },
-    "Failed to fetch organization",
+  const fetchConfig = await buildCachedFetchConfig(
+    ["organizations"],
+    86400,
+    options,
   );
+  return requestJson(url, fetchConfig, "Failed to fetch organization");
 };
 
 export const getOrgVideosAction = async (options = {}) => {
   const url = `${getApiBaseUrl(options)}/api/organization_videos`;
-  return requestJson(
-    url,
-    {
-      method: "GET",
-      headers: await buildHeaders(options),
-      cache: "no-store",
-    },
-    "Failed to fetch organization videos",
+  const fetchConfig = await buildCachedFetchConfig(
+    ["organization-videos"],
+    86400,
+    options,
   );
+  return requestJson(url, fetchConfig, "Failed to fetch organization videos");
 };
