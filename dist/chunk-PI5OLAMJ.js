@@ -453,51 +453,61 @@ var validateCartTotal = async (cartId, clientTotal, options = {}) => {
   }
 };
 var getProductsAction = async (query = {}, options = {}) => {
-  let queryString = "";
-  if (typeof query === "string") {
-    queryString = query.startsWith("?") ? query.slice(1) : query;
-  } else if (query && typeof query === "object") {
-    const sp = new URLSearchParams();
-    Object.entries(query).forEach(([k, v]) => {
-      if (v !== void 0 && v !== null) sp.append(k, v);
-    });
-    queryString = sp.toString();
+  let queryParams = query;
+  let opt = { ...options };
+  if (query && typeof query === "object") {
+    const {
+      cache,
+      revalidate,
+      revalidation,
+      forceRevalidate,
+      tags,
+      token,
+      config,
+      orgId,
+      apiBaseUrl,
+      ...restQuery
+    } = query;
+    if (cache !== void 0) opt.cache = cache;
+    if (revalidate !== void 0) opt.revalidate = revalidate;
+    if (revalidation !== void 0) opt.revalidation = revalidation;
+    if (forceRevalidate !== void 0) opt.forceRevalidate = forceRevalidate;
+    if (tags !== void 0) opt.tags = tags;
+    if (token !== void 0) opt.token = token;
+    if (config !== void 0) opt.config = config;
+    if (orgId !== void 0) opt.orgId = orgId;
+    if (apiBaseUrl !== void 0) opt.apiBaseUrl = apiBaseUrl;
+    queryParams = restQuery;
   }
-  const url = `${getApiBaseUrl(options)}/api/products${queryString ? `?${queryString}` : ""}`;
-  return requestJson(
-    url,
-    {
-      method: "GET",
-      headers: await buildHeaders(options),
-      cache: "no-store"
-    },
-    "Failed to fetch products"
-  );
+  const queryStr = buildQueryString(queryParams);
+  const url = `${getApiBaseUrl(opt)}/api/products${queryStr}`;
+  const fetchConfig = await buildCachedFetchConfig(["products"], 604800, opt);
+  return requestJson(url, fetchConfig, "Failed to fetch products");
 };
 var getProductByIdAction = async (productId, options = {}) => {
+  if (!productId) return null;
   const url = `${getApiBaseUrl(options)}/api/products/${productId}`;
-  return requestJson(
-    url,
-    {
-      method: "GET",
-      headers: await buildHeaders(options),
-      cache: "no-store"
-    },
-    "Failed to fetch product"
+  const fetchConfig = await buildCachedFetchConfig(
+    ["products", `product-${productId}`],
+    604800,
+    options
   );
+  return requestJson(url, fetchConfig, "Failed to fetch product");
 };
 var getRelatedProductsAction = async (taxonId, options = {}) => {
-  const queryStr = typeof taxonId === "string" && (taxonId.includes("=") || taxonId.startsWith("?")) ? taxonId.startsWith("?") ? taxonId : `?${taxonId}` : `?taxon_id=${taxonId}`;
+  let queryStr = "";
+  if (typeof taxonId === "string") {
+    queryStr = taxonId.includes("=") || taxonId.startsWith("?") ? taxonId.startsWith("?") ? taxonId : `?${taxonId}` : `?taxon_id=${taxonId}`;
+  } else if (taxonId && typeof taxonId === "object") {
+    queryStr = buildQueryString(taxonId);
+  }
   const url = `${getApiBaseUrl(options)}/api/products${queryStr}`;
-  return requestJson(
-    url,
-    {
-      method: "GET",
-      headers: await buildHeaders(options),
-      cache: "no-store"
-    },
-    "Failed to fetch related products"
+  const fetchConfig = await buildCachedFetchConfig(
+    ["products"],
+    604800,
+    options
   );
+  return requestJson(url, fetchConfig, "Failed to fetch related products");
 };
 var getTaxonByIdAction = async (taxonId, options = {}) => {
   if (!taxonId) return null;
@@ -585,15 +595,12 @@ var getTaxonomyByIdAction = async (taxonomyId, options = {}) => {
 };
 var getProductsFilterAction = async (options = {}) => {
   const url = `${getApiBaseUrl(options)}/api/filterable`;
-  return requestJson(
-    url,
-    {
-      method: "GET",
-      headers: await buildHeaders(options),
-      cache: "no-store"
-    },
-    "Failed to fetch products filter"
+  const fetchConfig = await buildCachedFetchConfig(
+    ["filterable"],
+    604800,
+    options
   );
+  return requestJson(url, fetchConfig, "Failed to fetch products filter");
 };
 var getRecentlyViewedProductsAction = async (options = {}) => {
   const token = await getServerToken(options.token);
@@ -686,13 +693,14 @@ var getProductsByIdsAction = async (productIds = [], options = {}) => {
   if (!productIds.length) return [];
   const params = productIds.map((pid) => `ids[]=${pid}`).join("&");
   const url = `${getApiBaseUrl(options)}/api/products?${params}&per_page=${productIds.length}`;
+  const fetchConfig = await buildCachedFetchConfig(
+    ["products"],
+    604800,
+    options
+  );
   const data = await requestJson(
     url,
-    {
-      method: "GET",
-      headers: await buildHeaders(options),
-      cache: "no-store"
-    },
+    fetchConfig,
     "Failed to fetch products by ids"
   );
   return data?.products ?? data?.data ?? (Array.isArray(data) ? data : []);
@@ -793,5 +801,5 @@ var applyDiscount = async ({
 };
 
 export { applyDiscount, applyDiscountAction, createAddressAction, createCartAction, createLineItemAction, createRazorpayOrderAction, deleteAddressAction, deleteLineItemAction, getAddressesAction, getAllTaxonsAction, getAvailableDiscountsAction, getCartAction, getCartByIdAction, getCurrentUserLikedProductsAction, getLikedProductsAction, getOrderByIdAction, getOrderInvoiceAction, getOrdersAction, getOrgVideosAction, getOrganizationAction, getProductByIdAction, getProductsAction, getProductsByIdsAction, getProductsFilterAction, getRecentlyViewedProductsAction, getRelatedProductsAction, getTaxonByIdAction, getTaxonomiesAction, getTaxonomyByIdAction, getUserAction, likeProductAction, loginUser, removeDiscountAction, removeDiscountById, signUpUser, trackDiscountEventAction, unlikeProductAction, updateAddressAction, updateCartAction, updateCartIdLineItemsAction, updateLineItemAction, updateRazorpayPaymentAction, updateUserAction, validateCartTotal, verifyOtp };
-//# sourceMappingURL=chunk-4J7TRQZY.js.map
-//# sourceMappingURL=chunk-4J7TRQZY.js.map
+//# sourceMappingURL=chunk-PI5OLAMJ.js.map
+//# sourceMappingURL=chunk-PI5OLAMJ.js.map
