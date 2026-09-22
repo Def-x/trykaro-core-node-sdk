@@ -981,7 +981,11 @@ export const getProductsByIdsAction = async (productIds = [], options = {}) => {
 // ─── Organization ─────────────────────────────────────────────────────────────
 
 export const getOrganizationAction = async (options = {}) => {
-  const url = `${getApiBaseUrl(options)}/api/organizations`;
+  const orgId =
+    options?.organizationId || options?.id || getOrganizationId(options);
+  const url = orgId
+    ? `${getApiBaseUrl(options)}/api/organizations/${orgId}`
+    : `${getApiBaseUrl(options)}/api/organizations`;
   const fetchConfig = await buildCachedFetchConfig(
     ["organizations"],
     86400,

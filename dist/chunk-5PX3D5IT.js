@@ -750,7 +750,8 @@ var getProductsByIdsAction = async (productIds = [], options = {}) => {
   return data?.products ?? data?.data ?? (Array.isArray(data) ? data : []);
 };
 var getOrganizationAction = async (options = {}) => {
-  const url = `${getApiBaseUrl(options)}/api/organizations`;
+  const orgId = options?.organizationId || options?.id || getOrganizationId(options);
+  const url = orgId ? `${getApiBaseUrl(options)}/api/organizations/${orgId}` : `${getApiBaseUrl(options)}/api/organizations`;
   const fetchConfig = await buildCachedFetchConfig(
     ["organizations"],
     86400,
@@ -845,5 +846,5 @@ var applyDiscount = async ({
 };
 
 export { applyDiscount, applyDiscountAction, createAddressAction, createCartAction, createLineItemAction, createRazorpayOrderAction, deleteAddressAction, deleteLineItemAction, getAddressesAction, getAllTaxonsAction, getAvailableDiscountsAction, getCartAction, getCartByIdAction, getCurrentUserLikedProductsAction, getLikedProductsAction, getOrderByIdAction, getOrderInvoiceAction, getOrdersAction, getOrgVideosAction, getOrganizationAction, getProductByIdAction, getProductsAction, getProductsByIdsAction, getProductsFilterAction, getRecentlyViewedProductsAction, getRelatedProductsAction, getTaxonByIdAction, getTaxonomiesAction, getTaxonomyByIdAction, getUserAction, likeProductAction, loginUser, removeDiscountAction, removeDiscountById, signUpUser, trackDiscountEventAction, unlikeProductAction, updateAddressAction, updateCartAction, updateCartIdLineItemsAction, updateLineItemAction, updateRazorpayPaymentAction, updateUserAction, validateCartTotal, verifyOtp };
-//# sourceMappingURL=chunk-J74BIWZ6.js.map
-//# sourceMappingURL=chunk-J74BIWZ6.js.map
+//# sourceMappingURL=chunk-5PX3D5IT.js.map
+//# sourceMappingURL=chunk-5PX3D5IT.js.map
