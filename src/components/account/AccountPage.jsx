@@ -27,7 +27,6 @@ export const AccountPage = ({ initialTab = "profile" }) => {
     try {
       if (actions?.getUser) {
         const user = await actions.getUser();
-        console.log("user", { user });
         setUserData(user);
       } else {
         // Fallback to auth user if action not provided
@@ -49,7 +48,6 @@ export const AccountPage = ({ initialTab = "profile" }) => {
     { id: "orders", label: "My Orders" },
   ];
 
-  console.log({ userData })
   return (
     <div className="min-h-screen bg-white">
       <div className="px-4 md:px-8 lg:px-[32px] py-[40px] md:py-[100px] flex flex-col md:flex-row items-start justify-between gap-8 w-full">
@@ -65,10 +63,11 @@ export const AccountPage = ({ initialTab = "profile" }) => {
                 <li key={item.id}>
                   <button
                     onClick={() => setActiveTab(item.id)}
-                    className={`w-full text-left px-4 py-3 text-[14px] uppercase tracking-wider transition-all duration-200 ${activeTab === item.id
+                    className={`w-full text-left px-4 py-3 text-[14px] uppercase tracking-wider transition-all duration-200 ${
+                      activeTab === item.id
                         ? "bg-[var(--core-primary)] text-white"
                         : "text-[#2d2d2d] hover:bg-[#f5f2ec]"
-                      }`}
+                    }`}
                   >
                     {item.label}
                   </button>

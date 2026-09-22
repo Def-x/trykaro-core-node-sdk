@@ -298,11 +298,13 @@ export const CoreProvider = ({
         setIsCartLoading(true);
 
         let resolvedCart = null;
-        const isSignedIn = auth?.isSignedIn ?? false;
+        const token = auth?.token ?? auth?.access_token ?? null;
+        const isActuallySignedIn = !!((auth?.isSignedIn ?? false) && token);
 
-        if (isSignedIn) {
-          const data = await resolvedActions.getCart(resolvedConfig?.regionId);
-          resolvedCart = Array.isArray(data) ? data[0] : data;
+        if (isActuallySignedIn && token) {
+          const data = await resolvedActions.getCart(resolvedConfig?.regionId, { token });
+          const candidate = Array.isArray(data) ? data[0] : data;
+          resolvedCart = candidate && !candidate.serverError && !candidate.error ? candidate : null;
         } else {
           const storedCartId =
             typeof window !== "undefined"
@@ -310,10 +312,12 @@ export const CoreProvider = ({
               : null;
 
           if (storedCartId && resolvedActions?.getCartById) {
-            resolvedCart = await resolvedActions.getCartById(
+            const candidate = await resolvedActions.getCartById(
               storedCartId,
               resolvedConfig?.regionId,
+              { token: null },
             );
+            resolvedCart = candidate && !candidate.serverError && !candidate.error ? candidate : null;
           }
         }
 
@@ -332,7 +336,7 @@ export const CoreProvider = ({
 
     loadCart();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resolvedConfig?.regionId, auth?.isSignedIn]);
+  }, [resolvedConfig?.regionId, auth?.isSignedIn, auth?.token, auth?.access_token]);
 
   useEffect(() => {
     if (typeof document === "undefined") return;

@@ -25,6 +25,7 @@ const getOrganizationId = (options = {}) =>
   null;
 
 const getServerToken = async (token) => {
+  if (token === null || token === false) return null;
   if (token) return token;
 
   if (typeof window !== "undefined") {
@@ -180,7 +181,10 @@ export const createCartAction = async (body = {}, options = {}) => {
   return requestJsonFromResponse(res, "Failed to create cart");
 };
 
-export const getCartAction = async (regionId, options = {}) => {
+export const getCartAction = async (regionId = null, options = {}) => {
+  const token = await getServerToken(options?.token);
+  if (!token) return [];
+
   const url = new URL(`${getApiBaseUrl(options)}/api/carts`);
   if (regionId) url.searchParams.set("region_id", regionId);
 
@@ -188,7 +192,7 @@ export const getCartAction = async (regionId, options = {}) => {
     url.toString(),
     {
       method: "GET",
-      headers: await buildHeaders(options),
+      headers: await buildHeaders({ ...options, token }),
       cache: "no-store",
     },
     "Failed to get cart",
@@ -196,12 +200,19 @@ export const getCartAction = async (regionId, options = {}) => {
 };
 
 export const getCartByIdAction = async (cartId, regionId, options = {}) => {
+  if (!cartId) return null;
+
   const url = new URL(`${getApiBaseUrl(options)}/api/carts/${cartId}`);
   if (regionId) url.searchParams.set("region_id", regionId);
 
+  const resolvedOptions = {
+    ...options,
+    token: options.token ?? null,
+  };
+
   const res = await fetch(url.toString(), {
     method: "GET",
-    headers: await buildHeaders(options),
+    headers: await buildHeaders(resolvedOptions),
     cache: "no-store",
   });
 

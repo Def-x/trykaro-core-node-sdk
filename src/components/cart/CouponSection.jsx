@@ -131,7 +131,9 @@ const CouponSection = () => {
       ) {
         // Force refresh cart to sync UI
         if (actions?.getCart && auth?.isSignedIn) {
-          const res = await actions.getCart(config?.regionId);
+          const res = await actions.getCart(config?.regionId, {
+            token: auth?.token ?? auth?.access_token,
+          });
           setCart(Array.isArray(res) ? res[0] : res);
         } else if (actions?.getCartById && cart?.id) {
           const res = await actions.getCartById(cart.id, config?.regionId);
@@ -198,7 +200,9 @@ const CouponSection = () => {
       ) {
         // Force refresh cart to sync UI
         if (actions?.getCart && auth?.isSignedIn) {
-          const res = await actions.getCart(config?.regionId);
+          const res = await actions.getCart(config?.regionId, {
+            token: auth?.token ?? auth?.access_token,
+          });
           setCart(Array.isArray(res) ? res[0] : res);
         } else if (actions?.getCartById && cart?.id) {
           const res = await actions.getCartById(cart.id, config?.regionId);

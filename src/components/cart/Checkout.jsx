@@ -613,7 +613,6 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
                           ? updatedCart[0]
                           : updatedCart;
 
-                        console.log({ regionId, updatedCart, cartData });
                         const orderId = cartData?.order_id;
                         setCart(null);
                         if (orderId) {

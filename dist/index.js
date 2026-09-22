@@ -1,5 +1,5 @@
-import { trackDiscountEventAction, removeDiscountById, removeDiscountAction, applyDiscountAction, getAvailableDiscountsAction, getOrderInvoiceAction, getOrderByIdAction, getOrdersAction, updateUserAction, getUserAction, deleteAddressAction, updateAddressAction, createAddressAction, getAddressesAction, updateRazorpayPaymentAction, createRazorpayOrderAction, deleteLineItemAction, updateLineItemAction, createLineItemAction, updateCartIdLineItemsAction, updateCartAction, createCartAction, getCartByIdAction, getCartAction, getCurrentUserLikedProductsAction, verifyOtp, signUpUser, loginUser, validateCartTotal } from './chunk-PI5OLAMJ.js';
-export { applyDiscount, applyDiscountAction, createAddressAction, createCartAction, createLineItemAction, createRazorpayOrderAction, deleteAddressAction, deleteLineItemAction, getAddressesAction, getAllTaxonsAction, getAvailableDiscountsAction, getCartAction, getCartByIdAction, getCurrentUserLikedProductsAction, getLikedProductsAction, getOrderByIdAction, getOrderInvoiceAction, getOrdersAction, getOrgVideosAction, getOrganizationAction, getProductByIdAction, getProductsAction, getProductsByIdsAction, getProductsFilterAction, getRecentlyViewedProductsAction, getRelatedProductsAction, getTaxonByIdAction, getTaxonomiesAction, getTaxonomyByIdAction, getUserAction, likeProductAction, loginUser, removeDiscountAction, removeDiscountById, signUpUser, trackDiscountEventAction, unlikeProductAction, updateAddressAction, updateCartAction, updateCartIdLineItemsAction, updateLineItemAction, updateRazorpayPaymentAction, updateUserAction, validateCartTotal, verifyOtp } from './chunk-PI5OLAMJ.js';
+import { trackDiscountEventAction, removeDiscountById, removeDiscountAction, applyDiscountAction, getAvailableDiscountsAction, getOrderInvoiceAction, getOrderByIdAction, getOrdersAction, updateUserAction, getUserAction, deleteAddressAction, updateAddressAction, createAddressAction, getAddressesAction, updateRazorpayPaymentAction, createRazorpayOrderAction, deleteLineItemAction, updateLineItemAction, createLineItemAction, updateCartIdLineItemsAction, updateCartAction, createCartAction, getCartByIdAction, getCartAction, getCurrentUserLikedProductsAction, verifyOtp, signUpUser, loginUser, validateCartTotal } from './chunk-IBZ56ABS.js';
+export { applyDiscount, applyDiscountAction, createAddressAction, createCartAction, createLineItemAction, createRazorpayOrderAction, deleteAddressAction, deleteLineItemAction, getAddressesAction, getAllTaxonsAction, getAvailableDiscountsAction, getCartAction, getCartByIdAction, getCurrentUserLikedProductsAction, getLikedProductsAction, getOrderByIdAction, getOrderInvoiceAction, getOrdersAction, getOrgVideosAction, getOrganizationAction, getProductByIdAction, getProductsAction, getProductsByIdsAction, getProductsFilterAction, getRecentlyViewedProductsAction, getRelatedProductsAction, getTaxonByIdAction, getTaxonomiesAction, getTaxonomyByIdAction, getUserAction, likeProductAction, loginUser, removeDiscountAction, removeDiscountById, signUpUser, trackDiscountEventAction, unlikeProductAction, updateAddressAction, updateCartAction, updateCartIdLineItemsAction, updateLineItemAction, updateRazorpayPaymentAction, updateUserAction, validateCartTotal, verifyOtp } from './chunk-IBZ56ABS.js';
 import { getPaymentGateway } from './chunk-ZXSZ7SQJ.js';
 import React8, { createContext, useEffect, useMemo, useState, useCallback, useContext, useRef, Component } from 'react';
 import posthog from 'posthog-js';
@@ -120,7 +120,6 @@ function ThirdPartyScripts({
   marketplaces: prefetched,
   orgData
 }) {
-  console.log({ orgData });
   useEffect(() => {
     async function run() {
       let records = prefetched;
@@ -584,17 +583,21 @@ var CoreProvider = ({
       try {
         setIsCartLoading(true);
         let resolvedCart = null;
-        const isSignedIn = auth?.isSignedIn ?? false;
-        if (isSignedIn) {
-          const data = await resolvedActions.getCart(resolvedConfig?.regionId);
-          resolvedCart = Array.isArray(data) ? data[0] : data;
+        const token = auth?.token ?? auth?.access_token ?? null;
+        const isActuallySignedIn = !!((auth?.isSignedIn ?? false) && token);
+        if (isActuallySignedIn && token) {
+          const data = await resolvedActions.getCart(resolvedConfig?.regionId, { token });
+          const candidate = Array.isArray(data) ? data[0] : data;
+          resolvedCart = candidate && !candidate.serverError && !candidate.error ? candidate : null;
         } else {
           const storedCartId = typeof window !== "undefined" ? localStorage.getItem("cartid") : null;
           if (storedCartId && resolvedActions?.getCartById) {
-            resolvedCart = await resolvedActions.getCartById(
+            const candidate = await resolvedActions.getCartById(
               storedCartId,
-              resolvedConfig?.regionId
+              resolvedConfig?.regionId,
+              { token: null }
             );
+            resolvedCart = candidate && !candidate.serverError && !candidate.error ? candidate : null;
           }
         }
         setCart(resolvedCart ?? null);
@@ -610,7 +613,7 @@ var CoreProvider = ({
       }
     };
     loadCart();
-  }, [resolvedConfig?.regionId, auth?.isSignedIn]);
+  }, [resolvedConfig?.regionId, auth?.isSignedIn, auth?.token, auth?.access_token]);
   useEffect(() => {
     if (typeof document === "undefined") return;
     const root = document.documentElement;
@@ -1127,7 +1130,8 @@ function useAddToCart() {
   const { cart, setCart, actions, toast, auth, config } = useCore();
   const [quantity, setQuantity] = useState(1);
   const [isAddToCartLoading, setIsAddToCartLoading] = useState(false);
-  const isSignedIn = auth?.isSignedIn ?? false;
+  const userToken = auth?.token ?? auth?.access_token ?? null;
+  const isActuallySignedIn = !!((auth?.isSignedIn ?? false) && userToken);
   const regionId = config?.regionId ?? null;
   const cartItems = cart?.line_items ?? [];
   const normalizeCustomizations = (c) => {
@@ -1168,44 +1172,44 @@ function useAddToCart() {
   const refreshCart = async (cartId) => {
     try {
       let updatedCart;
-      if (isSignedIn) {
-        const data = await actions.getCart?.(regionId);
+      if (isActuallySignedIn && userToken) {
+        const data = await actions.getCart?.(regionId, { token: userToken });
         updatedCart = Array.isArray(data) ? data[0] : data;
-      } else {
+      } else if (cartId) {
         updatedCart = await actions.getCartById?.(cartId, regionId);
       }
-      console.log("refreshCart", { updatedCart });
       setCart(updatedCart ?? null);
     } catch (err) {
       console.error("[useAddToCart] refreshCart error:", err);
     }
   };
   const addItemToCart = async (product, resolvedCartId, customizations = [], overrideQty = null) => {
-    console.log({ product, resolvedCartId, customizations, overrideQty });
     const sellingQTY = product?.selling_quantity?.values?.[0]?.label;
     const qty = overrideQty !== null ? overrideQty : quantity ?? 1;
     const existingLineItem = getCartItem(product, customizations);
     if (existingLineItem && !sellingQTY) {
       const newQty = existingLineItem.quantity + qty;
-      await actions.updateLineItem?.(existingLineItem.id, { quantity: newQty });
+      await actions.updateLineItem?.(
+        existingLineItem.id,
+        { quantity: newQty },
+        { token: userToken }
+      );
     } else {
       const body = {
         line_itemable_id: product?.id,
         quantity: qty,
         line_items_customizations: customizations,
-        ...resolvedCartId && !isSignedIn ? { cart_id: resolvedCartId } : {},
+        ...resolvedCartId && !isActuallySignedIn ? { cart_id: resolvedCartId } : {},
         ...regionId ? { region_id: regionId } : {}
       };
-      await actions.createLineItem?.(body);
+      await actions.createLineItem?.(body, { token: userToken });
     }
     setQuantity(sellingQTY ? Number(sellingQTY) : 1);
-    console.log({ resolvedCartId });
     if (resolvedCartId) {
       await refreshCart(resolvedCartId);
     }
   };
   const handleAddToCart = async (product, customizations = [], overrideQty = null) => {
-    console.log({ product, customizations, overrideQty });
     try {
       setIsAddToCartLoading(true);
       const storedCartId = typeof window !== "undefined" ? localStorage.getItem("cartid") : null;
@@ -1220,18 +1224,18 @@ function useAddToCart() {
           order_type: "delivery",
           ...regionId ? { region_id: regionId } : {}
         };
-        const createdCart = await actions.createCart?.(payload);
+        const createdCart = await actions.createCart?.(payload, {
+          token: userToken
+        });
         if (createdCart?.id) {
           resolvedCartId = createdCart.id;
-          if (!isSignedIn) {
+          if (!isActuallySignedIn) {
             localStorage.setItem("cartid", createdCart.id);
           }
-          console.log("createdCart", { createdCart });
           setCart(createdCart);
         }
       }
       await addItemToCart(product, resolvedCartId, customizations, overrideQty);
-      console.log({ product });
       const userId = auth?.user?.id ?? auth?.user?.userId ?? null;
       const currency = config?.currency ?? "INR";
       const qty = overrideQty !== null ? overrideQty : quantity ?? 1;
@@ -1256,11 +1260,15 @@ function useAddToCart() {
     try {
       setIsAddToCartLoading(true);
       if (existingLineItem.quantity <= 1) {
-        await actions.deleteLineItem?.(existingLineItem.id);
-      } else {
-        await actions.updateLineItem?.(existingLineItem.id, {
-          quantity: existingLineItem.quantity - 1
+        await actions.deleteLineItem?.(existingLineItem.id, {
+          token: userToken
         });
+      } else {
+        await actions.updateLineItem?.(
+          existingLineItem.id,
+          { quantity: existingLineItem.quantity - 1 },
+          { token: userToken }
+        );
       }
       const activeCartId = cart?.id;
       if (activeCartId) {
@@ -1364,6 +1372,7 @@ var useLogout = () => {
       }
       localStorage.removeItem("cartid");
       localStorage.removeItem("access_token");
+      localStorage.removeItem("user");
       try {
         Cookies.remove("access_token", { path: "/" });
       } catch (e) {
@@ -3911,7 +3920,6 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
                 const regionId = config?.regionId ?? null;
                 const updatedCart = await actions?.getCart?.(regionId);
                 const cartData = Array.isArray(updatedCart) ? updatedCart[0] : updatedCart;
-                console.log({ regionId, updatedCart, cartData });
                 const orderId = cartData?.order_id;
                 setCart(null);
                 if (orderId) {
@@ -4129,7 +4137,9 @@ var CouponSection = () => {
       setErrorMessage(msg);
       if (msg.toLowerCase().includes("already applied") || msg.toLowerCase().includes("discount is already")) {
         if (actions?.getCart && auth?.isSignedIn) {
-          const res = await actions.getCart(config?.regionId);
+          const res = await actions.getCart(config?.regionId, {
+            token: auth?.token ?? auth?.access_token
+          });
           setCart(Array.isArray(res) ? res[0] : res);
         } else if (actions?.getCartById && cart?.id) {
           const res = await actions.getCartById(cart.id, config?.regionId);
@@ -4176,7 +4186,9 @@ var CouponSection = () => {
       setErrorMessage(msg);
       if (msg.toLowerCase().includes("already applied") || msg.toLowerCase().includes("discount is already")) {
         if (actions?.getCart && auth?.isSignedIn) {
-          const res = await actions.getCart(config?.regionId);
+          const res = await actions.getCart(config?.regionId, {
+            token: auth?.token ?? auth?.access_token
+          });
           setCart(Array.isArray(res) ? res[0] : res);
         } else if (actions?.getCartById && cart?.id) {
           const res = await actions.getCartById(cart.id, config?.regionId);
@@ -4871,7 +4883,6 @@ var UserInfo = ({ user, isLoading, refetch }) => {
     setIsAddrLoading(true);
     try {
       const addrs = await actions.getUserAddress();
-      console.log("addrs", { addrs });
       setAddresses(addrs || []);
     } catch (error) {
       console.error("Error fetching addresses:", error);
@@ -5121,7 +5132,6 @@ var AccountPage = ({ initialTab = "profile" }) => {
     try {
       if (actions?.getUser) {
         const user = await actions.getUser();
-        console.log("user", { user });
         setUserData(user);
       } else {
         setUserData(auth?.user);
@@ -5139,7 +5149,6 @@ var AccountPage = ({ initialTab = "profile" }) => {
     { id: "profile", label: "My Profile" },
     { id: "orders", label: "My Orders" }
   ];
-  console.log({ userData });
   return /* @__PURE__ */ jsx("div", { className: "min-h-screen bg-white", children: /* @__PURE__ */ jsxs("div", { className: "px-4 md:px-8 lg:px-[32px] py-[40px] md:py-[100px] flex flex-col md:flex-row items-start justify-between gap-8 w-full", children: [
     /* @__PURE__ */ jsxs("aside", { className: "w-full md:w-[280px] lg:w-[320px] md:sticky top-[40px]", children: [
       /* @__PURE__ */ jsx("h1", { className: "font-[var(--font-regular)] text-[40px] md:text-[48px] leading-[1.05] text-[var(--core-primary)] mb-8 tracking-tight uppercase", children: "MY ACCOUNT" }),
@@ -5408,7 +5417,10 @@ var AccountOrdersPage = ({ initialOrders = [], pagination }) => {
   const isServerPaginated = pagination && pagination.total_pages !== void 0;
   const currentPage = isServerPaginated ? pagination.current_page : parseInt(searchParams.get("page") || "1", 10);
   const totalPages = isServerPaginated ? pagination.total_pages : Math.ceil(initialOrders.length / itemsPerPage) || 1;
-  const currentOrders = isServerPaginated ? initialOrders : initialOrders.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const currentOrders = isServerPaginated ? initialOrders : initialOrders.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
   const handlePageChange = (page) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("page", page.toString());
@@ -5417,11 +5429,11 @@ var AccountOrdersPage = ({ initialOrders = [], pagination }) => {
   const getVisiblePages = (current, total) => {
     if (total <= 5) return Array.from({ length: total }, (_, i) => i + 1);
     if (current <= 3) return [1, 2, 3, 4, 5, "...", total];
-    if (current >= total - 2) return [1, "...", total - 4, total - 3, total - 2, total - 1, total];
+    if (current >= total - 2)
+      return [1, "...", total - 4, total - 3, total - 2, total - 1, total];
     return [1, "...", current - 1, current, current + 1, "...", total];
   };
   const visiblePages = getVisiblePages(currentPage, totalPages);
-  console.log({ initialOrders, currentOrders, currentPage, totalPages });
   return /* @__PURE__ */ jsxs("div", { className: "animate-in fade-in duration-300", children: [
     /* @__PURE__ */ jsxs("h1", { className: "mb-6 flex items-center gap-2 text-[20px] font-[var(--font-bold)] text-[#1C1C1C]", children: [
       /* @__PURE__ */ jsx(AccountShoppingBagIcon, { className: "h-5 w-5 text-[var(--core-primary)]" }),
@@ -5485,8 +5497,15 @@ var AccountOrdersPage = ({ initialOrders = [], pagination }) => {
                     total
                   ] }),
                   /* @__PURE__ */ jsxs("span", { className: "flex items-center gap-1.5 border-l border-gray-200 pl-4", children: [
-                    "Payment: ",
-                    /* @__PURE__ */ jsx("span", { className: `uppercase text-[11px] font-[var(--font-bold)] tracking-tight ${paymentStatus.toLowerCase() === "received" || paymentStatus.toLowerCase() === "paid" ? "text-green-600" : "text-orange-500"}`, children: paymentStatus })
+                    "Payment:",
+                    " ",
+                    /* @__PURE__ */ jsx(
+                      "span",
+                      {
+                        className: `uppercase text-[11px] font-[var(--font-bold)] tracking-tight ${paymentStatus.toLowerCase() === "received" || paymentStatus.toLowerCase() === "paid" ? "text-green-600" : "text-orange-500"}`,
+                        children: paymentStatus
+                      }
+                    )
                   ] })
                 ] })
               ] }),
@@ -5531,7 +5550,14 @@ var AccountOrdersPage = ({ initialOrders = [], pagination }) => {
           }
         ),
         /* @__PURE__ */ jsx("div", { className: "flex flex-wrap items-center justify-center gap-1", children: visiblePages.map(
-          (page, index) => page === "..." ? /* @__PURE__ */ jsx("span", { className: "flex h-9 w-6 items-center justify-center text-gray-400", children: "..." }, `ellipsis-${index}`) : /* @__PURE__ */ jsx(
+          (page, index) => page === "..." ? /* @__PURE__ */ jsx(
+            "span",
+            {
+              className: "flex h-9 w-6 items-center justify-center text-gray-400",
+              children: "..."
+            },
+            `ellipsis-${index}`
+          ) : /* @__PURE__ */ jsx(
             "button",
             {
               onClick: () => handlePageChange(page),
@@ -5915,15 +5941,41 @@ var AccountWishlistPage = ({
     ] })
   ] });
 };
-var DownloadIcon = () => /* @__PURE__ */ jsxs("svg", { width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: [
-  /* @__PURE__ */ jsx("path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" }),
-  /* @__PURE__ */ jsx("polyline", { points: "7 10 12 15 17 10" }),
-  /* @__PURE__ */ jsx("line", { x1: "12", y1: "15", x2: "12", y2: "3" })
-] });
-var OrderConfirmationIcon = () => /* @__PURE__ */ jsxs("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: [
-  /* @__PURE__ */ jsx("path", { d: "M22 11.08V12a10 10 0 1 1-5.93-9.14" }),
-  /* @__PURE__ */ jsx("polyline", { points: "22 4 12 14.01 9 11.01" })
-] });
+var DownloadIcon = () => /* @__PURE__ */ jsxs(
+  "svg",
+  {
+    width: "20",
+    height: "20",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    children: [
+      /* @__PURE__ */ jsx("path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" }),
+      /* @__PURE__ */ jsx("polyline", { points: "7 10 12 15 17 10" }),
+      /* @__PURE__ */ jsx("line", { x1: "12", y1: "15", x2: "12", y2: "3" })
+    ]
+  }
+);
+var OrderConfirmationIcon = () => /* @__PURE__ */ jsxs(
+  "svg",
+  {
+    width: "24",
+    height: "24",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    children: [
+      /* @__PURE__ */ jsx("path", { d: "M22 11.08V12a10 10 0 1 1-5.93-9.14" }),
+      /* @__PURE__ */ jsx("polyline", { points: "22 4 12 14.01 9 11.01" })
+    ]
+  }
+);
 var fallbackToast = {
   error: (msg) => console.error(msg),
   success: (msg) => console.log(msg)
@@ -5931,7 +5983,6 @@ var fallbackToast = {
 var Order = (props) => {
   const params = useParams();
   const id = params?.orderid;
-  console.log({ id });
   const searchParams = useSearchParams();
   const router = useRouter();
   const { formatCurrency } = useCurrencyFormat();
@@ -5943,7 +5994,6 @@ var Order = (props) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
   const [isFetchingInvoice, setIsFetchingInvoice] = useState(false);
-  console.log({ data });
   useEffect(() => {
     if (!id) return;
     const fetchOrder = async () => {
@@ -5954,7 +6004,6 @@ var Order = (props) => {
           throw new Error("getOrderById action is not available");
         }
         const orderData = await actions.getOrderById(id);
-        console.log({ orderData });
         setData(orderData);
       } catch (err) {
         console.error("Failed to fetch order", err);
@@ -5965,7 +6014,16 @@ var Order = (props) => {
     };
     fetchOrder();
   }, [id, actions, config?.storeId]);
-  const { order_number, created_at, cart, order_type, state, order_status, payment_state, payment_status } = data || {};
+  const {
+    order_number,
+    created_at,
+    cart,
+    order_type,
+    state,
+    order_status,
+    payment_state,
+    payment_status
+  } = data || {};
   const {
     shipping_address,
     billing_address,
@@ -6044,9 +6102,19 @@ var Order = (props) => {
         "div",
         {
           className: "flex items-start gap-3 p-4 rounded-lg border-l-4",
-          style: { borderColor: "var(--core-secondary)", background: "color-mix(in srgb, var(--core-secondary) 8%, white)" },
+          style: {
+            borderColor: "var(--core-secondary)",
+            background: "color-mix(in srgb, var(--core-secondary) 8%, white)"
+          },
           children: [
-            /* @__PURE__ */ jsx("div", { className: "mt-0.5 shrink-0", style: { color: "var(--core-secondary)" }, children: /* @__PURE__ */ jsx(OrderConfirmationIcon, {}) }),
+            /* @__PURE__ */ jsx(
+              "div",
+              {
+                className: "mt-0.5 shrink-0",
+                style: { color: "var(--core-secondary)" },
+                children: /* @__PURE__ */ jsx(OrderConfirmationIcon, {})
+              }
+            ),
             /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-1", children: [
               /* @__PURE__ */ jsx("p", { className: "font-[var(--font-bold)] text-[16px] text-[var(--core-primary)] uppercase tracking-wide", children: "Thank you. Your order has been received" }),
               /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-regular)] text-[13px] text-gray-500", children: [
@@ -6055,7 +6123,8 @@ var Order = (props) => {
                   "#",
                   order_number
                 ] }),
-                " is confirmed and being processed."
+                " ",
+                "is confirmed and being processed."
               ] })
             ] })
           ]
@@ -6078,101 +6147,157 @@ var Order = (props) => {
             }
           )
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "border rounded-lg overflow-hidden", style: { borderColor: "color-mix(in srgb, var(--core-primary) 20%, #e8e5df)" }, children: [
-          /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-2 divide-x", style: { divideColor: "color-mix(in srgb, var(--core-primary) 15%, #e8e5df)" }, children: [
-            /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-1", children: [
-              /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Order Number" }),
-              /* @__PURE__ */ jsx("p", { className: "font-[var(--font-bold)] text-[14px] text-[var(--core-primary)]", children: order_number || "\u2014" })
-            ] }),
-            /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-1", children: [
-              /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Order Status" }),
-              /* @__PURE__ */ jsx(
-                "span",
+        /* @__PURE__ */ jsxs(
+          "div",
+          {
+            className: "border rounded-lg overflow-hidden",
+            style: {
+              borderColor: "color-mix(in srgb, var(--core-primary) 20%, #e8e5df)"
+            },
+            children: [
+              /* @__PURE__ */ jsxs(
+                "div",
                 {
-                  className: "inline-flex self-start font-[var(--font-bold)] text-[12px] px-2.5 py-0.5 rounded-full uppercase tracking-wide",
+                  className: "grid grid-cols-2 divide-x",
                   style: {
-                    background: "color-mix(in srgb, var(--core-secondary) 15%, white)",
-                    color: "var(--core-primary)",
-                    border: "1px solid color-mix(in srgb, var(--core-secondary) 40%, white)"
+                    divideColor: "color-mix(in srgb, var(--core-primary) 15%, #e8e5df)"
                   },
-                  children: order_status || "Processing"
-                }
-              )
-            ] })
-          ] }),
-          /* @__PURE__ */ jsx("div", { className: "border-t", style: { borderColor: "color-mix(in srgb, var(--core-primary) 12%, #e8e5df)" } }),
-          /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-2 divide-x", style: { divideColor: "color-mix(in srgb, var(--core-primary) 15%, #e8e5df)" }, children: [
-            /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-1", children: [
-              /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Order Date" }),
-              /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-[14px] text-[var(--core-primary)]", children: orderDate || "\u2014" })
-            ] }),
-            /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-1", children: [
-              /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Payment Status" }),
-              /* @__PURE__ */ jsx(
-                "p",
-                {
-                  className: "font-[var(--font-bold)] text-[13px] uppercase",
-                  style: { color: payment_status === "paid" || payment_status === "received" ? "#16a34a" : "var(--core-secondary)" },
-                  children: payment_status || "Pending"
-                }
-              )
-            ] })
-          ] }),
-          /* @__PURE__ */ jsx("div", { className: "border-t", style: { borderColor: "color-mix(in srgb, var(--core-primary) 12%, #e8e5df)" } }),
-          order_type === "pickup" ? /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-1", children: [
-            /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Pickup Address" }),
-            /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-[14px] text-[var(--core-primary)]", children: storePickUpAddress || "\u2014" })
-          ] }) : /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x", style: { borderColor: "color-mix(in srgb, var(--core-primary) 12%, #e8e5df)" }, children: [
-            /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-2", children: [
-              /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Delivery Address" }),
-              shipping_address?.label && /* @__PURE__ */ jsx(
-                "span",
-                {
-                  className: "self-start text-[10px] font-[var(--font-bold)] px-2 py-0.5 rounded-full uppercase tracking-widest",
-                  style: {
-                    background: "color-mix(in srgb, var(--core-primary) 10%, white)",
-                    color: "var(--core-primary)"
-                  },
-                  children: shipping_address.label
+                  children: [
+                    /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-1", children: [
+                      /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Order Number" }),
+                      /* @__PURE__ */ jsx("p", { className: "font-[var(--font-bold)] text-[14px] text-[var(--core-primary)]", children: order_number || "\u2014" })
+                    ] }),
+                    /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-1", children: [
+                      /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Order Status" }),
+                      /* @__PURE__ */ jsx(
+                        "span",
+                        {
+                          className: "inline-flex self-start font-[var(--font-bold)] text-[12px] px-2.5 py-0.5 rounded-full uppercase tracking-wide",
+                          style: {
+                            background: "color-mix(in srgb, var(--core-secondary) 15%, white)",
+                            color: "var(--core-primary)",
+                            border: "1px solid color-mix(in srgb, var(--core-secondary) 40%, white)"
+                          },
+                          children: order_status || "Processing"
+                        }
+                      )
+                    ] })
+                  ]
                 }
               ),
-              /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-0.5", children: [
-                /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-bold)] text-[13px] text-[var(--core-primary)]", children: [
-                  `${shipping_address?.firstname ?? ""} ${shipping_address?.lastname ?? ""}`.trim(),
-                  shipping_address?.phone && /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-regular)] text-gray-500", children: [
-                    " \xB7 ",
-                    shipping_address.phone
-                  ] })
-                ] }),
-                /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[13px] text-gray-500 leading-relaxed", children: fullShippingAddress })
-              ] })
-            ] }),
-            /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-2", children: [
-              /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Billing Address" }),
-              billing_address?.label && /* @__PURE__ */ jsx(
-                "span",
+              /* @__PURE__ */ jsx(
+                "div",
                 {
-                  className: "self-start text-[10px] font-[var(--font-bold)] px-2 py-0.5 rounded-full uppercase tracking-widest",
+                  className: "border-t",
                   style: {
-                    background: "color-mix(in srgb, var(--core-primary) 10%, white)",
-                    color: "var(--core-primary)"
-                  },
-                  children: billing_address.label
+                    borderColor: "color-mix(in srgb, var(--core-primary) 12%, #e8e5df)"
+                  }
                 }
               ),
-              /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-0.5", children: [
-                /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-bold)] text-[13px] text-[var(--core-primary)]", children: [
-                  `${billing_address?.firstname ?? ""} ${billing_address?.lastname ?? ""}`.trim(),
-                  billing_address?.phone && /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-regular)] text-gray-500", children: [
-                    " \xB7 ",
-                    billing_address.phone
-                  ] })
-                ] }),
-                /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[13px] text-gray-500 leading-relaxed", children: fullBillingAddress })
-              ] })
-            ] })
-          ] })
-        ] })
+              /* @__PURE__ */ jsxs(
+                "div",
+                {
+                  className: "grid grid-cols-2 divide-x",
+                  style: {
+                    divideColor: "color-mix(in srgb, var(--core-primary) 15%, #e8e5df)"
+                  },
+                  children: [
+                    /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-1", children: [
+                      /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Order Date" }),
+                      /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-[14px] text-[var(--core-primary)]", children: orderDate || "\u2014" })
+                    ] }),
+                    /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-1", children: [
+                      /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Payment Status" }),
+                      /* @__PURE__ */ jsx(
+                        "p",
+                        {
+                          className: "font-[var(--font-bold)] text-[13px] uppercase",
+                          style: {
+                            color: payment_status === "paid" || payment_status === "received" ? "#16a34a" : "var(--core-secondary)"
+                          },
+                          children: payment_status || "Pending"
+                        }
+                      )
+                    ] })
+                  ]
+                }
+              ),
+              /* @__PURE__ */ jsx(
+                "div",
+                {
+                  className: "border-t",
+                  style: {
+                    borderColor: "color-mix(in srgb, var(--core-primary) 12%, #e8e5df)"
+                  }
+                }
+              ),
+              order_type === "pickup" ? /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-1", children: [
+                /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Pickup Address" }),
+                /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-[14px] text-[var(--core-primary)]", children: storePickUpAddress || "\u2014" })
+              ] }) : /* @__PURE__ */ jsxs(
+                "div",
+                {
+                  className: "grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x",
+                  style: {
+                    borderColor: "color-mix(in srgb, var(--core-primary) 12%, #e8e5df)"
+                  },
+                  children: [
+                    /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-2", children: [
+                      /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Delivery Address" }),
+                      shipping_address?.label && /* @__PURE__ */ jsx(
+                        "span",
+                        {
+                          className: "self-start text-[10px] font-[var(--font-bold)] px-2 py-0.5 rounded-full uppercase tracking-widest",
+                          style: {
+                            background: "color-mix(in srgb, var(--core-primary) 10%, white)",
+                            color: "var(--core-primary)"
+                          },
+                          children: shipping_address.label
+                        }
+                      ),
+                      /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-0.5", children: [
+                        /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-bold)] text-[13px] text-[var(--core-primary)]", children: [
+                          `${shipping_address?.firstname ?? ""} ${shipping_address?.lastname ?? ""}`.trim(),
+                          shipping_address?.phone && /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-regular)] text-gray-500", children: [
+                            " ",
+                            "\xB7 ",
+                            shipping_address.phone
+                          ] })
+                        ] }),
+                        /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[13px] text-gray-500 leading-relaxed", children: fullShippingAddress })
+                      ] })
+                    ] }),
+                    /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-2", children: [
+                      /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Billing Address" }),
+                      billing_address?.label && /* @__PURE__ */ jsx(
+                        "span",
+                        {
+                          className: "self-start text-[10px] font-[var(--font-bold)] px-2 py-0.5 rounded-full uppercase tracking-widest",
+                          style: {
+                            background: "color-mix(in srgb, var(--core-primary) 10%, white)",
+                            color: "var(--core-primary)"
+                          },
+                          children: billing_address.label
+                        }
+                      ),
+                      /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-0.5", children: [
+                        /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-bold)] text-[13px] text-[var(--core-primary)]", children: [
+                          `${billing_address?.firstname ?? ""} ${billing_address?.lastname ?? ""}`.trim(),
+                          billing_address?.phone && /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-regular)] text-gray-500", children: [
+                            " ",
+                            "\xB7 ",
+                            billing_address.phone
+                          ] })
+                        ] }),
+                        /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[13px] text-gray-500 leading-relaxed", children: fullBillingAddress })
+                      ] })
+                    ] })
+                  ]
+                }
+              )
+            ]
+          }
+        )
       ] }),
       /* @__PURE__ */ jsx(
         "button",
@@ -6209,64 +6334,97 @@ var Order = (props) => {
           );
         }) })
       ] }),
-      /* @__PURE__ */ jsxs("div", { className: "border rounded-lg overflow-hidden", style: { borderColor: "color-mix(in srgb, var(--core-primary) 20%, #e8e5df)" }, children: [
-        /* @__PURE__ */ jsx("div", { className: "px-4 py-3", style: { background: "color-mix(in srgb, var(--core-primary) 6%, white)" }, children: /* @__PURE__ */ jsx("h3", { className: "font-[var(--font-bold)] text-[15px] text-[var(--core-primary)] uppercase tracking-wider", children: "Bill Summary" }) }),
-        /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-3", children: [
-          /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
-            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-regular)] text-[14px] text-gray-500", children: "Item Total" }),
-            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-medium)] text-[14px] text-[var(--core-primary)]", children: formatCurrency(display_item_total) })
-          ] }),
-          appliedDiscounts?.length > 0 ? appliedDiscounts.map((coupon, idx) => {
-            const amt = getDiscountAmount(coupon) ?? (appliedDiscounts.length === 1 ? totalSavings : 0);
-            return /* @__PURE__ */ jsxs(
+      /* @__PURE__ */ jsxs(
+        "div",
+        {
+          className: "border rounded-lg overflow-hidden",
+          style: {
+            borderColor: "color-mix(in srgb, var(--core-primary) 20%, #e8e5df)"
+          },
+          children: [
+            /* @__PURE__ */ jsx(
               "div",
               {
-                className: "flex justify-between items-center text-[14px]",
-                children: [
-                  /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-medium)] text-[#FF6500] flex items-center gap-1.5 flex-wrap", children: [
-                    /* @__PURE__ */ jsx("span", { children: "Discount" }),
-                    coupon?.code && /* @__PURE__ */ jsx("span", { className: "font-mono text-xs font-semibold px-2 py-0.5 rounded bg-orange-50 text-[#FF6500] border border-orange-200", children: coupon.code }),
-                    coupon?.display_action_value && /* @__PURE__ */ jsxs("span", { className: "text-xs text-[#FF6500]/90", children: [
-                      "(",
-                      coupon.display_action_value,
-                      ")"
-                    ] })
-                  ] }),
-                  /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-medium)] text-[#FF6500]", children: [
-                    "-",
-                    formatCurrency(amt)
-                  ] })
-                ]
-              },
-              coupon?.id || coupon?.discount_id || coupon?.code || idx
-            );
-          }) : hasPromoTotal ? /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center text-[14px]", children: [
-            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-medium)] text-[#FF6500]", children: "Discount" }),
-            /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-medium)] text-[#FF6500]", children: [
-              "-",
-              formatCurrency(promoTotalAmount)
+                className: "px-4 py-3",
+                style: {
+                  background: "color-mix(in srgb, var(--core-primary) 6%, white)"
+                },
+                children: /* @__PURE__ */ jsx("h3", { className: "font-[var(--font-bold)] text-[15px] text-[var(--core-primary)] uppercase tracking-wider", children: "Bill Summary" })
+              }
+            ),
+            /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-3", children: [
+              /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
+                /* @__PURE__ */ jsx("span", { className: "font-[var(--font-regular)] text-[14px] text-gray-500", children: "Item Total" }),
+                /* @__PURE__ */ jsx("span", { className: "font-[var(--font-medium)] text-[14px] text-[var(--core-primary)]", children: formatCurrency(display_item_total) })
+              ] }),
+              appliedDiscounts?.length > 0 ? appliedDiscounts.map((coupon, idx) => {
+                const amt = getDiscountAmount(coupon) ?? (appliedDiscounts.length === 1 ? totalSavings : 0);
+                return /* @__PURE__ */ jsxs(
+                  "div",
+                  {
+                    className: "flex justify-between items-center text-[14px]",
+                    children: [
+                      /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-medium)] text-[#FF6500] flex items-center gap-1.5 flex-wrap", children: [
+                        /* @__PURE__ */ jsx("span", { children: "Discount" }),
+                        coupon?.code && /* @__PURE__ */ jsx("span", { className: "font-mono text-xs font-semibold px-2 py-0.5 rounded bg-orange-50 text-[#FF6500] border border-orange-200", children: coupon.code }),
+                        coupon?.display_action_value && /* @__PURE__ */ jsxs("span", { className: "text-xs text-[#FF6500]/90", children: [
+                          "(",
+                          coupon.display_action_value,
+                          ")"
+                        ] })
+                      ] }),
+                      /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-medium)] text-[#FF6500]", children: [
+                        "-",
+                        formatCurrency(amt)
+                      ] })
+                    ]
+                  },
+                  coupon?.id || coupon?.discount_id || coupon?.code || idx
+                );
+              }) : hasPromoTotal ? /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center text-[14px]", children: [
+                /* @__PURE__ */ jsx("span", { className: "font-[var(--font-medium)] text-[#FF6500]", children: "Discount" }),
+                /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-medium)] text-[#FF6500]", children: [
+                  "-",
+                  formatCurrency(promoTotalAmount)
+                ] })
+              ] }) : null,
+              /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
+                /* @__PURE__ */ jsx("span", { className: "font-[var(--font-regular)] text-[14px] text-gray-500", children: "Tax" }),
+                /* @__PURE__ */ jsx("span", { className: "font-[var(--font-medium)] text-[14px] text-[var(--core-primary)]", children: formatCurrency(display_tax_total) })
+              ] }),
+              order_type !== "pickup" && /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
+                /* @__PURE__ */ jsx("span", { className: "font-[var(--font-regular)] text-[14px] text-gray-500", children: "Shipping" }),
+                /* @__PURE__ */ jsx("span", { className: "font-[var(--font-medium)] text-[14px] text-[var(--core-primary)]", children: display_ship_total === "0.00" || display_ship_total === 0 || display_ship_total === "0" ? /* @__PURE__ */ jsx(
+                  "span",
+                  {
+                    style: { color: "#16a34a" },
+                    className: "font-[var(--font-bold)]",
+                    children: "Free"
+                  }
+                ) : formatCurrency(display_ship_total) })
+              ] }),
+              /* @__PURE__ */ jsx(
+                "div",
+                {
+                  className: "h-px my-1",
+                  style: {
+                    background: "color-mix(in srgb, var(--core-secondary) 35%, #e8e5df)"
+                  }
+                }
+              ),
+              /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
+                /* @__PURE__ */ jsx("span", { className: "font-[var(--font-bold)] text-[15px] text-[var(--core-primary)]", children: "Total" }),
+                /* @__PURE__ */ jsx("span", { className: "font-[var(--font-bold)] text-[17px] text-[var(--core-primary)]", children: formatCurrency(display_total) })
+              ] }),
+              totalSavings > 0 && /* @__PURE__ */ jsxs("p", { className: "text-[13px] font-[var(--font-bold)] text-[#16a34a] mt-[6px] text-right", children: [
+                "You save ",
+                formatCurrency(totalSavings),
+                " on this order \u{1F389}"
+              ] })
             ] })
-          ] }) : null,
-          /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
-            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-regular)] text-[14px] text-gray-500", children: "Tax" }),
-            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-medium)] text-[14px] text-[var(--core-primary)]", children: formatCurrency(display_tax_total) })
-          ] }),
-          order_type !== "pickup" && /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
-            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-regular)] text-[14px] text-gray-500", children: "Shipping" }),
-            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-medium)] text-[14px] text-[var(--core-primary)]", children: display_ship_total === "0.00" || display_ship_total === 0 || display_ship_total === "0" ? /* @__PURE__ */ jsx("span", { style: { color: "#16a34a" }, className: "font-[var(--font-bold)]", children: "Free" }) : formatCurrency(display_ship_total) })
-          ] }),
-          /* @__PURE__ */ jsx("div", { className: "h-px my-1", style: { background: "color-mix(in srgb, var(--core-secondary) 35%, #e8e5df)" } }),
-          /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
-            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-bold)] text-[15px] text-[var(--core-primary)]", children: "Total" }),
-            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-bold)] text-[17px] text-[var(--core-primary)]", children: formatCurrency(display_total) })
-          ] }),
-          totalSavings > 0 && /* @__PURE__ */ jsxs("p", { className: "text-[13px] font-[var(--font-bold)] text-[#16a34a] mt-[6px] text-right", children: [
-            "You save ",
-            formatCurrency(totalSavings),
-            " on this order \u{1F389}"
-          ] })
-        ] })
-      ] })
+          ]
+        }
+      )
     ] }),
     /* @__PURE__ */ jsx(
       "button",
@@ -6281,7 +6439,6 @@ var Order = (props) => {
 };
 var Hello = () => {
   const { cart, isCartLoading } = useCore();
-  console.log("Cart:", cart, isCartLoading);
   return /* @__PURE__ */ jsx("div", { children: isCartLoading ? "Loading..." : "Core Working \u2705" });
 };
 var DeveloperErrorBoundary = class extends Component {

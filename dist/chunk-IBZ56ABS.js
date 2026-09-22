@@ -3,6 +3,7 @@ var API_VERSION_ACCEPT = "application/vnd.defx-store.v2";
 var getApiBaseUrl = (options = {}) => options?.config?.apiBaseUrl || options?.apiBaseUrl || process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || "";
 var getOrganizationId = (options = {}) => options?.config?.storeId || options?.orgId || process.env.NEXT_PUBLIC_ORGANIZATION_ID || process.env.ORG_ID || null;
 var getServerToken = async (token) => {
+  if (token === null || token === false) return null;
   if (token) return token;
   if (typeof window !== "undefined") {
     return window.localStorage?.getItem("access_token") || window.localStorage?.getItem("token") || null;
@@ -116,25 +117,32 @@ var createCartAction = async (body = {}, options = {}) => {
   });
   return requestJsonFromResponse(res, "Failed to create cart");
 };
-var getCartAction = async (regionId, options = {}) => {
+var getCartAction = async (regionId = null, options = {}) => {
+  const token = await getServerToken(options?.token);
+  if (!token) return [];
   const url = new URL(`${getApiBaseUrl(options)}/api/carts`);
   if (regionId) url.searchParams.set("region_id", regionId);
   return requestJson(
     url.toString(),
     {
       method: "GET",
-      headers: await buildHeaders(options),
+      headers: await buildHeaders({ ...options, token }),
       cache: "no-store"
     },
     "Failed to get cart"
   );
 };
 var getCartByIdAction = async (cartId, regionId, options = {}) => {
+  if (!cartId) return null;
   const url = new URL(`${getApiBaseUrl(options)}/api/carts/${cartId}`);
   if (regionId) url.searchParams.set("region_id", regionId);
+  const resolvedOptions = {
+    ...options,
+    token: options.token ?? null
+  };
   const res = await fetch(url.toString(), {
     method: "GET",
-    headers: await buildHeaders(options),
+    headers: await buildHeaders(resolvedOptions),
     cache: "no-store"
   });
   if (res.status === 404) return null;
@@ -801,5 +809,5 @@ var applyDiscount = async ({
 };
 
 export { applyDiscount, applyDiscountAction, createAddressAction, createCartAction, createLineItemAction, createRazorpayOrderAction, deleteAddressAction, deleteLineItemAction, getAddressesAction, getAllTaxonsAction, getAvailableDiscountsAction, getCartAction, getCartByIdAction, getCurrentUserLikedProductsAction, getLikedProductsAction, getOrderByIdAction, getOrderInvoiceAction, getOrdersAction, getOrgVideosAction, getOrganizationAction, getProductByIdAction, getProductsAction, getProductsByIdsAction, getProductsFilterAction, getRecentlyViewedProductsAction, getRelatedProductsAction, getTaxonByIdAction, getTaxonomiesAction, getTaxonomyByIdAction, getUserAction, likeProductAction, loginUser, removeDiscountAction, removeDiscountById, signUpUser, trackDiscountEventAction, unlikeProductAction, updateAddressAction, updateCartAction, updateCartIdLineItemsAction, updateLineItemAction, updateRazorpayPaymentAction, updateUserAction, validateCartTotal, verifyOtp };
-//# sourceMappingURL=chunk-PI5OLAMJ.js.map
-//# sourceMappingURL=chunk-PI5OLAMJ.js.map
+//# sourceMappingURL=chunk-IBZ56ABS.js.map
+//# sourceMappingURL=chunk-IBZ56ABS.js.map

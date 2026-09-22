@@ -25,7 +25,6 @@ export const UserInfo = ({ user, isLoading, refetch }) => {
     setIsAddrLoading(true);
     try {
       const addrs = await actions.getUserAddress();
-      console.log("addrs", { addrs });
       setAddresses(addrs || []);
     } catch (error) {
       console.error("Error fetching addresses:", error);

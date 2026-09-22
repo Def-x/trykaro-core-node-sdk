@@ -25,7 +25,6 @@ export function ThirdPartyScripts({
   marketplaces: prefetched,
   orgData,
 }) {
-  console.log({ orgData });
   useEffect(() => {
     async function run() {
       let records = prefetched;
