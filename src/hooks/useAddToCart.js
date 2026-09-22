@@ -30,6 +30,7 @@ export function useAddToCart() {
   const { cart, setCart, actions, toast, auth, config } = useCore();
   const [quantity, setQuantity] = useState(1);
   const [isAddToCartLoading, setIsAddToCartLoading] = useState(false);
+  const [deletingLineItemId, setDeletingLineItemId] = useState(null);
 
   const userToken = auth?.token ?? auth?.access_token ?? null;
   const isActuallySignedIn = !!((auth?.isSignedIn ?? false) && userToken);
@@ -228,6 +229,7 @@ export function useAddToCart() {
       setIsAddToCartLoading(true);
 
       if (existingLineItem.quantity <= 1) {
+        setDeletingLineItemId(existingLineItem.id);
         await actions.deleteLineItem?.(existingLineItem.id, {
           token: userToken,
         });
@@ -253,6 +255,7 @@ export function useAddToCart() {
       }
     } finally {
       setIsAddToCartLoading(false);
+      setDeletingLineItemId(null);
     }
   };
 
@@ -261,8 +264,15 @@ export function useAddToCart() {
    */
   const handleDeleteLineItem = async (product) => {
     try {
-      // setIsAddToCartLoading(true);
-      await actions.deleteLineItem?.(product?.id);
+      setIsAddToCartLoading(true);
+      const lineItem = product?.line_itemable
+        ? product
+        : (getCartItem(product) || product);
+      const lineItemId = lineItem?.id;
+      if (lineItemId) {
+        setDeletingLineItemId(lineItemId);
+      }
+      await actions.deleteLineItem?.(lineItemId || product?.id);
 
       const activeCartId = cart?.id;
       if (activeCartId) {
@@ -295,6 +305,7 @@ export function useAddToCart() {
       }
     } finally {
       setIsAddToCartLoading(false);
+      setDeletingLineItemId(null);
     }
   };
 
@@ -306,6 +317,7 @@ export function useAddToCart() {
     quantity,
     setQuantity,
     isAddToCartLoading,
+    deletingLineItemId,
     cartItems,
     cart,
   };

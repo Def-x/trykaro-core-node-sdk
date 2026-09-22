@@ -1127,6 +1127,7 @@ function useAddToCart() {
   const { cart, setCart, actions, toast, auth, config } = useCore();
   const [quantity, setQuantity] = useState(1);
   const [isAddToCartLoading, setIsAddToCartLoading] = useState(false);
+  const [deletingLineItemId, setDeletingLineItemId] = useState(null);
   const userToken = auth?.token ?? auth?.access_token ?? null;
   const isActuallySignedIn = !!((auth?.isSignedIn ?? false) && userToken);
   const regionId = config?.regionId ?? null;
@@ -1257,6 +1258,7 @@ function useAddToCart() {
     try {
       setIsAddToCartLoading(true);
       if (existingLineItem.quantity <= 1) {
+        setDeletingLineItemId(existingLineItem.id);
         await actions.deleteLineItem?.(existingLineItem.id, {
           token: userToken
         });
@@ -1281,11 +1283,18 @@ function useAddToCart() {
       }
     } finally {
       setIsAddToCartLoading(false);
+      setDeletingLineItemId(null);
     }
   };
   const handleDeleteLineItem = async (product) => {
     try {
-      await actions.deleteLineItem?.(product?.id);
+      setIsAddToCartLoading(true);
+      const lineItem = product?.line_itemable ? product : getCartItem(product) || product;
+      const lineItemId = lineItem?.id;
+      if (lineItemId) {
+        setDeletingLineItemId(lineItemId);
+      }
+      await actions.deleteLineItem?.(lineItemId || product?.id);
       const activeCartId = cart?.id;
       if (activeCartId) {
         await refreshCart(activeCartId);
@@ -1312,6 +1321,7 @@ function useAddToCart() {
       }
     } finally {
       setIsAddToCartLoading(false);
+      setDeletingLineItemId(null);
     }
   };
   return {
@@ -1322,6 +1332,7 @@ function useAddToCart() {
     quantity,
     setQuantity,
     isAddToCartLoading,
+    deletingLineItemId,
     cartItems,
     cart
   };
@@ -2022,13 +2033,31 @@ var CartItem = ({
   renderActions = null,
   className = ""
 }) => {
-  const { handleAddToCart, handleDecreaseQty, handleDeleteLineItem, isAddToCartLoading } = useAddToCart();
+  const {
+    handleAddToCart,
+    handleDecreaseQty,
+    handleDeleteLineItem,
+    isAddToCartLoading,
+    deletingLineItemId
+  } = useAddToCart();
   const { formatCurrency } = useCurrencyFormat();
+  const [isDeleting, setIsDeleting] = useState(false);
   const product = item?.line_itemable;
   const name = product?.name ?? item?.name ?? "Product";
   const price = item?.price ?? product?.price ?? 0;
   const quantity = item?.quantity ?? 0;
   const imageUrl = product?.product_images?.[0]?.product_image_url ?? product?.image_url ?? null;
+  const isItemDeleting = isDeleting || Boolean(item?.id) && deletingLineItemId === item?.id;
+  const isActionDisabled = isAddToCartLoading || isItemDeleting;
+  const handleDelete = async () => {
+    if (isActionDisabled) return;
+    try {
+      setIsDeleting(true);
+      await handleDeleteLineItem(item);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
   const s = {
     row: {
       display: "flex",
@@ -2114,18 +2143,18 @@ var CartItem = ({
           {
             style: s.qtyBtn,
             onClick: () => handleDecreaseQty(product),
-            disabled: isAddToCartLoading,
+            disabled: isActionDisabled,
             "aria-label": "Decrease quantity",
             children: "\u2212"
           }
         ),
-        /* @__PURE__ */ jsx("span", { style: s.qty, children: isAddToCartLoading ? /* @__PURE__ */ jsx(Spinner, { size: "sm" }) : quantity }),
+        /* @__PURE__ */ jsx("span", { style: s.qty, children: isItemDeleting || isAddToCartLoading ? /* @__PURE__ */ jsx(Spinner, { size: "sm" }) : quantity }),
         /* @__PURE__ */ jsx(
           "button",
           {
             style: s.qtyBtn,
             onClick: () => handleAddToCart(product),
-            disabled: isAddToCartLoading,
+            disabled: isActionDisabled,
             "aria-label": "Increase quantity",
             children: "+"
           }
@@ -2135,12 +2164,15 @@ var CartItem = ({
     /* @__PURE__ */ jsx(
       "button",
       {
-        style: s.deleteBtn,
-        onClick: () => handleDeleteLineItem(product),
-        disabled: isAddToCartLoading,
+        style: {
+          ...s.deleteBtn,
+          ...isActionDisabled ? { opacity: 0.5, cursor: "not-allowed", pointerEvents: "none" } : {}
+        },
+        onClick: handleDelete,
+        disabled: isActionDisabled,
         "aria-label": "Remove item",
         title: "Remove",
-        children: "\u2715"
+        children: isItemDeleting ? /* @__PURE__ */ jsx(Spinner, { size: "sm" }) : "\u2715"
       }
     )
   ] });
@@ -2488,16 +2520,23 @@ var ViewCustomizationModal = ({
   ] }) });
 };
 var ViewCustomizationModal_default = ViewCustomizationModal;
-var DeleteIcon = ({ onClick, disabled, className, title }) => /* @__PURE__ */ jsx(
+var DeleteIcon = ({ onClick, disabled, loading, className, title }) => /* @__PURE__ */ jsx(
   "button",
   {
     type: "button",
     onClick,
-    disabled,
-    className,
+    disabled: disabled || loading,
+    className: `${className || ""} ${disabled || loading ? "cursor-not-allowed opacity-50 pointer-events-none" : ""}`,
     title,
     "aria-label": title || "Delete",
-    children: /* @__PURE__ */ jsxs(
+    children: loading ? /* @__PURE__ */ jsx(
+      "div",
+      {
+        className: "w-4 h-4 border-2 border-[var(--core-primary)] border-t-transparent rounded-full animate-spin",
+        role: "status",
+        "aria-label": "Deleting..."
+      }
+    ) : /* @__PURE__ */ jsxs(
       "svg",
       {
         width: "18",
@@ -2536,8 +2575,12 @@ var ProductlistCard = ({ product, component, orderType }) => {
     handleDeleteLineItem,
     handleDecreaseQty,
     handleAddToCart,
-    isAddToCartLoading
+    isAddToCartLoading,
+    deletingLineItemId
   } = useAddToCart();
+  const [isDeleting, setIsDeleting] = useState(false);
+  const isItemDeleting = isDeleting || Boolean(product?.id) && deletingLineItemId === product?.id;
+  const isActionDisabled = isAddToCartLoading || isItemDeleting;
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const handleNavigateToProduct = () => {
@@ -2556,7 +2599,13 @@ var ProductlistCard = ({ product, component, orderType }) => {
     event.currentTarget.src = noProductImage;
   };
   const handleDeleteItem = async () => {
-    await handleDeleteLineItem(product);
+    if (isActionDisabled) return;
+    try {
+      setIsDeleting(true);
+      await handleDeleteLineItem(product);
+    } finally {
+      setIsDeleting(false);
+    }
   };
   const handleEditConfirm = async (newCustomizations, newQty) => {
     try {
@@ -2607,6 +2656,8 @@ var ProductlistCard = ({ product, component, orderType }) => {
           DeleteIcon,
           {
             onClick: handleDeleteItem,
+            disabled: isActionDisabled,
+            loading: isItemDeleting,
             className: "cursor-pointer opacity-100 hover:opacity-80 transition-opacity",
             title: "Delete item"
           }
@@ -2696,7 +2747,7 @@ var ProductlistCard = ({ product, component, orderType }) => {
                 product?.line_itemable,
                 product?.line_items_customizations
               ),
-              disabled: isAddToCartLoading,
+              disabled: isActionDisabled,
               className: "w-7 h-full flex items-center justify-center text-lg text-gray-500 hover:text-[var(--core-primary)] transition-colors disabled:opacity-50 pb-0.5",
               children: "-"
             }
@@ -2710,7 +2761,7 @@ var ProductlistCard = ({ product, component, orderType }) => {
                 product?.line_items_customizations,
                 1
               ),
-              disabled: isAddToCartLoading,
+              disabled: isActionDisabled,
               className: "w-7 h-full flex items-center justify-center text-base text-gray-500 hover:text-[var(--core-primary)] transition-colors disabled:opacity-50 pb-0.5",
               children: "+"
             }
@@ -2720,7 +2771,8 @@ var ProductlistCard = ({ product, component, orderType }) => {
           DeleteIcon,
           {
             onClick: handleDeleteItem,
-            disabled: isAddToCartLoading,
+            disabled: isActionDisabled,
+            loading: isItemDeleting,
             className: "cursor-pointer opacity-100 hover:opacity-80 transition-opacity disabled:opacity-50",
             title: "Delete item"
           }

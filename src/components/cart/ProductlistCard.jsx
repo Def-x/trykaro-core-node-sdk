@@ -7,30 +7,38 @@ import CustomizationModal from "../common/CustomizationModal";
 import ViewCustomizationModal from "../common/ViewCustomizationModal";
 
 // ─── Inline Icons ─────────────────────────────────────────────────────────────
-const DeleteIcon = ({ onClick, disabled, className, title }) => (
+const DeleteIcon = ({ onClick, disabled, loading, className, title }) => (
   <button
     type="button"
     onClick={onClick}
-    disabled={disabled}
-    className={className}
+    disabled={disabled || loading}
+    className={`${className || ""} ${disabled || loading ? "cursor-not-allowed opacity-50 pointer-events-none" : ""}`}
     title={title}
     aria-label={title || "Delete"}
   >
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <polyline points="3 6 5 6 21 6" />
-      <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
-      <path d="M10 11v6M14 11v6" />
-      <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
-    </svg>
+    {loading ? (
+      <div
+        className="w-4 h-4 border-2 border-[var(--core-primary)] border-t-transparent rounded-full animate-spin"
+        role="status"
+        aria-label="Deleting..."
+      />
+    ) : (
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <polyline points="3 6 5 6 21 6" />
+        <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+        <path d="M10 11v6M14 11v6" />
+        <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
+      </svg>
+    )}
   </button>
 );
 
@@ -57,7 +65,13 @@ const ProductlistCard = ({ product, component, orderType }) => {
     handleDecreaseQty,
     handleAddToCart,
     isAddToCartLoading,
+    deletingLineItemId,
   } = useAddToCart();
+
+  const [isDeleting, setIsDeleting] = useState(false);
+  const isItemDeleting =
+    isDeleting || (Boolean(product?.id) && deletingLineItemId === product?.id);
+  const isActionDisabled = isAddToCartLoading || isItemDeleting;
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -85,7 +99,13 @@ const ProductlistCard = ({ product, component, orderType }) => {
   };
 
   const handleDeleteItem = async () => {
-    await handleDeleteLineItem(product);
+    if (isActionDisabled) return;
+    try {
+      setIsDeleting(true);
+      await handleDeleteLineItem(product);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleEditConfirm = async (newCustomizations, newQty) => {
@@ -167,6 +187,8 @@ const ProductlistCard = ({ product, component, orderType }) => {
           {component !== "order" && (
             <DeleteIcon
               onClick={handleDeleteItem}
+              disabled={isActionDisabled}
+              loading={isItemDeleting}
               className="cursor-pointer opacity-100 hover:opacity-80 transition-opacity"
               title="Delete item"
             />
@@ -281,7 +303,7 @@ const ProductlistCard = ({ product, component, orderType }) => {
                       product?.line_items_customizations,
                     )
                   }
-                  disabled={isAddToCartLoading}
+                  disabled={isActionDisabled}
                   className="w-7 h-full flex items-center justify-center text-lg text-gray-500 hover:text-[var(--core-primary)] transition-colors disabled:opacity-50 pb-0.5"
                 >
                   -
@@ -297,7 +319,7 @@ const ProductlistCard = ({ product, component, orderType }) => {
                       1,
                     )
                   }
-                  disabled={isAddToCartLoading}
+                  disabled={isActionDisabled}
                   className="w-7 h-full flex items-center justify-center text-base text-gray-500 hover:text-[var(--core-primary)] transition-colors disabled:opacity-50 pb-0.5"
                 >
                   +
@@ -321,7 +343,8 @@ const ProductlistCard = ({ product, component, orderType }) => {
             )} */}
             <DeleteIcon
               onClick={handleDeleteItem}
-              disabled={isAddToCartLoading}
+              disabled={isActionDisabled}
+              loading={isItemDeleting}
               className="cursor-pointer opacity-100 hover:opacity-80 transition-opacity disabled:opacity-50"
               title="Delete item"
             />
