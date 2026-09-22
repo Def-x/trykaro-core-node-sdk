@@ -28,6 +28,11 @@ import {
 import { validateCartTotal } from "../../actions/storefrontActions";
 import CartMismatchBanner from "./CartMismatchBanner";
 
+const normalizeAddresses = (payload) =>
+  payload?.data ??
+  payload?.addresses ??
+  (Array.isArray(payload) ? payload : []);
+
 // ─── Top-level Checkout ────────────────────────────────────────────────────────
 const Checkout = ({ hasDeletedItems }) => {
   const { auth, config } = useCore();
@@ -172,20 +177,26 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
   const { shippingAddressId, billingAddressId } = selectedAddress;
 
   // Fetch addresses using getUserAddress action
-  const fetchAddresses = useCallback(async () => {
-    try {
-      setIsAddressLoading(true);
-      if (actions?.getUserAddress && auth?.isSignedIn) {
-        const data = await actions.getUserAddress();
-        setAddresses(Array.isArray(data) ? data : [data]);
+  const fetchAddresses = useCallback(
+    async (options = {}) => {
+      try {
+        setIsAddressLoading(true);
+        const token = auth?.token ?? auth?.access_token ?? null;
+        if (actions?.getUserAddress && auth?.isSignedIn && token) {
+          const data = await actions.getUserAddress(options);
+          setAddresses(normalizeAddresses(data));
+        } else {
+          setAddresses([]);
+        }
+      } catch (err) {
+        console.error("Failed to fetch addresses:", err);
+        setAddresses([]);
+      } finally {
+        setIsAddressLoading(false);
       }
-    } catch (err) {
-      console.error("Failed to fetch addresses:", err);
-      setAddresses([]);
-    } finally {
-      setIsAddressLoading(false);
-    }
-  }, [actions, auth?.isSignedIn]);
+    },
+    [actions?.getUserAddress, auth?.isSignedIn, auth?.token, auth?.access_token],
+  );
 
   useEffect(() => {
     fetchAddresses();
@@ -526,7 +537,7 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
               cart={cart}
               setCart={setCart}
               user={user}
-              refetch={fetchAddresses}
+              refetch={() => fetchAddresses({ force: true })}
               sameAsShipping={sameAsShipping}
               setSameAsShipping={setSameAsShipping}
               shippingAddressId={shippingAddressId}
@@ -536,7 +547,7 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
               isCarthaveShippingAddress={isCarthaveShippingAddress}
             />
           ) : (
-            <AddressFormInline refetch={fetchAddresses} />
+            <AddressFormInline refetch={() => fetchAddresses({ force: true })} />
           )}
         </div>
       )}

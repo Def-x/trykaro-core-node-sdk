@@ -9,25 +9,35 @@ import { AccountMapPinIcon, AccountPencilIcon, AccountPlusIcon, AccountTrashIcon
 const normalizeAddresses = (payload) => payload?.data ?? payload?.addresses ?? (Array.isArray(payload) ? payload : []);
 
 export const AccountAddressesPage = () => {
-  const { actions, toast } = useCore();
+  const { actions, toast, auth } = useCore();
   const [addresses, setAddresses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [editingAddress, setEditingAddress] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
 
-  const fetchAddresses = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const res = await actions?.getUserAddress?.();
-      setAddresses(normalizeAddresses(res));
-    } catch (error) {
-      console.error("Failed to fetch addresses", error);
-      toast?.error?.("Failed to fetch addresses");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [actions, toast]);
+  const fetchAddresses = useCallback(
+    async (options = {}) => {
+      const token = auth?.token ?? auth?.access_token ?? null;
+      const signedIn = !!((auth?.isSignedIn ?? false) && token);
+      if (!signedIn) {
+        setAddresses([]);
+        setIsLoading(false);
+        return;
+      }
+      setIsLoading(true);
+      try {
+        const res = await actions?.getUserAddress?.(options);
+        setAddresses(normalizeAddresses(res));
+      } catch (error) {
+        console.error("Failed to fetch addresses", error);
+        toast?.error?.("Failed to fetch addresses");
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [actions, toast, auth?.isSignedIn, auth?.token, auth?.access_token],
+  );
 
   useEffect(() => {
     fetchAddresses();
@@ -48,7 +58,7 @@ export const AccountAddressesPage = () => {
     setDeletingId(addressId);
     try {
       await actions?.deleteAddress?.(addressId);
-      await fetchAddresses();
+      await fetchAddresses({ force: true });
       toast?.success?.("Address deleted successfully");
     } catch (error) {
       console.error("Failed to delete address", error);
@@ -107,7 +117,7 @@ export const AccountAddressesPage = () => {
           onCancel={() => setIsModalOpen(false)}
           onSuccess={() => {
             setIsModalOpen(false);
-            fetchAddresses();
+            fetchAddresses({ force: true });
           }}
           submitLabel={editingAddress?.id ? "Save Changes" : "Save Address"}
         />

@@ -9,6 +9,7 @@ export { useCurrencyFormat } from "./hooks/useCurrencyFormat";
 export { useAuth } from "./hooks/useAuth";
 export { useLogout } from "./hooks/useLogout";
 export { useVariantSelection } from "./hooks/useVariantSelection";
+export { useAddresses } from "./hooks/useAddresses";
 export { default as useCartInfo } from "./hooks/userCartInfo";
 export {
   useGetCurrentUserLikedProductsQuery,

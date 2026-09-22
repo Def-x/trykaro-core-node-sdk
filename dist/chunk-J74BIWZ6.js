@@ -218,47 +218,83 @@ var updateRazorpayPaymentAction = async (paymentId, razorpayPaymentId, options =
   "Failed to update Razorpay payment id"
 );
 var getAddressesAction = async (options = {}) => {
-  const token = await getServerToken(options.token);
+  const token = await getServerToken(options?.token);
   if (!token) return { data: [] };
-  return requestJson(
+  const url = `${getApiBaseUrl(options)}/api/addresses`;
+  const fetchConfig = await buildCachedFetchConfig(
+    ["addresses"],
+    86400,
+    { ...options, token }
+  );
+  return requestJson(url, fetchConfig, "Failed to fetch addresses");
+};
+var createAddressAction = async (addressData, options = {}) => {
+  const token = await getServerToken(options?.token);
+  if (!token) throw new Error("Unauthorized");
+  const body = addressData?.address ? addressData : { address: addressData };
+  const res = await requestJson(
     `${getApiBaseUrl(options)}/api/addresses`,
     {
-      method: "GET",
-      headers: await buildHeaders({ ...options, token }),
+      method: "POST",
+      headers: await buildHeaders({ ...options, token, requireAuth: true }),
+      body: JSON.stringify(body),
       cache: "no-store"
     },
-    "Failed to fetch addresses"
+    "Failed to create address"
   );
+  if (typeof window === "undefined") {
+    try {
+      const { revalidateTag } = await import('next/cache');
+      revalidateTag("addresses");
+    } catch {
+    }
+  }
+  return res;
 };
-var createAddressAction = async (addressData, options = {}) => requestJson(
-  `${getApiBaseUrl(options)}/api/addresses`,
-  {
-    method: "POST",
-    headers: await buildHeaders({ ...options, requireAuth: true }),
-    body: JSON.stringify({ address: addressData }),
-    cache: "no-store"
-  },
-  "Failed to create address"
-);
-var updateAddressAction = async (addressId, addressData, options = {}) => requestJson(
-  `${getApiBaseUrl(options)}/api/addresses/${addressId}`,
-  {
-    method: "PUT",
-    headers: await buildHeaders({ ...options, requireAuth: true }),
-    body: JSON.stringify({ address: addressData }),
-    cache: "no-store"
-  },
-  "Failed to update address"
-);
-var deleteAddressAction = async (addressId, options = {}) => requestJson(
-  `${getApiBaseUrl(options)}/api/addresses/${addressId}`,
-  {
-    method: "DELETE",
-    headers: await buildHeaders({ ...options, requireAuth: true }),
-    cache: "no-store"
-  },
-  "Failed to delete address"
-);
+var updateAddressAction = async (addressId, addressData, options = {}) => {
+  const token = await getServerToken(options?.token);
+  if (!token) throw new Error("Unauthorized");
+  const body = addressData?.address ? addressData : { address: addressData };
+  const res = await requestJson(
+    `${getApiBaseUrl(options)}/api/addresses/${addressId}`,
+    {
+      method: "PUT",
+      headers: await buildHeaders({ ...options, token, requireAuth: true }),
+      body: JSON.stringify(body),
+      cache: "no-store"
+    },
+    "Failed to update address"
+  );
+  if (typeof window === "undefined") {
+    try {
+      const { revalidateTag } = await import('next/cache');
+      revalidateTag("addresses");
+    } catch {
+    }
+  }
+  return res;
+};
+var deleteAddressAction = async (addressId, options = {}) => {
+  const token = await getServerToken(options?.token);
+  if (!token) throw new Error("Unauthorized");
+  const res = await requestJson(
+    `${getApiBaseUrl(options)}/api/addresses/${addressId}`,
+    {
+      method: "DELETE",
+      headers: await buildHeaders({ ...options, token, requireAuth: true }),
+      cache: "no-store"
+    },
+    "Failed to delete address"
+  );
+  if (typeof window === "undefined") {
+    try {
+      const { revalidateTag } = await import('next/cache');
+      revalidateTag("addresses");
+    } catch {
+    }
+  }
+  return res;
+};
 var loginUser = async (data = {}, options = {}) => {
   const payload = {
     phone: data?.phone ?? data,
@@ -809,5 +845,5 @@ var applyDiscount = async ({
 };
 
 export { applyDiscount, applyDiscountAction, createAddressAction, createCartAction, createLineItemAction, createRazorpayOrderAction, deleteAddressAction, deleteLineItemAction, getAddressesAction, getAllTaxonsAction, getAvailableDiscountsAction, getCartAction, getCartByIdAction, getCurrentUserLikedProductsAction, getLikedProductsAction, getOrderByIdAction, getOrderInvoiceAction, getOrdersAction, getOrgVideosAction, getOrganizationAction, getProductByIdAction, getProductsAction, getProductsByIdsAction, getProductsFilterAction, getRecentlyViewedProductsAction, getRelatedProductsAction, getTaxonByIdAction, getTaxonomiesAction, getTaxonomyByIdAction, getUserAction, likeProductAction, loginUser, removeDiscountAction, removeDiscountById, signUpUser, trackDiscountEventAction, unlikeProductAction, updateAddressAction, updateCartAction, updateCartIdLineItemsAction, updateLineItemAction, updateRazorpayPaymentAction, updateUserAction, validateCartTotal, verifyOtp };
-//# sourceMappingURL=chunk-IBZ56ABS.js.map
-//# sourceMappingURL=chunk-IBZ56ABS.js.map
+//# sourceMappingURL=chunk-J74BIWZ6.js.map
+//# sourceMappingURL=chunk-J74BIWZ6.js.map

@@ -1,5 +1,5 @@
-import { trackDiscountEventAction, removeDiscountById, removeDiscountAction, applyDiscountAction, getAvailableDiscountsAction, getOrderInvoiceAction, getOrderByIdAction, getOrdersAction, updateUserAction, getUserAction, deleteAddressAction, updateAddressAction, createAddressAction, getAddressesAction, updateRazorpayPaymentAction, createRazorpayOrderAction, deleteLineItemAction, updateLineItemAction, createLineItemAction, updateCartIdLineItemsAction, updateCartAction, createCartAction, getCartByIdAction, getCartAction, getCurrentUserLikedProductsAction, verifyOtp, signUpUser, loginUser, validateCartTotal } from './chunk-IBZ56ABS.js';
-export { applyDiscount, applyDiscountAction, createAddressAction, createCartAction, createLineItemAction, createRazorpayOrderAction, deleteAddressAction, deleteLineItemAction, getAddressesAction, getAllTaxonsAction, getAvailableDiscountsAction, getCartAction, getCartByIdAction, getCurrentUserLikedProductsAction, getLikedProductsAction, getOrderByIdAction, getOrderInvoiceAction, getOrdersAction, getOrgVideosAction, getOrganizationAction, getProductByIdAction, getProductsAction, getProductsByIdsAction, getProductsFilterAction, getRecentlyViewedProductsAction, getRelatedProductsAction, getTaxonByIdAction, getTaxonomiesAction, getTaxonomyByIdAction, getUserAction, likeProductAction, loginUser, removeDiscountAction, removeDiscountById, signUpUser, trackDiscountEventAction, unlikeProductAction, updateAddressAction, updateCartAction, updateCartIdLineItemsAction, updateLineItemAction, updateRazorpayPaymentAction, updateUserAction, validateCartTotal, verifyOtp } from './chunk-IBZ56ABS.js';
+import { trackDiscountEventAction, removeDiscountById, removeDiscountAction, applyDiscountAction, getAvailableDiscountsAction, getOrderInvoiceAction, getOrderByIdAction, getOrdersAction, updateUserAction, getUserAction, deleteAddressAction, updateAddressAction, createAddressAction, getAddressesAction, updateRazorpayPaymentAction, createRazorpayOrderAction, deleteLineItemAction, updateLineItemAction, createLineItemAction, updateCartIdLineItemsAction, updateCartAction, createCartAction, getCartByIdAction, getCartAction, getCurrentUserLikedProductsAction, verifyOtp, signUpUser, loginUser, validateCartTotal } from './chunk-J74BIWZ6.js';
+export { applyDiscount, applyDiscountAction, createAddressAction, createCartAction, createLineItemAction, createRazorpayOrderAction, deleteAddressAction, deleteLineItemAction, getAddressesAction, getAllTaxonsAction, getAvailableDiscountsAction, getCartAction, getCartByIdAction, getCurrentUserLikedProductsAction, getLikedProductsAction, getOrderByIdAction, getOrderInvoiceAction, getOrdersAction, getOrgVideosAction, getOrganizationAction, getProductByIdAction, getProductsAction, getProductsByIdsAction, getProductsFilterAction, getRecentlyViewedProductsAction, getRelatedProductsAction, getTaxonByIdAction, getTaxonomiesAction, getTaxonomyByIdAction, getUserAction, likeProductAction, loginUser, removeDiscountAction, removeDiscountById, signUpUser, trackDiscountEventAction, unlikeProductAction, updateAddressAction, updateCartAction, updateCartIdLineItemsAction, updateLineItemAction, updateRazorpayPaymentAction, updateUserAction, validateCartTotal, verifyOtp } from './chunk-J74BIWZ6.js';
 import { getPaymentGateway } from './chunk-ZXSZ7SQJ.js';
 import React8, { createContext, useEffect, useMemo, useState, useCallback, useContext, useRef, Component } from 'react';
 import posthog from 'posthog-js';
@@ -472,15 +472,6 @@ var CoreProvider = ({
   const primaryColor = resolvedConfig?.primaryColor ?? "#00214c";
   const secondaryColor = resolvedConfig?.secondaryColor ?? "#c8a95a";
   const [cart, setCart] = useState();
-  const resolvedActions = useMemo(() => {
-    const merged = { ...actions };
-    Object.entries(inbuiltActions).forEach(([key, fn]) => {
-      if (!merged[key]) {
-        merged[key] = fn;
-      }
-    });
-    return merged;
-  }, [actions]);
   const [isCartLoading, setIsCartLoading] = useState(true);
   const [region, setRegion] = useState(resolvedConfig?.region ?? null);
   const [authState, setAuthState] = useState(() => injectedAuth ?? {});
@@ -533,6 +524,15 @@ var CoreProvider = ({
       clearAuth
     };
   }, [authType, injectedAuth, authState, setAuth, clearAuth]);
+  const resolvedActions = useMemo(() => {
+    const merged = { ...actions };
+    Object.entries(inbuiltActions).forEach(([key, fn]) => {
+      if (!merged[key]) {
+        merged[key] = fn;
+      }
+    });
+    return merged;
+  }, [actions]);
   useEffect(() => {
     const devToken = resolvedConfig?.posthogDeveloperToken || config?.posthogDeveloperToken || (typeof process !== "undefined" ? process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN_DEVELOPER : null);
     const devHost = resolvedConfig?.posthogDeveloperHost || config?.posthogDeveloperHost || (typeof process !== "undefined" ? process.env.NEXT_PUBLIC_POSTHOG_HOST_DEVELOPER : null) || "https://us.i.posthog.com";
@@ -656,14 +656,11 @@ var CoreProvider = ({
       captureDeveloperException,
       posthogDeveloper: getDeveloperPostHog()
     }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       cart,
       isCartLoading,
       resolvedRegion,
-      // was wrong: was "region" (stale local state) and "config" (raw prop)
       resolvedConfig,
-      // was wrong: was raw "config" prop
       resolvedActions,
       toast,
       auth,
@@ -1530,6 +1527,23 @@ function useVariantSelection(rawProduct) {
      * images when a variant with images is selected.
      */
     getDisplayImages
+  };
+}
+
+// src/hooks/useAddresses.js
+function useAddresses() {
+  const { addresses, isAddressLoading, refreshAddresses, actions, auth } = useCore();
+  const token = auth?.token ?? auth?.access_token ?? null;
+  const isSignedIn = !!((auth?.isSignedIn ?? false) && token);
+  return {
+    addresses: isSignedIn ? addresses : [],
+    isAddressLoading,
+    isSignedIn,
+    refreshAddresses: actions?.refreshAddresses || refreshAddresses,
+    createAddress: actions?.createAddress,
+    updateAddress: actions?.updateAddress,
+    deleteAddress: actions?.deleteAddress,
+    getUserAddress: actions?.getUserAddress
   };
 }
 
@@ -3496,6 +3510,7 @@ function CartMismatchBanner({
     }
   );
 }
+var normalizeAddresses = (payload) => payload?.data ?? payload?.addresses ?? (Array.isArray(payload) ? payload : []);
 var Checkout = ({ hasDeletedItems }) => {
   const { auth, config } = useCore();
   const { isSignedIn, isLoading } = auth || {};
@@ -3583,20 +3598,26 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
     billingAddressId: cart?.billing_address?.id ?? null
   });
   const { shippingAddressId, billingAddressId } = selectedAddress;
-  const fetchAddresses = useCallback(async () => {
-    try {
-      setIsAddressLoading(true);
-      if (actions?.getUserAddress && auth?.isSignedIn) {
-        const data = await actions.getUserAddress();
-        setAddresses(Array.isArray(data) ? data : [data]);
+  const fetchAddresses = useCallback(
+    async (options = {}) => {
+      try {
+        setIsAddressLoading(true);
+        const token = auth?.token ?? auth?.access_token ?? null;
+        if (actions?.getUserAddress && auth?.isSignedIn && token) {
+          const data = await actions.getUserAddress(options);
+          setAddresses(normalizeAddresses(data));
+        } else {
+          setAddresses([]);
+        }
+      } catch (err) {
+        console.error("Failed to fetch addresses:", err);
+        setAddresses([]);
+      } finally {
+        setIsAddressLoading(false);
       }
-    } catch (err) {
-      console.error("Failed to fetch addresses:", err);
-      setAddresses([]);
-    } finally {
-      setIsAddressLoading(false);
-    }
-  }, [actions, auth?.isSignedIn]);
+    },
+    [actions?.getUserAddress, auth?.isSignedIn, auth?.token, auth?.access_token]
+  );
   useEffect(() => {
     fetchAddresses();
   }, [fetchAddresses]);
@@ -3857,7 +3878,7 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
         cart,
         setCart,
         user,
-        refetch: fetchAddresses,
+        refetch: () => fetchAddresses({ force: true }),
         sameAsShipping,
         setSameAsShipping,
         shippingAddressId,
@@ -3866,7 +3887,7 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
         isCartHaveBillingAddress,
         isCarthaveShippingAddress
       }
-    ) : /* @__PURE__ */ jsx(AddressFormInline, { refetch: fetchAddresses }) }),
+    ) : /* @__PURE__ */ jsx(AddressFormInline, { refetch: () => fetchAddresses({ force: true }) }) }),
     /* @__PURE__ */ jsxs("div", { className: "mt-[32px]", children: [
       /* @__PURE__ */ jsx("h1", { className: "font-[var(--font-medium)] text-[20px] text-[var(--main)]", children: "PAYMENT" }),
       /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[14px] text-[var(--secondary)]", children: "All transactions are secure and encrypted." }),
@@ -4873,23 +4894,34 @@ var ProfileForm = ({ user, onSuccess, onCancel }) => {
     ] })
   ] });
 };
+var normalizeAddresses2 = (payload) => payload?.data ?? payload?.addresses ?? (Array.isArray(payload) ? payload : []);
 var UserInfo = ({ user, isLoading, refetch }) => {
-  const { actions, config } = useCore();
+  const { actions, config, auth } = useCore();
   const [addresses, setAddresses] = useState([]);
   const [isAddrLoading, setIsAddrLoading] = useState(false);
   const [modalState, setModalState] = useState({ type: null, data: null });
-  const fetchAddresses = useCallback(async () => {
-    if (!actions?.getUserAddress) return;
-    setIsAddrLoading(true);
-    try {
-      const addrs = await actions.getUserAddress();
-      setAddresses(addrs || []);
-    } catch (error) {
-      console.error("Error fetching addresses:", error);
-    } finally {
-      setIsAddrLoading(false);
-    }
-  }, [actions]);
+  const fetchAddresses = useCallback(
+    async (options = {}) => {
+      const token = auth?.token ?? auth?.access_token ?? null;
+      const signedIn = !!((auth?.isSignedIn ?? false) && token);
+      if (!actions?.getUserAddress || !signedIn) {
+        setAddresses([]);
+        setIsAddrLoading(false);
+        return;
+      }
+      setIsAddrLoading(true);
+      try {
+        const addrs = await actions.getUserAddress(options);
+        setAddresses(normalizeAddresses2(addrs));
+      } catch (error) {
+        console.error("Error fetching addresses:", error);
+        setAddresses([]);
+      } finally {
+        setIsAddrLoading(false);
+      }
+    },
+    [actions?.getUserAddress, auth?.isSignedIn, auth?.token, auth?.access_token]
+  );
   useEffect(() => {
     fetchAddresses();
   }, [fetchAddresses]);
@@ -4986,7 +5018,7 @@ var UserInfo = ({ user, isLoading, refetch }) => {
           {
             initialData: modalState.data,
             onSuccess: () => {
-              fetchAddresses();
+              fetchAddresses({ force: true });
               closeModal();
             },
             onCancel: closeModal,
@@ -5320,26 +5352,36 @@ var AccountLayout = ({
     /* @__PURE__ */ jsx("main", { className: `flex-1 p-8 max-md:p-5 ${mainClassName}`, children })
   ] }) }) });
 };
-var normalizeAddresses = (payload) => payload?.data ?? payload?.addresses ?? (Array.isArray(payload) ? payload : []);
+var normalizeAddresses3 = (payload) => payload?.data ?? payload?.addresses ?? (Array.isArray(payload) ? payload : []);
 var AccountAddressesPage = () => {
-  const { actions, toast } = useCore();
+  const { actions, toast, auth } = useCore();
   const [addresses, setAddresses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [editingAddress, setEditingAddress] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
-  const fetchAddresses = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const res = await actions?.getUserAddress?.();
-      setAddresses(normalizeAddresses(res));
-    } catch (error) {
-      console.error("Failed to fetch addresses", error);
-      toast?.error?.("Failed to fetch addresses");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [actions, toast]);
+  const fetchAddresses = useCallback(
+    async (options = {}) => {
+      const token = auth?.token ?? auth?.access_token ?? null;
+      const signedIn = !!((auth?.isSignedIn ?? false) && token);
+      if (!signedIn) {
+        setAddresses([]);
+        setIsLoading(false);
+        return;
+      }
+      setIsLoading(true);
+      try {
+        const res = await actions?.getUserAddress?.(options);
+        setAddresses(normalizeAddresses3(res));
+      } catch (error) {
+        console.error("Failed to fetch addresses", error);
+        toast?.error?.("Failed to fetch addresses");
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [actions, toast, auth?.isSignedIn, auth?.token, auth?.access_token]
+  );
   useEffect(() => {
     fetchAddresses();
   }, [fetchAddresses]);
@@ -5356,7 +5398,7 @@ var AccountAddressesPage = () => {
     setDeletingId(addressId);
     try {
       await actions?.deleteAddress?.(addressId);
-      await fetchAddresses();
+      await fetchAddresses({ force: true });
       toast?.success?.("Address deleted successfully");
     } catch (error) {
       console.error("Failed to delete address", error);
@@ -5401,7 +5443,7 @@ var AccountAddressesPage = () => {
         onCancel: () => setIsModalOpen(false),
         onSuccess: () => {
           setIsModalOpen(false);
-          fetchAddresses();
+          fetchAddresses({ force: true });
         },
         submitLabel: editingAddress?.id ? "Save Changes" : "Save Address"
       }
@@ -6491,6 +6533,6 @@ var DeveloperErrorBoundary = class extends Component {
   }
 };
 
-export { AccountAddressesPage, AccountLayout, AccountOrderDetailContent, AccountOrdersPage, AccountPage, AccountSidebar, AccountWishlistPage, AddressCard2 as AddressCard, AddressForm, AuthManager, CartItem, CartMismatchBanner, CartPage, CartSummary, CoreProvider, CouponSection_default as CouponSection, CustomOTPAuth, DEFAULT_NAV_ITEMS as DEFAULT_ACCOUNT_NAV_ITEMS, DeveloperErrorBoundary, EmptyState, Hello, Order, OrdersList, POSTHOG_INSTANCES, Popup, ProfileForm, Spinner, ThirdPartyScripts, UserInfo, ViewCart, buildItem, buildMeta, captureDeveloperException, clearEcommerce, devLogger, getDeveloperPostHog, getMerchantPostHog, getPostHogInstance, identifyDeveloperUser, initDeveloperPostHog, initGtmConfig, initMerchantPostHog, initMetaPixelConfig, initPostHog, injectContentSquare, injectHotjar, invalidateLikedProductsCache, logDeveloper, nameToSlug, pushToDataLayer, resetDeveloperPostHog, sanitizePostHogToken, setDeveloperSuperProperties, trackAddPaymentInfo, trackAddShippingInfo, trackAddToCart, trackApplyCoupon, trackBeginCheckout, trackCustomEvent, trackMetaAddPaymentInfo, trackMetaAddToCart, trackMetaCompleteRegistration, trackMetaInitiateCheckout, trackMetaLead, trackMetaPageView, trackMetaPurchase, trackMetaSearch, trackMetaViewContent, trackPageView, trackPaymentFailed, trackPurchase, trackSearch, trackViewItem, useAddToCart, useAuth, useCart, userCartInfo_default as useCartInfo, useCore, useCurrencyFormat, useGetCurrentUserLikedProductsQuery, useLogout, useVariantSelection };
+export { AccountAddressesPage, AccountLayout, AccountOrderDetailContent, AccountOrdersPage, AccountPage, AccountSidebar, AccountWishlistPage, AddressCard2 as AddressCard, AddressForm, AuthManager, CartItem, CartMismatchBanner, CartPage, CartSummary, CoreProvider, CouponSection_default as CouponSection, CustomOTPAuth, DEFAULT_NAV_ITEMS as DEFAULT_ACCOUNT_NAV_ITEMS, DeveloperErrorBoundary, EmptyState, Hello, Order, OrdersList, POSTHOG_INSTANCES, Popup, ProfileForm, Spinner, ThirdPartyScripts, UserInfo, ViewCart, buildItem, buildMeta, captureDeveloperException, clearEcommerce, devLogger, getDeveloperPostHog, getMerchantPostHog, getPostHogInstance, identifyDeveloperUser, initDeveloperPostHog, initGtmConfig, initMerchantPostHog, initMetaPixelConfig, initPostHog, injectContentSquare, injectHotjar, invalidateLikedProductsCache, logDeveloper, nameToSlug, pushToDataLayer, resetDeveloperPostHog, sanitizePostHogToken, setDeveloperSuperProperties, trackAddPaymentInfo, trackAddShippingInfo, trackAddToCart, trackApplyCoupon, trackBeginCheckout, trackCustomEvent, trackMetaAddPaymentInfo, trackMetaAddToCart, trackMetaCompleteRegistration, trackMetaInitiateCheckout, trackMetaLead, trackMetaPageView, trackMetaPurchase, trackMetaSearch, trackMetaViewContent, trackPageView, trackPaymentFailed, trackPurchase, trackSearch, trackViewItem, useAddToCart, useAddresses, useAuth, useCart, userCartInfo_default as useCartInfo, useCore, useCurrencyFormat, useGetCurrentUserLikedProductsQuery, useLogout, useVariantSelection };
 //# sourceMappingURL=index.js.map
 //# sourceMappingURL=index.js.map

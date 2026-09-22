@@ -314,58 +314,100 @@ export const updateRazorpayPaymentAction = async (
 // ─── Addresses ────────────────────────────────────────────────────────────────
 
 export const getAddressesAction = async (options = {}) => {
-  const token = await getServerToken(options.token);
+  const token = await getServerToken(options?.token);
   if (!token) return { data: [] };
 
-  return requestJson(
-    `${getApiBaseUrl(options)}/api/addresses`,
-    {
-      method: "GET",
-      headers: await buildHeaders({ ...options, token }),
-      cache: "no-store",
-    },
-    "Failed to fetch addresses",
+  const url = `${getApiBaseUrl(options)}/api/addresses`;
+  const fetchConfig = await buildCachedFetchConfig(
+    ["addresses"],
+    86400,
+    { ...options, token },
   );
+
+  return requestJson(url, fetchConfig, "Failed to fetch addresses");
 };
 
-export const createAddressAction = async (addressData, options = {}) =>
-  requestJson(
+export const createAddressAction = async (addressData, options = {}) => {
+  const token = await getServerToken(options?.token);
+  if (!token) throw new Error("Unauthorized");
+
+  const body = addressData?.address ? addressData : { address: addressData };
+
+  const res = await requestJson(
     `${getApiBaseUrl(options)}/api/addresses`,
     {
       method: "POST",
-      headers: await buildHeaders({ ...options, requireAuth: true }),
-      body: JSON.stringify({ address: addressData }),
+      headers: await buildHeaders({ ...options, token, requireAuth: true }),
+      body: JSON.stringify(body),
       cache: "no-store",
     },
     "Failed to create address",
   );
 
+  if (typeof window === "undefined") {
+    try {
+      const { revalidateTag } = await import("next/cache");
+      revalidateTag("addresses");
+    } catch {}
+  }
+
+  return res;
+};
+
 export const updateAddressAction = async (
   addressId,
   addressData,
   options = {},
-) =>
-  requestJson(
+) => {
+  const token = await getServerToken(options?.token);
+  if (!token) throw new Error("Unauthorized");
+
+  const body = addressData?.address ? addressData : { address: addressData };
+
+  const res = await requestJson(
     `${getApiBaseUrl(options)}/api/addresses/${addressId}`,
     {
       method: "PUT",
-      headers: await buildHeaders({ ...options, requireAuth: true }),
-      body: JSON.stringify({ address: addressData }),
+      headers: await buildHeaders({ ...options, token, requireAuth: true }),
+      body: JSON.stringify(body),
       cache: "no-store",
     },
     "Failed to update address",
   );
 
-export const deleteAddressAction = async (addressId, options = {}) =>
-  requestJson(
+  if (typeof window === "undefined") {
+    try {
+      const { revalidateTag } = await import("next/cache");
+      revalidateTag("addresses");
+    } catch {}
+  }
+
+  return res;
+};
+
+export const deleteAddressAction = async (addressId, options = {}) => {
+  const token = await getServerToken(options?.token);
+  if (!token) throw new Error("Unauthorized");
+
+  const res = await requestJson(
     `${getApiBaseUrl(options)}/api/addresses/${addressId}`,
     {
       method: "DELETE",
-      headers: await buildHeaders({ ...options, requireAuth: true }),
+      headers: await buildHeaders({ ...options, token, requireAuth: true }),
       cache: "no-store",
     },
     "Failed to delete address",
   );
+
+  if (typeof window === "undefined") {
+    try {
+      const { revalidateTag } = await import("next/cache");
+      revalidateTag("addresses");
+    } catch {}
+  }
+
+  return res;
+};
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
