@@ -78,6 +78,53 @@ export const AccountOrderDetailContent = ({ order, id }) => {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const getProductUrl = (item) => {
+    const lineItemable = item?.line_itemable || item?.variant || {};
+    const productId =
+      lineItemable?.product_id ||
+      item?.product_id ||
+      item?.productId ||
+      lineItemable?.id ||
+      item?.id;
+
+    if (!productId) return null;
+
+    let variantId = null;
+    if (
+      lineItemable?.product_id &&
+      lineItemable?.id &&
+      String(lineItemable.id) !== String(lineItemable.product_id)
+    ) {
+      variantId = lineItemable.id;
+    } else if (
+      item?.variant_id &&
+      String(item.variant_id) !== String(productId)
+    ) {
+      variantId = item.variant_id;
+    } else if (
+      item?.variantId &&
+      String(item.variantId) !== String(productId)
+    ) {
+      variantId = item.variantId;
+    }
+
+    const taxonId =
+      lineItemable?.taxons?.[0]?.id ||
+      item?.taxon_id ||
+      item?.taxons?.[0]?.id;
+
+    const params = new URLSearchParams();
+    if (taxonId && taxonId !== "taxon") {
+      params.set("taxonid", taxonId);
+    }
+    if (variantId) {
+      params.set("variantId", variantId);
+    }
+
+    const qs = params.toString();
+    return `/product/${productId}${qs ? `?${qs}` : ""}`;
+  };
+
   return (
     <div className="animate-in fade-in w-full pb-6 duration-300">
       <div className="sticky top-0 z-10 mb-2 flex items-center gap-3 border-b border-gray-50/50 bg-white/95 py-2.5 backdrop-blur-md">
@@ -146,23 +193,62 @@ export const AccountOrderDetailContent = ({ order, id }) => {
               item.display_price ??
               item.line_itemable?.display_price ??
               (item.line_itemable?.price || 0) / 100;
+            const variantOptions =
+              item.line_itemable?.variant_options ||
+              item.variant_options ||
+              [];
+            const productUrl = getProductUrl(item);
+            const ItemWrapper = productUrl ? Link : "div";
+            const wrapperProps = productUrl
+              ? {
+                  href: productUrl,
+                  className:
+                    "flex gap-3 border-b border-gray-50 p-3 transition last:border-0 hover:bg-gray-50 group cursor-pointer",
+                }
+              : {
+                  className:
+                    "flex gap-3 border-b border-gray-50 p-3 transition last:border-0 hover:bg-gray-50",
+                };
+
             return (
-              <div
+              <ItemWrapper
                 key={item.id || index}
-                className="flex gap-3 border-b border-gray-50 p-3 transition last:border-0 hover:bg-gray-50"
+                {...wrapperProps}
               >
-                <div className="h-14 w-14 shrink-0 rounded-lg border border-gray-50 bg-[#F8F8F8] p-1">
+                <div className="h-14 w-14 shrink-0 rounded-lg border border-gray-50 bg-[#F8F8F8] p-1 overflow-hidden">
                   <img
                     src={item.image || "/NoProductImage.png"}
                     alt={item.name || item.line_itemable?.name || "item"}
-                    className="h-full w-full object-contain"
+                    className="h-full w-full object-contain transition-transform duration-200 group-hover:scale-105"
                   />
                 </div>
-                <div className="flex flex-1 flex-col justify-center gap-0.5">
-                  <h3 className="line-clamp-1 text-[13px] font-[var(--font-semibold)] leading-snug text-[#1C1C1C]">
-                    {item.name || item.line_itemable?.name}
-                  </h3>
-                  <div className="flex w-full items-center justify-between">
+                <div className="flex flex-1 flex-col justify-center gap-0.5 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="line-clamp-1 text-[13px] font-[var(--font-semibold)] leading-snug text-[#1C1C1C] group-hover:text-[var(--core-primary)] transition-colors">
+                      {item.name || item.line_itemable?.name}
+                    </h3>
+                    <span className="text-[13px] font-[var(--font-bold)] text-[#1C1C1C] shrink-0">
+                      {formatCurrency(amount)}
+                    </span>
+                  </div>
+
+                  {variantOptions.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-[#777777] mt-0.5">
+                      {variantOptions.map((vo, i) => (
+                        <span
+                          key={i}
+                          className="inline-flex items-center rounded bg-gray-100 px-1.5 py-0.5 font-[var(--font-medium)] text-[#555555]"
+                        >
+                          {vo?.option_type?.presentation || vo?.option_type?.name || "Option"}:{" "}
+                          <span className="ml-1 font-semibold text-[#1C1C1C]">
+                            {vo?.option_value?.presentation || vo?.option_value?.name}
+                          </span>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="flex w-full items-center justify-between mt-0.5">
                     <div className="flex items-center gap-2">
                       {unitValue && (
                         <span className="text-[11px] font-[var(--font-medium)] text-[#888888]">
@@ -173,12 +259,14 @@ export const AccountOrderDetailContent = ({ order, id }) => {
                         x {item.quantity || 1}
                       </span>
                     </div>
-                    <span className="text-[13px] font-[var(--font-bold)] text-[#1C1C1C]">
-                      {formatCurrency(amount)}
-                    </span>
+                    {productUrl && (
+                      <span className="text-[11px] font-[var(--font-medium)] text-[var(--core-primary)] opacity-0 group-hover:opacity-100 transition-opacity">
+                        View product &rarr;
+                      </span>
+                    )}
                   </div>
                 </div>
-              </div>
+              </ItemWrapper>
             );
           })}
         </div>

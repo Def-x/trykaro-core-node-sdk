@@ -15,6 +15,7 @@ export const AccountAddressesPage = () => {
   const [editingAddress, setEditingAddress] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const [deleteConfirmAddress, setDeleteConfirmAddress] = useState(null);
 
   const fetchAddresses = useCallback(
     async (options = {}) => {
@@ -102,7 +103,7 @@ export const AccountAddressesPage = () => {
                 <button type="button" onClick={() => openEditModal(address)} className="flex items-center justify-center rounded-full p-1.5 text-[#888888] transition-colors hover:bg-gray-100 hover:text-[var(--core-primary)]">
                   <AccountPencilIcon className="h-4 w-4" />
                 </button>
-                <button type="button" disabled={deletingId === address.id} onClick={() => deleteAddress(address.id)} className="flex items-center justify-center rounded-full p-1.5 text-[#888888] transition-colors hover:bg-gray-100 hover:text-red-500 disabled:opacity-50">
+                <button type="button" disabled={deletingId === address.id} onClick={() => setDeleteConfirmAddress(address)} className="flex items-center justify-center rounded-full p-1.5 text-[#888888] transition-colors hover:bg-gray-100 hover:text-red-500 disabled:opacity-50">
                   {deletingId === address.id ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-red-500 border-t-transparent" /> : <AccountTrashIcon className="h-4 w-4" />}
                 </button>
               </div>
@@ -122,6 +123,53 @@ export const AccountAddressesPage = () => {
           submitLabel={editingAddress?.id ? "Save Changes" : "Save Address"}
         />
       </Popup>
+
+      {deleteConfirmAddress && (
+        <Popup
+          isOpen={!!deleteConfirmAddress}
+          onClose={() => !deletingId && setDeleteConfirmAddress(null)}
+          title="Delete Address"
+          maxWidth="max-w-[400px]"
+        >
+          <div className="py-2">
+            <p className="text-[14px] font-[var(--font-regular)] text-gray-600 mb-6 leading-relaxed">
+              Are you sure you want to delete{" "}
+              <span className="font-[var(--font-bold)] text-[var(--core-primary)]">
+                &quot;{deleteConfirmAddress.label || deleteConfirmAddress.address_type || "this address"}&quot;
+              </span>
+              ? This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                disabled={!!deletingId}
+                onClick={() => setDeleteConfirmAddress(null)}
+                className="flex-1 py-2.5 border border-gray-200 rounded-lg text-gray-700 font-[var(--font-bold)] hover:bg-gray-50 transition-colors uppercase tracking-widest text-[12px] disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!!deletingId}
+                onClick={async () => {
+                  await deleteAddress(deleteConfirmAddress.id);
+                  setDeleteConfirmAddress(null);
+                }}
+                className="flex-1 py-2.5 bg-red-600 text-white rounded-lg font-[var(--font-bold)] hover:bg-red-700 transition-colors uppercase tracking-widest text-[12px] flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
+              >
+                {deletingId ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  "Delete"
+                )}
+              </button>
+            </div>
+          </div>
+        </Popup>
+      )}
     </div>
   );
 };

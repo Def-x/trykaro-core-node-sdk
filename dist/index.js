@@ -2885,6 +2885,8 @@ var AddressForm = ({
 }) => {
   const { actions, toast } = useCore();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [formData, setFormData] = useState({
     address_type: initialData?.address_type || "shipping",
     address1: initialData?.address1 || "",
@@ -3116,27 +3118,107 @@ var AddressForm = ({
           "button",
           {
             type: "button",
-            disabled: isSubmitting,
-            onClick: async () => {
-              if (window.confirm("Are you sure you want to delete this address?")) {
-                setIsSubmitting(true);
-                try {
-                  await actions.deleteAddress(initialData.id);
-                  toast?.success?.("Address deleted successfully.");
-                  onSuccess?.();
-                } catch (err) {
-                  toast?.error?.("Failed to delete address.");
-                } finally {
-                  setIsSubmitting(false);
-                }
-              }
-            },
-            className: "flex-1 py-3 border border-red-100 text-red-500 rounded-md font-[var(--font-bold)] hover:bg-red-50 transition-colors uppercase tracking-widest text-[12px]",
+            disabled: isSubmitting || isDeleting,
+            onClick: () => setShowDeleteConfirm(true),
+            className: "flex-1 py-3 border border-red-100 text-red-500 rounded-md font-[var(--font-bold)] hover:bg-red-50 transition-colors uppercase tracking-widest text-[12px] disabled:opacity-50",
             children: "Delete Address"
           }
         )
       ] })
-    ] })
+    ] }),
+    showDeleteConfirm && typeof document !== "undefined" && createPortal(
+      /* @__PURE__ */ jsx(
+        "div",
+        {
+          className: "fixed inset-0 z-[1000000] flex items-center justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-[2px] transition-all duration-300",
+          onClick: (e) => {
+            if (e.target === e.currentTarget && !isDeleting) {
+              setShowDeleteConfirm(false);
+            }
+          },
+          children: /* @__PURE__ */ jsxs("div", { className: "relative w-full max-w-[400px] overflow-hidden rounded-xl border border-gray-100 bg-white p-6 shadow-2xl animate-in fade-in zoom-in duration-200", children: [
+            /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between pb-3 mb-2 border-b border-gray-100", children: [
+              /* @__PURE__ */ jsx("h3", { className: "text-[17px] font-[var(--font-bold)] text-[var(--core-primary)] uppercase tracking-wide", children: "Delete Address" }),
+              !isDeleting && /* @__PURE__ */ jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => setShowDeleteConfirm(false),
+                  className: "text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-full hover:bg-gray-100",
+                  "aria-label": "Close",
+                  children: /* @__PURE__ */ jsx(
+                    "svg",
+                    {
+                      className: "w-5 h-5",
+                      fill: "none",
+                      stroke: "currentColor",
+                      viewBox: "0 0 24 24",
+                      children: /* @__PURE__ */ jsx(
+                        "path",
+                        {
+                          strokeLinecap: "round",
+                          strokeLinejoin: "round",
+                          strokeWidth: 2,
+                          d: "M6 18L18 6M6 6l12 12"
+                        }
+                      )
+                    }
+                  )
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxs("p", { className: "py-3 text-[14px] font-[var(--font-regular)] text-gray-600 leading-relaxed", children: [
+              "Are you sure you want to delete",
+              " ",
+              /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-bold)] text-[var(--core-primary)]", children: [
+                '"',
+                initialData?.label || initialData?.address_type || "this address",
+                '"'
+              ] }),
+              "? This action cannot be undone."
+            ] }),
+            /* @__PURE__ */ jsxs("div", { className: "flex gap-3 mt-4 pt-2", children: [
+              /* @__PURE__ */ jsx(
+                "button",
+                {
+                  type: "button",
+                  disabled: isDeleting,
+                  onClick: () => setShowDeleteConfirm(false),
+                  className: "flex-1 py-2.5 border border-gray-200 rounded-lg text-gray-700 font-[var(--font-bold)] hover:bg-gray-50 transition-colors uppercase tracking-widest text-[12px] disabled:opacity-50",
+                  children: "Cancel"
+                }
+              ),
+              /* @__PURE__ */ jsx(
+                "button",
+                {
+                  type: "button",
+                  disabled: isDeleting,
+                  onClick: async () => {
+                    setIsDeleting(true);
+                    try {
+                      await actions.deleteAddress(initialData.id);
+                      toast?.success?.("Address deleted successfully.");
+                      setShowDeleteConfirm(false);
+                      onSuccess?.();
+                    } catch (err) {
+                      toast?.error?.("Failed to delete address.");
+                    } finally {
+                      setIsDeleting(false);
+                    }
+                  },
+                  className: "flex-1 py-2.5 bg-red-600 text-white rounded-lg font-[var(--font-bold)] hover:bg-red-700 transition-colors uppercase tracking-widest text-[12px] flex items-center justify-center gap-2 shadow-sm disabled:opacity-50",
+                  children: isDeleting ? /* @__PURE__ */ jsxs(Fragment, { children: [
+                    /* @__PURE__ */ jsx("div", { className: "w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" }),
+                    /* @__PURE__ */ jsx("span", { children: "Deleting..." })
+                  ] }) : "Delete"
+                }
+              )
+            ] })
+          ] })
+        }
+      ),
+      document.body
+    )
   ] });
 };
 var AddressFormInline = ({ refetch }) => {
@@ -5412,6 +5494,7 @@ var AccountAddressesPage = () => {
   const [editingAddress, setEditingAddress] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const [deleteConfirmAddress, setDeleteConfirmAddress] = useState(null);
   const fetchAddresses = useCallback(
     async (options = {}) => {
       const token = auth?.token ?? auth?.access_token ?? null;
@@ -5485,7 +5568,7 @@ var AccountAddressesPage = () => {
       ] }),
       /* @__PURE__ */ jsxs("div", { className: "mt-1 flex flex-shrink-0 items-center gap-2", children: [
         /* @__PURE__ */ jsx("button", { type: "button", onClick: () => openEditModal(address), className: "flex items-center justify-center rounded-full p-1.5 text-[#888888] transition-colors hover:bg-gray-100 hover:text-[var(--core-primary)]", children: /* @__PURE__ */ jsx(AccountPencilIcon, { className: "h-4 w-4" }) }),
-        /* @__PURE__ */ jsx("button", { type: "button", disabled: deletingId === address.id, onClick: () => deleteAddress(address.id), className: "flex items-center justify-center rounded-full p-1.5 text-[#888888] transition-colors hover:bg-gray-100 hover:text-red-500 disabled:opacity-50", children: deletingId === address.id ? /* @__PURE__ */ jsx("div", { className: "h-4 w-4 animate-spin rounded-full border-2 border-red-500 border-t-transparent" }) : /* @__PURE__ */ jsx(AccountTrashIcon, { className: "h-4 w-4" }) })
+        /* @__PURE__ */ jsx("button", { type: "button", disabled: deletingId === address.id, onClick: () => setDeleteConfirmAddress(address), className: "flex items-center justify-center rounded-full p-1.5 text-[#888888] transition-colors hover:bg-gray-100 hover:text-red-500 disabled:opacity-50", children: deletingId === address.id ? /* @__PURE__ */ jsx("div", { className: "h-4 w-4 animate-spin rounded-full border-2 border-red-500 border-t-transparent" }) : /* @__PURE__ */ jsx(AccountTrashIcon, { className: "h-4 w-4" }) })
       ] })
     ] }, address.id)) }),
     /* @__PURE__ */ jsx(Popup, { isOpen: isModalOpen, onClose: () => setIsModalOpen(false), children: /* @__PURE__ */ jsx(
@@ -5499,7 +5582,56 @@ var AccountAddressesPage = () => {
         },
         submitLabel: editingAddress?.id ? "Save Changes" : "Save Address"
       }
-    ) })
+    ) }),
+    deleteConfirmAddress && /* @__PURE__ */ jsx(
+      Popup,
+      {
+        isOpen: !!deleteConfirmAddress,
+        onClose: () => !deletingId && setDeleteConfirmAddress(null),
+        title: "Delete Address",
+        maxWidth: "max-w-[400px]",
+        children: /* @__PURE__ */ jsxs("div", { className: "py-2", children: [
+          /* @__PURE__ */ jsxs("p", { className: "text-[14px] font-[var(--font-regular)] text-gray-600 mb-6 leading-relaxed", children: [
+            "Are you sure you want to delete",
+            " ",
+            /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-bold)] text-[var(--core-primary)]", children: [
+              '"',
+              deleteConfirmAddress.label || deleteConfirmAddress.address_type || "this address",
+              '"'
+            ] }),
+            "? This action cannot be undone."
+          ] }),
+          /* @__PURE__ */ jsxs("div", { className: "flex gap-3", children: [
+            /* @__PURE__ */ jsx(
+              "button",
+              {
+                type: "button",
+                disabled: !!deletingId,
+                onClick: () => setDeleteConfirmAddress(null),
+                className: "flex-1 py-2.5 border border-gray-200 rounded-lg text-gray-700 font-[var(--font-bold)] hover:bg-gray-50 transition-colors uppercase tracking-widest text-[12px] disabled:opacity-50",
+                children: "Cancel"
+              }
+            ),
+            /* @__PURE__ */ jsx(
+              "button",
+              {
+                type: "button",
+                disabled: !!deletingId,
+                onClick: async () => {
+                  await deleteAddress(deleteConfirmAddress.id);
+                  setDeleteConfirmAddress(null);
+                },
+                className: "flex-1 py-2.5 bg-red-600 text-white rounded-lg font-[var(--font-bold)] hover:bg-red-700 transition-colors uppercase tracking-widest text-[12px] flex items-center justify-center gap-2 shadow-sm disabled:opacity-50",
+                children: deletingId ? /* @__PURE__ */ jsxs(Fragment, { children: [
+                  /* @__PURE__ */ jsx("div", { className: "w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" }),
+                  /* @__PURE__ */ jsx("span", { children: "Deleting..." })
+                ] }) : "Delete"
+              }
+            )
+          ] })
+        ] })
+      }
+    )
   ] });
 };
 var AccountOrdersPage = ({ initialOrders = [], pagination }) => {
@@ -5716,6 +5848,29 @@ var AccountOrderDetailContent = ({ order, id }) => {
     setCopied(true);
     setTimeout(() => setCopied(false), 2e3);
   };
+  const getProductUrl = (item) => {
+    const lineItemable = item?.line_itemable || item?.variant || {};
+    const productId = lineItemable?.product_id || item?.product_id || item?.productId || lineItemable?.id || item?.id;
+    if (!productId) return null;
+    let variantId = null;
+    if (lineItemable?.product_id && lineItemable?.id && String(lineItemable.id) !== String(lineItemable.product_id)) {
+      variantId = lineItemable.id;
+    } else if (item?.variant_id && String(item.variant_id) !== String(productId)) {
+      variantId = item.variant_id;
+    } else if (item?.variantId && String(item.variantId) !== String(productId)) {
+      variantId = item.variantId;
+    }
+    const taxonId = lineItemable?.taxons?.[0]?.id || item?.taxon_id || item?.taxons?.[0]?.id;
+    const params = new URLSearchParams();
+    if (taxonId && taxonId !== "taxon") {
+      params.set("taxonid", taxonId);
+    }
+    if (variantId) {
+      params.set("variantId", variantId);
+    }
+    const qs = params.toString();
+    return `/product/${productId}${qs ? `?${qs}` : ""}`;
+  };
   return /* @__PURE__ */ jsxs("div", { className: "animate-in fade-in w-full pb-6 duration-300", children: [
     /* @__PURE__ */ jsxs("div", { className: "sticky top-0 z-10 mb-2 flex items-center gap-3 border-b border-gray-50/50 bg-white/95 py-2.5 backdrop-blur-md", children: [
       /* @__PURE__ */ jsx(
@@ -5769,22 +5924,47 @@ var AccountOrderDetailContent = ({ order, id }) => {
       /* @__PURE__ */ jsx("div", { className: "flex flex-col", children: lineItems.map((item, index) => {
         const unitValue = item.line_itemable?.selling_quantity?.values?.[0]?.label;
         const amount = item.display_price ?? item.line_itemable?.display_price ?? (item.line_itemable?.price || 0) / 100;
+        const variantOptions = item.line_itemable?.variant_options || item.variant_options || [];
+        const productUrl = getProductUrl(item);
+        const ItemWrapper = productUrl ? Link : "div";
+        const wrapperProps = productUrl ? {
+          href: productUrl,
+          className: "flex gap-3 border-b border-gray-50 p-3 transition last:border-0 hover:bg-gray-50 group cursor-pointer"
+        } : {
+          className: "flex gap-3 border-b border-gray-50 p-3 transition last:border-0 hover:bg-gray-50"
+        };
         return /* @__PURE__ */ jsxs(
-          "div",
+          ItemWrapper,
           {
-            className: "flex gap-3 border-b border-gray-50 p-3 transition last:border-0 hover:bg-gray-50",
+            ...wrapperProps,
             children: [
-              /* @__PURE__ */ jsx("div", { className: "h-14 w-14 shrink-0 rounded-lg border border-gray-50 bg-[#F8F8F8] p-1", children: /* @__PURE__ */ jsx(
+              /* @__PURE__ */ jsx("div", { className: "h-14 w-14 shrink-0 rounded-lg border border-gray-50 bg-[#F8F8F8] p-1 overflow-hidden", children: /* @__PURE__ */ jsx(
                 "img",
                 {
                   src: item.image || "/NoProductImage.png",
                   alt: item.name || item.line_itemable?.name || "item",
-                  className: "h-full w-full object-contain"
+                  className: "h-full w-full object-contain transition-transform duration-200 group-hover:scale-105"
                 }
               ) }),
-              /* @__PURE__ */ jsxs("div", { className: "flex flex-1 flex-col justify-center gap-0.5", children: [
-                /* @__PURE__ */ jsx("h3", { className: "line-clamp-1 text-[13px] font-[var(--font-semibold)] leading-snug text-[#1C1C1C]", children: item.name || item.line_itemable?.name }),
-                /* @__PURE__ */ jsxs("div", { className: "flex w-full items-center justify-between", children: [
+              /* @__PURE__ */ jsxs("div", { className: "flex flex-1 flex-col justify-center gap-0.5 min-w-0", children: [
+                /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between gap-2", children: [
+                  /* @__PURE__ */ jsx("h3", { className: "line-clamp-1 text-[13px] font-[var(--font-semibold)] leading-snug text-[#1C1C1C] group-hover:text-[var(--core-primary)] transition-colors", children: item.name || item.line_itemable?.name }),
+                  /* @__PURE__ */ jsx("span", { className: "text-[13px] font-[var(--font-bold)] text-[#1C1C1C] shrink-0", children: formatCurrency(amount) })
+                ] }),
+                variantOptions.length > 0 && /* @__PURE__ */ jsx("div", { className: "flex flex-wrap items-center gap-1.5 text-[11px] text-[#777777] mt-0.5", children: variantOptions.map((vo, i) => /* @__PURE__ */ jsxs(
+                  "span",
+                  {
+                    className: "inline-flex items-center rounded bg-gray-100 px-1.5 py-0.5 font-[var(--font-medium)] text-[#555555]",
+                    children: [
+                      vo?.option_type?.presentation || vo?.option_type?.name || "Option",
+                      ":",
+                      " ",
+                      /* @__PURE__ */ jsx("span", { className: "ml-1 font-semibold text-[#1C1C1C]", children: vo?.option_value?.presentation || vo?.option_value?.name })
+                    ]
+                  },
+                  i
+                )) }),
+                /* @__PURE__ */ jsxs("div", { className: "flex w-full items-center justify-between mt-0.5", children: [
                   /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
                     unitValue && /* @__PURE__ */ jsx("span", { className: "text-[11px] font-[var(--font-medium)] text-[#888888]", children: unitValue }),
                     /* @__PURE__ */ jsxs("span", { className: "text-[11px] font-[var(--font-medium)] text-[#888888]", children: [
@@ -5792,7 +5972,7 @@ var AccountOrderDetailContent = ({ order, id }) => {
                       item.quantity || 1
                     ] })
                   ] }),
-                  /* @__PURE__ */ jsx("span", { className: "text-[13px] font-[var(--font-bold)] text-[#1C1C1C]", children: formatCurrency(amount) })
+                  productUrl && /* @__PURE__ */ jsx("span", { className: "text-[11px] font-[var(--font-medium)] text-[var(--core-primary)] opacity-0 group-hover:opacity-100 transition-opacity", children: "View product \u2192" })
                 ] })
               ] })
             ]
