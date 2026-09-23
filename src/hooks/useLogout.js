@@ -36,6 +36,7 @@ export const useLogout = () => {
       // Remove localStorage items
       localStorage.removeItem("cartid");
       localStorage.removeItem("access_token");
+      localStorage.removeItem("user");
 
       // Remove non-HttpOnly cookies via js-cookie (fallback for client-set cookies)
       try {

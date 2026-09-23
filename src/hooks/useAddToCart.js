@@ -30,8 +30,10 @@ export function useAddToCart() {
   const { cart, setCart, actions, toast, auth, config } = useCore();
   const [quantity, setQuantity] = useState(1);
   const [isAddToCartLoading, setIsAddToCartLoading] = useState(false);
+  const [deletingLineItemId, setDeletingLineItemId] = useState(null);
 
-  const isSignedIn = auth?.isSignedIn ?? false;
+  const userToken = auth?.token ?? auth?.access_token ?? null;
+  const isActuallySignedIn = !!((auth?.isSignedIn ?? false) && userToken);
   const regionId = config?.regionId ?? null;
   const cartItems = cart?.line_items ?? [];
 
@@ -91,13 +93,13 @@ export function useAddToCart() {
   const refreshCart = async (cartId) => {
     try {
       let updatedCart;
-      if (isSignedIn) {
-        const data = await actions.getCart?.(regionId);
+      if (isActuallySignedIn && userToken) {
+        const data = await actions.getCart?.(regionId, { token: userToken });
         updatedCart = Array.isArray(data) ? data[0] : data;
-      } else {
+      } else if (cartId) {
         updatedCart = await actions.getCartById?.(cartId, regionId);
       }
-      console.log("refreshCart", { updatedCart });
+
       setCart(updatedCart ?? null);
     } catch (err) {
       console.error("[useAddToCart] refreshCart error:", err);
@@ -111,7 +113,6 @@ export function useAddToCart() {
     customizations = [],
     overrideQty = null,
   ) => {
-    console.log({ product, resolvedCartId, customizations, overrideQty });
     const sellingQTY = product?.selling_quantity?.values?.[0]?.label;
     const qty = overrideQty !== null ? overrideQty : (quantity ?? 1);
     const existingLineItem = getCartItem(product, customizations);
@@ -119,23 +120,29 @@ export function useAddToCart() {
     if (existingLineItem && !sellingQTY) {
       // Quantity already exists and no sellingQTY → increment
       const newQty = existingLineItem.quantity + qty;
-      await actions.updateLineItem?.(existingLineItem.id, { quantity: newQty });
+      await actions.updateLineItem?.(
+        existingLineItem.id,
+        { quantity: newQty },
+        { token: userToken },
+      );
     } else {
-      // New line item
+      // New line item: only send cart_id when user is not logged in
       const body = {
         line_itemable_id: product?.id,
         quantity: qty,
         line_items_customizations: customizations,
-        ...(resolvedCartId && !isSignedIn ? { cart_id: resolvedCartId } : {}),
+        ...(resolvedCartId && !isActuallySignedIn
+          ? { cart_id: resolvedCartId }
+          : {}),
         ...(regionId ? { region_id: regionId } : {}),
       };
 
-      await actions.createLineItem?.(body);
+      await actions.createLineItem?.(body, { token: userToken });
     }
 
     // Reset quantity to selling-unit default
     setQuantity(sellingQTY ? Number(sellingQTY) : 1);
-    console.log({ resolvedCartId });
+
     // Always refresh to keep context in sync
     if (resolvedCartId) {
       await refreshCart(resolvedCartId);
@@ -153,7 +160,6 @@ export function useAddToCart() {
     customizations = [],
     overrideQty = null,
   ) => {
-    console.log({ product, customizations, overrideQty });
     try {
       setIsAddToCartLoading(true);
 
@@ -173,19 +179,20 @@ export function useAddToCart() {
           ...(regionId ? { region_id: regionId } : {}),
         };
 
-        const createdCart = await actions.createCart?.(payload);
+        const createdCart = await actions.createCart?.(payload, {
+          token: userToken,
+        });
         if (createdCart?.id) {
           resolvedCartId = createdCart.id;
-          if (!isSignedIn) {
+          if (!isActuallySignedIn) {
             localStorage.setItem("cartid", createdCart.id);
           }
-          console.log("createdCart", { createdCart });
           setCart(createdCart);
         }
       }
 
       await addItemToCart(product, resolvedCartId, customizations, overrideQty);
-      console.log({ product });
+
       // ── GA4 via GTM ───────────────────────────────────────────────
       const userId = auth?.user?.id ?? auth?.user?.userId ?? null;
       const currency = config?.currency ?? "INR";
@@ -222,11 +229,16 @@ export function useAddToCart() {
       setIsAddToCartLoading(true);
 
       if (existingLineItem.quantity <= 1) {
-        await actions.deleteLineItem?.(existingLineItem.id);
-      } else {
-        await actions.updateLineItem?.(existingLineItem.id, {
-          quantity: existingLineItem.quantity - 1,
+        setDeletingLineItemId(existingLineItem.id);
+        await actions.deleteLineItem?.(existingLineItem.id, {
+          token: userToken,
         });
+      } else {
+        await actions.updateLineItem?.(
+          existingLineItem.id,
+          { quantity: existingLineItem.quantity - 1 },
+          { token: userToken },
+        );
       }
 
       const activeCartId = cart?.id;
@@ -243,6 +255,7 @@ export function useAddToCart() {
       }
     } finally {
       setIsAddToCartLoading(false);
+      setDeletingLineItemId(null);
     }
   };
 
@@ -251,8 +264,15 @@ export function useAddToCart() {
    */
   const handleDeleteLineItem = async (product) => {
     try {
-      // setIsAddToCartLoading(true);
-      await actions.deleteLineItem?.(product?.id);
+      setIsAddToCartLoading(true);
+      const lineItem = product?.line_itemable
+        ? product
+        : (getCartItem(product) || product);
+      const lineItemId = lineItem?.id;
+      if (lineItemId) {
+        setDeletingLineItemId(lineItemId);
+      }
+      await actions.deleteLineItem?.(lineItemId || product?.id);
 
       const activeCartId = cart?.id;
       if (activeCartId) {
@@ -285,6 +305,7 @@ export function useAddToCart() {
       }
     } finally {
       setIsAddToCartLoading(false);
+      setDeletingLineItemId(null);
     }
   };
 
@@ -296,6 +317,7 @@ export function useAddToCart() {
     quantity,
     setQuantity,
     isAddToCartLoading,
+    deletingLineItemId,
     cartItems,
     cart,
   };

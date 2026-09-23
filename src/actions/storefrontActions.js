@@ -25,10 +25,15 @@ const getOrganizationId = (options = {}) =>
   null;
 
 const getServerToken = async (token) => {
+  if (token === null || token === false) return null;
   if (token) return token;
 
   if (typeof window !== "undefined") {
-    return window.localStorage?.getItem("access_token") || null;
+    return (
+      window.localStorage?.getItem("access_token") ||
+      window.localStorage?.getItem("token") ||
+      null
+    );
   }
 
   try {
@@ -109,6 +114,60 @@ const requestJsonFromResponse = async (res, fallback) => {
   return res.json();
 };
 
+const buildQueryString = (params) => {
+  if (!params) return "";
+  if (typeof params === "string") {
+    return params.startsWith("?") ? params : `?${params}`;
+  }
+  if (typeof params === "object") {
+    const sp = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null) {
+        if (Array.isArray(v)) {
+          v.forEach((val) => sp.append(`${k}[]`, val));
+        } else {
+          sp.append(k, v);
+        }
+      }
+    });
+    const s = sp.toString();
+    return s ? `?${s}` : "";
+  }
+  return "";
+};
+
+const buildCachedFetchConfig = async (
+  defaultTags = [],
+  defaultTtl = 86400,
+  options = {},
+) => {
+  const headers = await buildHeaders(options);
+  const shouldBypassCache =
+    options.cache === "no-store" ||
+    options.revalidation === true ||
+    options.forceRevalidate === true ||
+    options.revalidate === 0;
+
+  if (typeof window === "undefined" && !shouldBypassCache) {
+    const tags = Array.isArray(options.tags)
+      ? [...defaultTags, ...options.tags]
+      : defaultTags;
+    const revalidate =
+      typeof options.revalidate === "number" ? options.revalidate : defaultTtl;
+    return {
+      method: "GET",
+      headers,
+      next: { tags, revalidate },
+    };
+  }
+
+  return {
+    method: "GET",
+    headers,
+    cache: options.cache || "no-store",
+  };
+};
+
 // ─── Cart ────────────────────────────────────────────────────────────────────
 
 export const createCartAction = async (body = {}, options = {}) => {
@@ -122,7 +181,10 @@ export const createCartAction = async (body = {}, options = {}) => {
   return requestJsonFromResponse(res, "Failed to create cart");
 };
 
-export const getCartAction = async (regionId, options = {}) => {
+export const getCartAction = async (regionId = null, options = {}) => {
+  const token = await getServerToken(options?.token);
+  if (!token) return [];
+
   const url = new URL(`${getApiBaseUrl(options)}/api/carts`);
   if (regionId) url.searchParams.set("region_id", regionId);
 
@@ -130,7 +192,7 @@ export const getCartAction = async (regionId, options = {}) => {
     url.toString(),
     {
       method: "GET",
-      headers: await buildHeaders(options),
+      headers: await buildHeaders({ ...options, token }),
       cache: "no-store",
     },
     "Failed to get cart",
@@ -138,12 +200,19 @@ export const getCartAction = async (regionId, options = {}) => {
 };
 
 export const getCartByIdAction = async (cartId, regionId, options = {}) => {
+  if (!cartId) return null;
+
   const url = new URL(`${getApiBaseUrl(options)}/api/carts/${cartId}`);
   if (regionId) url.searchParams.set("region_id", regionId);
 
+  const resolvedOptions = {
+    ...options,
+    token: options.token ?? null,
+  };
+
   const res = await fetch(url.toString(), {
     method: "GET",
-    headers: await buildHeaders(options),
+    headers: await buildHeaders(resolvedOptions),
     cache: "no-store",
   });
 
@@ -245,54 +314,100 @@ export const updateRazorpayPaymentAction = async (
 // ─── Addresses ────────────────────────────────────────────────────────────────
 
 export const getAddressesAction = async (options = {}) => {
-  const token = await getServerToken(options.token);
+  const token = await getServerToken(options?.token);
   if (!token) return { data: [] };
 
-  return requestJson(
-    `${getApiBaseUrl(options)}/api/addresses`,
-    {
-      method: "GET",
-      headers: await buildHeaders({ ...options, token }),
-      cache: "no-store",
-    },
-    "Failed to fetch addresses",
+  const url = `${getApiBaseUrl(options)}/api/addresses`;
+  const fetchConfig = await buildCachedFetchConfig(
+    ["addresses"],
+    86400,
+    { ...options, token },
   );
+
+  return requestJson(url, fetchConfig, "Failed to fetch addresses");
 };
 
-export const createAddressAction = async (addressData, options = {}) =>
-  requestJson(
+export const createAddressAction = async (addressData, options = {}) => {
+  const token = await getServerToken(options?.token);
+  if (!token) throw new Error("Unauthorized");
+
+  const body = addressData?.address ? addressData : { address: addressData };
+
+  const res = await requestJson(
     `${getApiBaseUrl(options)}/api/addresses`,
     {
       method: "POST",
-      headers: await buildHeaders({ ...options, requireAuth: true }),
-      body: JSON.stringify({ address: addressData }),
+      headers: await buildHeaders({ ...options, token, requireAuth: true }),
+      body: JSON.stringify(body),
       cache: "no-store",
     },
     "Failed to create address",
   );
 
-export const updateAddressAction = async (addressId, addressData, options = {}) =>
-  requestJson(
+  if (typeof window === "undefined") {
+    try {
+      const { revalidateTag } = await import("next/cache");
+      revalidateTag("addresses");
+    } catch {}
+  }
+
+  return res;
+};
+
+export const updateAddressAction = async (
+  addressId,
+  addressData,
+  options = {},
+) => {
+  const token = await getServerToken(options?.token);
+  if (!token) throw new Error("Unauthorized");
+
+  const body = addressData?.address ? addressData : { address: addressData };
+
+  const res = await requestJson(
     `${getApiBaseUrl(options)}/api/addresses/${addressId}`,
     {
       method: "PUT",
-      headers: await buildHeaders({ ...options, requireAuth: true }),
-      body: JSON.stringify({ address: addressData }),
+      headers: await buildHeaders({ ...options, token, requireAuth: true }),
+      body: JSON.stringify(body),
       cache: "no-store",
     },
     "Failed to update address",
   );
 
-export const deleteAddressAction = async (addressId, options = {}) =>
-  requestJson(
+  if (typeof window === "undefined") {
+    try {
+      const { revalidateTag } = await import("next/cache");
+      revalidateTag("addresses");
+    } catch {}
+  }
+
+  return res;
+};
+
+export const deleteAddressAction = async (addressId, options = {}) => {
+  const token = await getServerToken(options?.token);
+  if (!token) throw new Error("Unauthorized");
+
+  const res = await requestJson(
     `${getApiBaseUrl(options)}/api/addresses/${addressId}`,
     {
       method: "DELETE",
-      headers: await buildHeaders({ ...options, requireAuth: true }),
+      headers: await buildHeaders({ ...options, token, requireAuth: true }),
       cache: "no-store",
     },
     "Failed to delete address",
   );
+
+  if (typeof window === "undefined") {
+    try {
+      const { revalidateTag } = await import("next/cache");
+      revalidateTag("addresses");
+    } catch {}
+  }
+
+  return res;
+};
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
@@ -560,4 +675,356 @@ export const validateCartTotal = async (cartId, clientTotal, options = {}) => {
     // On network error let the payment proceed; backend validates server-side
     return { valid: true, reason: "validation_skipped" };
   }
+};
+
+// ─── Products & Taxons ────────────────────────────────────────────────────────
+
+export const getProductsAction = async (query = {}, options = {}) => {
+  let queryParams = query;
+  let opt = { ...options };
+
+  if (query && typeof query === "object") {
+    const {
+      cache,
+      revalidate,
+      revalidation,
+      forceRevalidate,
+      tags,
+      token,
+      config,
+      orgId,
+      apiBaseUrl,
+      ...restQuery
+    } = query;
+
+    if (cache !== undefined) opt.cache = cache;
+    if (revalidate !== undefined) opt.revalidate = revalidate;
+    if (revalidation !== undefined) opt.revalidation = revalidation;
+    if (forceRevalidate !== undefined) opt.forceRevalidate = forceRevalidate;
+    if (tags !== undefined) opt.tags = tags;
+    if (token !== undefined) opt.token = token;
+    if (config !== undefined) opt.config = config;
+    if (orgId !== undefined) opt.orgId = orgId;
+    if (apiBaseUrl !== undefined) opt.apiBaseUrl = apiBaseUrl;
+
+    queryParams = restQuery;
+  }
+
+  const queryStr = buildQueryString(queryParams);
+  const url = `${getApiBaseUrl(opt)}/api/products${queryStr}`;
+  const fetchConfig = await buildCachedFetchConfig(["products"], 604800, opt);
+  return requestJson(url, fetchConfig, "Failed to fetch products");
+};
+
+export const getProductByIdAction = async (productId, options = {}) => {
+  if (!productId) return null;
+  const url = `${getApiBaseUrl(options)}/api/products/${productId}`;
+  const fetchConfig = await buildCachedFetchConfig(
+    ["products", `product-${productId}`],
+    604800,
+    options,
+  );
+  return requestJson(url, fetchConfig, "Failed to fetch product");
+};
+
+export const getRelatedProductsAction = async (taxonId, options = {}) => {
+  let queryStr = "";
+  if (typeof taxonId === "string") {
+    let clean = taxonId.startsWith("?") ? taxonId.slice(1) : taxonId;
+    if (clean.includes("&")) {
+      const parts = clean.split("&");
+      if (!parts[0].includes("=")) {
+        parts[0] = `taxon_id=${parts[0]}`;
+        clean = parts.join("&");
+      }
+      queryStr = `?${clean}`;
+    } else if (clean.includes("=")) {
+      queryStr = `?${clean}`;
+    } else if (clean) {
+      queryStr = `?taxon_id=${clean}`;
+    }
+  } else if (taxonId && typeof taxonId === "object") {
+    queryStr = buildQueryString(taxonId);
+  }
+
+  const url = `${getApiBaseUrl(options)}/api/products${queryStr}`;
+  const fetchConfig = await buildCachedFetchConfig(
+    ["products"],
+    604800,
+    options,
+  );
+  return requestJson(url, fetchConfig, "Failed to fetch related products");
+};
+
+export const getTaxonByIdAction = async (taxonId, options = {}) => {
+  if (!taxonId) return null;
+  const url = `${getApiBaseUrl(options)}/api/taxons/${taxonId}`;
+  const fetchConfig = await buildCachedFetchConfig(
+    ["taxons", `taxon-${taxonId}`],
+    86400,
+    options,
+  );
+  return requestJson(url, fetchConfig, "Failed to fetch taxon");
+};
+
+export const getAllTaxonsAction = async (params = "", options = {}) => {
+  let query = params;
+  let opt = { ...options };
+
+  if (params && typeof params === "object") {
+    const {
+      cache,
+      revalidate,
+      revalidation,
+      forceRevalidate,
+      tags,
+      token,
+      config,
+      orgId,
+      apiBaseUrl,
+      ...queryParams
+    } = params;
+
+    if (cache !== undefined) opt.cache = cache;
+    if (revalidate !== undefined) opt.revalidate = revalidate;
+    if (revalidation !== undefined) opt.revalidation = revalidation;
+    if (forceRevalidate !== undefined) opt.forceRevalidate = forceRevalidate;
+    if (tags !== undefined) opt.tags = tags;
+    if (token !== undefined) opt.token = token;
+    if (config !== undefined) opt.config = config;
+    if (orgId !== undefined) opt.orgId = orgId;
+    if (apiBaseUrl !== undefined) opt.apiBaseUrl = apiBaseUrl;
+
+    query = queryParams;
+  }
+
+  const queryStr = buildQueryString(query);
+  const url = `${getApiBaseUrl(opt)}/api/taxons${queryStr}`;
+  const fetchConfig = await buildCachedFetchConfig(["taxons"], 86400, opt);
+  return requestJson(url, fetchConfig, "Failed to fetch taxons");
+};
+
+export const getTaxonomiesAction = async (params = "", options = {}) => {
+  let query = params;
+  let opt = { ...options };
+
+  if (params && typeof params === "object") {
+    const {
+      cache,
+      revalidate,
+      revalidation,
+      forceRevalidate,
+      tags,
+      token,
+      config,
+      orgId,
+      apiBaseUrl,
+      ...queryParams
+    } = params;
+
+    if (cache !== undefined) opt.cache = cache;
+    if (revalidate !== undefined) opt.revalidate = revalidate;
+    if (revalidation !== undefined) opt.revalidation = revalidation;
+    if (forceRevalidate !== undefined) opt.forceRevalidate = forceRevalidate;
+    if (tags !== undefined) opt.tags = tags;
+    if (token !== undefined) opt.token = token;
+    if (config !== undefined) opt.config = config;
+    if (orgId !== undefined) opt.orgId = orgId;
+    if (apiBaseUrl !== undefined) opt.apiBaseUrl = apiBaseUrl;
+
+    query = queryParams;
+  }
+
+  const queryStr = buildQueryString(query);
+  const url = `${getApiBaseUrl(opt)}/api/taxonomies${queryStr}`;
+  const fetchConfig = await buildCachedFetchConfig(["taxonomies"], 86400, opt);
+  return requestJson(url, fetchConfig, "Failed to fetch taxonomies");
+};
+
+export const getTaxonomyByIdAction = async (taxonomyId, options = {}) => {
+  if (!taxonomyId) return null;
+  const url = `${getApiBaseUrl(options)}/api/taxonomies/${taxonomyId}`;
+  const fetchConfig = await buildCachedFetchConfig(
+    ["taxonomies", `taxonomy-${taxonomyId}`],
+    86400,
+    options,
+  );
+  return requestJson(url, fetchConfig, "Failed to fetch taxonomy");
+};
+
+export const getProductsFilterAction = async (options = {}) => {
+  const url = `${getApiBaseUrl(options)}/api/filterable`;
+  const fetchConfig = await buildCachedFetchConfig(
+    ["filterable"],
+    604800,
+    options,
+  );
+  return requestJson(url, fetchConfig, "Failed to fetch products filter");
+};
+
+export const getRecentlyViewedProductsAction = async (
+  page = 1,
+  perPage = 15,
+  options = {},
+) => {
+  let opt = options;
+  let p = page;
+  let pp = perPage;
+  if (typeof page === "object" && page !== null) {
+    opt = page;
+    p = opt.page || 1;
+    pp = opt.perPage || opt.per_page || 15;
+  }
+
+  // Guard: skip the API call entirely if no token is available (matching getCurrentUserLikedProductsAction)
+  const token = await getServerToken(opt.token);
+  if (!token) return { recently_viewed_products: [] };
+
+  const queryParts = [];
+  if (p) queryParts.push(`page=${p}`);
+  if (pp) queryParts.push(`per_page=${pp}`);
+  const queryStr = queryParts.length ? `?${queryParts.join("&")}` : "";
+
+  const url = `${getApiBaseUrl(opt)}/api/recently_viewed_products${queryStr}`;
+  const fetchConfig = {
+    method: "GET",
+    headers: await buildHeaders({ ...opt, token }),
+  };
+
+  if (typeof window === "undefined") {
+    fetchConfig.next = { tags: ["recently-viewed-products"], revalidate: 300 };
+  } else {
+    fetchConfig.cache = opt.cache || "no-store";
+  }
+
+  return requestJson(
+    url,
+    fetchConfig,
+    "Failed to fetch recently viewed products",
+  );
+};
+
+export const getLikedProductsAction = async (options = {}) => {
+  const url = `${getApiBaseUrl(options)}/api/product_likes`;
+  return requestJson(
+    url,
+    {
+      method: "GET",
+      headers: await buildHeaders(options),
+      cache: "no-store",
+    },
+    "Failed to fetch liked products",
+  );
+};
+
+export const likeProductAction = async (body, options = {}) => {
+  const url = `${getApiBaseUrl(options)}/api/product_likes`;
+  return requestJson(
+    url,
+    {
+      method: "POST",
+      headers: await buildHeaders(options),
+      body: JSON.stringify(body),
+      cache: "no-store",
+    },
+    "Failed to like product",
+  );
+};
+
+export const unlikeProductAction = async (id, options = {}) => {
+  const url = `${getApiBaseUrl(options)}/api/product_likes/${id}`;
+  return requestJson(
+    url,
+    {
+      method: "DELETE",
+      headers: await buildHeaders(options),
+      cache: "no-store",
+    },
+    "Failed to unlike product",
+  );
+};
+
+export const getCurrentUserLikedProductsAction = async (
+  page = 1,
+  perPage = 100,
+  options = {},
+) => {
+  let opt = options;
+  let p = page;
+  let pp = perPage;
+  if (typeof page === "object" && page !== null) {
+    opt = page;
+    p = opt.page || 1;
+    pp = opt.perPage || opt.per_page || 100;
+  }
+
+  // Guard: skip the API call entirely if no token is available
+  const token = await getServerToken(opt.token);
+  if (!token) return [];
+
+  const queryParts = [];
+  if (p) queryParts.push(`page=${p}`);
+  if (pp) queryParts.push(`per_page=${pp}`);
+  const queryStr = queryParts.length ? `?${queryParts.join("&")}` : "";
+  const url = `${getApiBaseUrl(opt)}/api/current_user_liked_products${queryStr}`;
+
+  const fetchConfig = {
+    method: "GET",
+    headers: await buildHeaders({ ...opt, token }),
+  };
+
+  if (typeof window === "undefined") {
+    fetchConfig.next = { tags: ["LikedProducts"], revalidate: 300 };
+  } else {
+    fetchConfig.cache = opt.cache || "no-store";
+  }
+
+  return requestJson(
+    url,
+    fetchConfig,
+    "Failed to fetch current user liked products",
+  );
+};
+
+export const getProductsByIdsAction = async (productIds = [], options = {}) => {
+  if (!productIds.length) return [];
+  const params = productIds.map((pid) => `ids[]=${pid}`).join("&");
+  const url = `${getApiBaseUrl(options)}/api/products?${params}&per_page=${productIds.length}`;
+  const fetchConfig = await buildCachedFetchConfig(
+    ["products"],
+    604800,
+    options,
+  );
+  const data = await requestJson(
+    url,
+    fetchConfig,
+    "Failed to fetch products by ids",
+  );
+  return data?.products ?? data?.data ?? (Array.isArray(data) ? data : []);
+};
+
+// ─── Organization ─────────────────────────────────────────────────────────────
+
+export const getOrganizationAction = async (options = {}) => {
+  const orgId =
+    options?.organizationId || options?.id || getOrganizationId(options);
+  const url = orgId
+    ? `${getApiBaseUrl(options)}/api/organizations/${orgId}`
+    : `${getApiBaseUrl(options)}/api/organizations`;
+  const fetchConfig = await buildCachedFetchConfig(
+    ["organizations"],
+    86400,
+    options,
+  );
+  return requestJson(url, fetchConfig, "Failed to fetch organization");
+};
+
+export const getOrgVideosAction = async (options = {}) => {
+  const url = `${getApiBaseUrl(options)}/api/organization_videos`;
+  const fetchConfig = await buildCachedFetchConfig(
+    ["organization-videos"],
+    86400,
+    options,
+  );
+  return requestJson(url, fetchConfig, "Failed to fetch organization videos");
 };

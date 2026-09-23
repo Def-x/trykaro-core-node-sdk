@@ -9,30 +9,44 @@ import { ProfileForm } from "./ProfileForm";
 import { Spinner } from "../ui/Spinner";
 import { EmptyState } from "../ui/EmptyState";
 
+const normalizeAddresses = (payload) =>
+  payload?.data ??
+  payload?.addresses ??
+  (Array.isArray(payload) ? payload : []);
+
 /**
  * UserInfo Component
  *
  * Displays the "MY PROFILE" section, including user details and a grid of addresses.
  */
 export const UserInfo = ({ user, isLoading, refetch }) => {
-  const { actions, config } = useCore();
+  const { actions, config, auth } = useCore();
   const [addresses, setAddresses] = useState([]);
   const [isAddrLoading, setIsAddrLoading] = useState(false);
   const [modalState, setModalState] = useState({ type: null, data: null });
 
-  const fetchAddresses = useCallback(async () => {
-    if (!actions?.getUserAddress) return;
-    setIsAddrLoading(true);
-    try {
-      const addrs = await actions.getUserAddress();
-      console.log("addrs", { addrs });
-      setAddresses(addrs || []);
-    } catch (error) {
-      console.error("Error fetching addresses:", error);
-    } finally {
-      setIsAddrLoading(false);
-    }
-  }, [actions]);
+  const fetchAddresses = useCallback(
+    async (options = {}) => {
+      const token = auth?.token ?? auth?.access_token ?? null;
+      const signedIn = !!((auth?.isSignedIn ?? false) && token);
+      if (!actions?.getUserAddress || !signedIn) {
+        setAddresses([]);
+        setIsAddrLoading(false);
+        return;
+      }
+      setIsAddrLoading(true);
+      try {
+        const addrs = await actions.getUserAddress(options);
+        setAddresses(normalizeAddresses(addrs));
+      } catch (error) {
+        console.error("Error fetching addresses:", error);
+        setAddresses([]);
+      } finally {
+        setIsAddrLoading(false);
+      }
+    },
+    [actions?.getUserAddress, auth?.isSignedIn, auth?.token, auth?.access_token],
+  );
 
   useEffect(() => {
     fetchAddresses();
@@ -182,7 +196,7 @@ export const UserInfo = ({ user, isLoading, refetch }) => {
           <AddressForm
             initialData={modalState.data}
             onSuccess={() => {
-              fetchAddresses();
+              fetchAddresses({ force: true });
               closeModal();
             }}
             onCancel={closeModal}

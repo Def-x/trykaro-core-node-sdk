@@ -1,4 +1,6 @@
-import { getPaymentGateway } from './chunk-UP7U6KB6.js';
+import { trackDiscountEventAction, removeDiscountById, removeDiscountAction, applyDiscountAction, getAvailableDiscountsAction, getOrderInvoiceAction, getOrderByIdAction, getOrdersAction, updateUserAction, getUserAction, deleteAddressAction, updateAddressAction, createAddressAction, getAddressesAction, updateRazorpayPaymentAction, createRazorpayOrderAction, deleteLineItemAction, updateLineItemAction, createLineItemAction, updateCartIdLineItemsAction, updateCartAction, createCartAction, getCartByIdAction, getCartAction, getCurrentUserLikedProductsAction, verifyOtp, signUpUser, loginUser, validateCartTotal } from './chunk-SYP2BKC5.js';
+export { applyDiscount, applyDiscountAction, createAddressAction, createCartAction, createLineItemAction, createRazorpayOrderAction, deleteAddressAction, deleteLineItemAction, getAddressesAction, getAllTaxonsAction, getAvailableDiscountsAction, getCartAction, getCartByIdAction, getCurrentUserLikedProductsAction, getLikedProductsAction, getOrderByIdAction, getOrderInvoiceAction, getOrdersAction, getOrgVideosAction, getOrganizationAction, getProductByIdAction, getProductsAction, getProductsByIdsAction, getProductsFilterAction, getRecentlyViewedProductsAction, getRelatedProductsAction, getTaxonByIdAction, getTaxonomiesAction, getTaxonomyByIdAction, getUserAction, likeProductAction, loginUser, removeDiscountAction, removeDiscountById, signUpUser, trackDiscountEventAction, unlikeProductAction, updateAddressAction, updateCartAction, updateCartIdLineItemsAction, updateLineItemAction, updateRazorpayPaymentAction, updateUserAction, validateCartTotal, verifyOtp } from './chunk-SYP2BKC5.js';
+import { getPaymentGateway } from './chunk-ZXSZ7SQJ.js';
 import React8, { createContext, useEffect, useMemo, useState, useCallback, useContext, useRef, Component } from 'react';
 import posthog from 'posthog-js';
 import { jsxs, jsx, Fragment } from 'react/jsx-runtime';
@@ -8,498 +10,6 @@ import { flatten, map, compact, filter, uniqBy } from 'lodash';
 import Link from 'next/link';
 import { useRazorpay } from 'react-razorpay';
 import { createPortal } from 'react-dom';
-
-// src/actions/storefrontActions.js
-var API_VERSION_ACCEPT = "application/vnd.defx-store.v2";
-var getApiBaseUrl = (options = {}) => options?.config?.apiBaseUrl || options?.apiBaseUrl || process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || "";
-var getOrganizationId = (options = {}) => options?.config?.storeId || options?.orgId || process.env.NEXT_PUBLIC_ORGANIZATION_ID || process.env.ORG_ID || null;
-var getServerToken = async (token) => {
-  if (token) return token;
-  if (typeof window !== "undefined") {
-    return window.localStorage?.getItem("access_token") || null;
-  }
-  try {
-    const { cookies } = await import('next/headers');
-    const cookieStore = await cookies();
-    return cookieStore.get("access_token")?.value || cookieStore.get("token")?.value || null;
-  } catch {
-    return null;
-  }
-};
-var buildHeaders = async ({
-  token,
-  orgId,
-  config,
-  json = true,
-  requireAuth = false
-} = {}) => {
-  const authToken = await getServerToken(token);
-  const organizationId = getOrganizationId({ orgId, config });
-  if (requireAuth && !authToken) {
-    throw new Error("Unauthorized");
-  }
-  return {
-    ...json ? { "Content-Type": "application/json" } : {},
-    accept: API_VERSION_ACCEPT,
-    ...organizationId ? { "Set-Organization": organizationId } : {},
-    ...authToken ? { Authorization: `Bearer ${authToken}` } : {}
-  };
-};
-var readError = async (res, fallback) => {
-  const text = await res.text().catch(() => "");
-  if (!text) return fallback;
-  try {
-    const data = JSON.parse(text);
-    return data?.message || data?.error || fallback;
-  } catch {
-    return text;
-  }
-};
-var wrapJsonResponse = async (res, fallback) => {
-  const data = await res.json().catch(() => null);
-  if (!res.ok) {
-    return {
-      serverError: data?.error || data?.message || fallback,
-      data,
-      status: res.status
-    };
-  }
-  return data;
-};
-var requestJson = async (url, options, fallback) => {
-  const res = await fetch(url, options);
-  if (!res.ok) {
-    return { serverError: await readError(res, fallback) };
-  }
-  if (res.status === 204) return true;
-  return res.json();
-};
-var requestJsonFromResponse = async (res, fallback) => {
-  if (!res.ok) return { serverError: await readError(res, fallback) };
-  if (res.status === 204) return true;
-  return res.json();
-};
-var createCartAction = async (body = {}, options = {}) => {
-  const res = await fetch(`${getApiBaseUrl(options)}/api/carts`, {
-    method: "POST",
-    headers: await buildHeaders(options),
-    body: JSON.stringify(body),
-    cache: "no-store"
-  });
-  return requestJsonFromResponse(res, "Failed to create cart");
-};
-var getCartAction = async (regionId, options = {}) => {
-  const url = new URL(`${getApiBaseUrl(options)}/api/carts`);
-  if (regionId) url.searchParams.set("region_id", regionId);
-  return requestJson(
-    url.toString(),
-    {
-      method: "GET",
-      headers: await buildHeaders(options),
-      cache: "no-store"
-    },
-    "Failed to get cart"
-  );
-};
-var getCartByIdAction = async (cartId, regionId, options = {}) => {
-  const url = new URL(`${getApiBaseUrl(options)}/api/carts/${cartId}`);
-  if (regionId) url.searchParams.set("region_id", regionId);
-  const res = await fetch(url.toString(), {
-    method: "GET",
-    headers: await buildHeaders(options),
-    cache: "no-store"
-  });
-  if (res.status === 404) return null;
-  return requestJsonFromResponse(res, "Failed to get cart");
-};
-var updateCartAction = async (cartId, payload, options = {}) => requestJson(
-  `${getApiBaseUrl(options)}/api/carts/${cartId}`,
-  {
-    method: "PUT",
-    headers: await buildHeaders(options),
-    body: JSON.stringify(payload),
-    cache: "no-store"
-  },
-  "Failed to update cart"
-);
-var updateCartIdLineItemsAction = async (payload, options = {}) => requestJson(
-  `${getApiBaseUrl(options)}/api/update_cart_id_line_items`,
-  {
-    method: "PUT",
-    headers: await buildHeaders(options),
-    body: JSON.stringify(payload),
-    cache: "no-store"
-  },
-  "Failed to update cart line items"
-);
-var createLineItemAction = async (body = {}, options = {}) => requestJson(
-  `${getApiBaseUrl(options)}/api/line_items`,
-  {
-    method: "POST",
-    headers: await buildHeaders(options),
-    body: JSON.stringify(body),
-    cache: "no-store"
-  },
-  "Failed to create line item"
-);
-var updateLineItemAction = async (lineItemId, body, options = {}) => requestJson(
-  `${getApiBaseUrl(options)}/api/line_items/${lineItemId}`,
-  {
-    method: "PUT",
-    headers: await buildHeaders(options),
-    body: JSON.stringify(body),
-    cache: "no-store"
-  },
-  "Failed to update line item"
-);
-var deleteLineItemAction = async (lineItemId, options = {}) => requestJson(
-  `${getApiBaseUrl(options)}/api/line_items/${lineItemId}`,
-  {
-    method: "DELETE",
-    headers: await buildHeaders(options),
-    cache: "no-store"
-  },
-  "Failed to delete line item"
-);
-var createRazorpayOrderAction = async (cartId, options = {}) => requestJson(
-  `${getApiBaseUrl(options)}/api/cart_payments`,
-  {
-    method: "POST",
-    headers: await buildHeaders({ ...options, requireAuth: true }),
-    body: JSON.stringify({ cart_id: cartId }),
-    cache: "no-store"
-  },
-  "Failed to create Razorpay order"
-);
-var updateRazorpayPaymentAction = async (paymentId, razorpayPaymentId, options = {}) => requestJson(
-  `${getApiBaseUrl(options)}/api/cart_payments/${paymentId}`,
-  {
-    method: "PUT",
-    headers: await buildHeaders({ ...options, requireAuth: true }),
-    body: JSON.stringify({ razor_payment_id: razorpayPaymentId }),
-    cache: "no-store"
-  },
-  "Failed to update Razorpay payment id"
-);
-var getAddressesAction = async (options = {}) => {
-  const token = await getServerToken(options.token);
-  if (!token) return { data: [] };
-  return requestJson(
-    `${getApiBaseUrl(options)}/api/addresses`,
-    {
-      method: "GET",
-      headers: await buildHeaders({ ...options, token }),
-      cache: "no-store"
-    },
-    "Failed to fetch addresses"
-  );
-};
-var createAddressAction = async (addressData, options = {}) => requestJson(
-  `${getApiBaseUrl(options)}/api/addresses`,
-  {
-    method: "POST",
-    headers: await buildHeaders({ ...options, requireAuth: true }),
-    body: JSON.stringify({ address: addressData }),
-    cache: "no-store"
-  },
-  "Failed to create address"
-);
-var updateAddressAction = async (addressId, addressData, options = {}) => requestJson(
-  `${getApiBaseUrl(options)}/api/addresses/${addressId}`,
-  {
-    method: "PUT",
-    headers: await buildHeaders({ ...options, requireAuth: true }),
-    body: JSON.stringify({ address: addressData }),
-    cache: "no-store"
-  },
-  "Failed to update address"
-);
-var deleteAddressAction = async (addressId, options = {}) => requestJson(
-  `${getApiBaseUrl(options)}/api/addresses/${addressId}`,
-  {
-    method: "DELETE",
-    headers: await buildHeaders({ ...options, requireAuth: true }),
-    cache: "no-store"
-  },
-  "Failed to delete address"
-);
-var loginUser = async (data = {}, options = {}) => {
-  const payload = {
-    phone: data?.phone ?? data,
-    country_code: data?.country_code ?? data?.countryCode ?? "+91",
-    organization_id: getOrganizationId(options)
-  };
-  return requestJson(
-    `${getApiBaseUrl(options)}/api/login`,
-    {
-      method: "POST",
-      headers: await buildHeaders(options),
-      body: JSON.stringify(payload),
-      cache: "no-store"
-    },
-    "Failed to send OTP"
-  );
-};
-var signUpUser = async (data = {}, options = {}) => {
-  const formData = data instanceof FormData ? data : new FormData();
-  if (!(data instanceof FormData)) {
-    formData.append("user[first_name]", data?.firstName ?? "");
-    formData.append("user[last_name]", data?.lastName ?? "");
-    formData.append("user[phone]", data?.phone ?? "");
-    formData.append("user[country_code]", data?.countryCode ?? "+91");
-  }
-  return requestJson(
-    `${getApiBaseUrl(options)}/api/users`,
-    {
-      method: "POST",
-      headers: await buildHeaders({ ...options, json: false }),
-      body: formData,
-      cache: "no-store"
-    },
-    "Failed to sign up"
-  );
-};
-var verifyOtp = async (data = {}, options = {}) => {
-  const result = await requestJson(
-    `${getApiBaseUrl(options)}/api/verify`,
-    {
-      method: "POST",
-      headers: await buildHeaders(options),
-      body: JSON.stringify(data),
-      cache: "no-store"
-    },
-    "Invalid OTP"
-  );
-  const token = result?.token ?? result?.access_token;
-  if (!token || result?.serverError) return result;
-  const user = await getUserAction({ ...options, token });
-  return { ...result, user };
-};
-var getUserAction = async (options = {}) => {
-  const token = await getServerToken(options.token);
-  if (!token) return null;
-  return requestJson(
-    `${getApiBaseUrl(options)}/api/users`,
-    {
-      method: "GET",
-      headers: await buildHeaders({ ...options, token }),
-      cache: "no-store"
-    },
-    "Failed to get user"
-  );
-};
-var updateUserAction = async (userId, userData, options = {}) => requestJson(
-  `${getApiBaseUrl(options)}/api/users/${userId}`,
-  {
-    method: "PUT",
-    headers: await buildHeaders({ ...options, requireAuth: true }),
-    body: JSON.stringify(userData),
-    cache: "no-store"
-  },
-  "Failed to update user"
-);
-var getOrdersAction = async (regionId, page = 1, options = {}) => {
-  const url = new URL(`${getApiBaseUrl(options)}/api/get_current_user_orders`);
-  if (regionId) url.searchParams.set("region_id", regionId);
-  url.searchParams.set("page", page.toString());
-  url.searchParams.set("per_page", "10");
-  return requestJson(
-    url.toString(),
-    {
-      method: "GET",
-      headers: await buildHeaders(options),
-      cache: "no-store"
-    },
-    "Failed to get orders"
-  );
-};
-var getOrderByIdAction = async (orderId, options = {}) => requestJson(
-  `${getApiBaseUrl(options)}/api/orders/${orderId}`,
-  {
-    method: "GET",
-    headers: await buildHeaders(options),
-    cache: "no-store"
-  },
-  "Failed to get order"
-);
-var getOrderInvoiceAction = async (orderId, options = {}) => {
-  const res = await fetch(
-    `${getApiBaseUrl(options)}/api/generate_invoice_pdf/${orderId}`,
-    {
-      method: "GET",
-      headers: await buildHeaders(options),
-      cache: "no-store"
-    }
-  );
-  if (!res.ok)
-    return { serverError: await readError(res, "Failed to get order invoice") };
-  return res.text();
-};
-var getAvailableDiscountsAction = async (params = {}) => {
-  const url = new URL(`${getApiBaseUrl(params)}/api/discounts/available`);
-  if (params.cart_id) url.searchParams.set("cart_id", params.cart_id);
-  if (params.region_id) url.searchParams.set("region_id", params.region_id);
-  const res = await fetch(url.toString(), {
-    method: "GET",
-    headers: await buildHeaders(params),
-    cache: "no-store"
-  });
-  return wrapJsonResponse(res, "Failed to fetch available discounts");
-};
-var applyDiscountAction = async (params = {}) => {
-  const payload = {
-    source: params.source || "web",
-    ...params.region_id ? { region_id: params.region_id } : {},
-    ...params.code ? { code: params.code } : {},
-    ...params.discount_id ? { discount_id: params.discount_id } : {}
-  };
-  const res = await fetch(`${getApiBaseUrl(params)}/api/discounts/apply`, {
-    method: "POST",
-    headers: await buildHeaders(params),
-    body: JSON.stringify(payload),
-    cache: "no-store"
-  });
-  return wrapJsonResponse(res, "Failed to apply discount");
-};
-var removeDiscountAction = async (params = {}) => {
-  const url = new URL(`${getApiBaseUrl(params)}/api/discounts/remove`);
-  if (params.discount_id)
-    url.searchParams.set("discount_id", params.discount_id);
-  if (params.region_id) url.searchParams.set("region_id", params.region_id);
-  const res = await fetch(url.toString(), {
-    method: "DELETE",
-    headers: await buildHeaders(params),
-    cache: "no-store"
-  });
-  return wrapJsonResponse(res, "Failed to remove discount");
-};
-var trackDiscountEventAction = async (params = {}) => {
-  const res = await fetch(
-    `${getApiBaseUrl(params)}/api/discounts/track_event`,
-    {
-      method: "POST",
-      headers: await buildHeaders(params),
-      body: JSON.stringify({
-        discount_id: params.discount_id,
-        event_type: params.event_type,
-        source: params.source,
-        region_id: params.region_id
-      }),
-      cache: "no-store"
-    }
-  );
-  return wrapJsonResponse(res, "Failed to track discount event");
-};
-var validateCartTotal = async (cartId, clientTotal, options = {}) => {
-  if (!cartId) return { valid: false, reason: "no_cart_id" };
-  try {
-    const headers = await buildHeaders({ ...options, requireAuth: false });
-    const base = getApiBaseUrl(options);
-    const res = await fetch(`${base}/api/carts/${cartId}`, {
-      method: "GET",
-      headers,
-      cache: "no-store"
-    });
-    const resData = await res.json();
-    const cart = Array.isArray(resData) ? resData[0] : resData;
-    const serverTotal = cart?.total ?? cart?.grand_total ?? cart?.total_amount ?? cart?.display_total ?? null;
-    if (serverTotal === null) {
-      return { valid: true, serverTotal: null };
-    }
-    const tolerance = options?.tolerance ?? 0;
-    const diff = Math.abs(Number(serverTotal) - Number(clientTotal));
-    if (diff > tolerance) {
-      return {
-        valid: false,
-        reason: "price_mismatch",
-        serverTotal: Number(serverTotal),
-        clientTotal: Number(clientTotal),
-        cart
-        // return the fresh cart so UI can update without an extra fetch
-      };
-    }
-    return { valid: true, serverTotal: Number(serverTotal) };
-  } catch (err) {
-    console.error("[validateCartTotal] Error:", err);
-    return { valid: true, reason: "validation_skipped" };
-  }
-};
-
-// src/actions/discountActions.js
-var buildHeaders2 = (token, orgId) => {
-  const headers = {
-    "Content-Type": "application/json",
-    accept: "application/vnd.defx-store.v2"
-  };
-  if (orgId) {
-    headers["Set-Organization"] = orgId;
-  } else if (process.env.NEXT_PUBLIC_ORGANIZATION_ID) {
-    headers["Set-Organization"] = process.env.NEXT_PUBLIC_ORGANIZATION_ID;
-  } else if (process.env.ORG_ID) {
-    headers["Set-Organization"] = process.env.ORG_ID;
-  }
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-  return headers;
-};
-var wrapResponse = async (res, fallbackMessage) => {
-  const data = await res.json().catch(() => null);
-  if (!res.ok) {
-    const err = new Error(
-      data?.error || data?.message || fallbackMessage || "Discount action failed"
-    );
-    err.data = data;
-    err.status = res.status;
-    throw err;
-  }
-  return data;
-};
-var removeDiscountById = async ({
-  token,
-  discount_id,
-  region_id,
-  apiBaseUrl,
-  orgId
-} = {}) => {
-  const baseUrl = apiBaseUrl || process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL;
-  if (!baseUrl) throw new Error("API base URL is not configured");
-  const url = new URL(`${baseUrl}/api/discounts/remove`);
-  if (discount_id) url.searchParams.set("discount_id", discount_id);
-  if (region_id) url.searchParams.set("region_id", region_id);
-  const res = await fetch(url.toString(), {
-    method: "DELETE",
-    headers: buildHeaders2(token, orgId),
-    cache: "no-store"
-  });
-  return wrapResponse(res, "Failed to remove discount");
-};
-var applyDiscount = async ({
-  token,
-  code,
-  discount_id,
-  source,
-  region_id,
-  apiBaseUrl,
-  orgId
-} = {}) => {
-  const baseUrl = apiBaseUrl || process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL;
-  if (!baseUrl) throw new Error("API base URL is not configured");
-  const url = new URL(`${baseUrl}/api/discounts/apply`);
-  const payload = {
-    source: source || "web"
-  };
-  if (code) payload.code = code;
-  if (discount_id) payload.discount_id = discount_id;
-  if (region_id) payload.region_id = region_id;
-  const res = await fetch(url.toString(), {
-    method: "POST",
-    headers: buildHeaders2(token, orgId),
-    body: JSON.stringify(payload),
-    cache: "no-store"
-  });
-  return wrapResponse(res, "Failed to apply discount");
-};
 
 // src/lib/thirdPartyScripts.js
 function nameToSlug(name = "") {
@@ -610,7 +120,6 @@ function ThirdPartyScripts({
   marketplaces: prefetched,
   orgData
 }) {
-  console.log({ orgData });
   useEffect(() => {
     async function run() {
       let records = prefetched;
@@ -963,15 +472,6 @@ var CoreProvider = ({
   const primaryColor = resolvedConfig?.primaryColor ?? "#00214c";
   const secondaryColor = resolvedConfig?.secondaryColor ?? "#c8a95a";
   const [cart, setCart] = useState();
-  const resolvedActions = useMemo(() => {
-    const merged = { ...actions };
-    Object.entries(inbuiltActions).forEach(([key, fn]) => {
-      if (!merged[key]) {
-        merged[key] = fn;
-      }
-    });
-    return merged;
-  }, [actions]);
   const [isCartLoading, setIsCartLoading] = useState(true);
   const [region, setRegion] = useState(resolvedConfig?.region ?? null);
   const [authState, setAuthState] = useState(() => injectedAuth ?? {});
@@ -1024,6 +524,15 @@ var CoreProvider = ({
       clearAuth
     };
   }, [authType, injectedAuth, authState, setAuth, clearAuth]);
+  const resolvedActions = useMemo(() => {
+    const merged = { ...actions };
+    Object.entries(inbuiltActions).forEach(([key, fn]) => {
+      if (!merged[key]) {
+        merged[key] = fn;
+      }
+    });
+    return merged;
+  }, [actions]);
   useEffect(() => {
     const devToken = resolvedConfig?.posthogDeveloperToken || config?.posthogDeveloperToken || (typeof process !== "undefined" ? process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN_DEVELOPER : null);
     const devHost = resolvedConfig?.posthogDeveloperHost || config?.posthogDeveloperHost || (typeof process !== "undefined" ? process.env.NEXT_PUBLIC_POSTHOG_HOST_DEVELOPER : null) || "https://us.i.posthog.com";
@@ -1074,17 +583,21 @@ var CoreProvider = ({
       try {
         setIsCartLoading(true);
         let resolvedCart = null;
-        const isSignedIn = auth?.isSignedIn ?? false;
-        if (isSignedIn) {
-          const data = await resolvedActions.getCart(resolvedConfig?.regionId);
-          resolvedCart = Array.isArray(data) ? data[0] : data;
+        const token = auth?.token ?? auth?.access_token ?? null;
+        const isActuallySignedIn = !!((auth?.isSignedIn ?? false) && token);
+        if (isActuallySignedIn && token) {
+          const data = await resolvedActions.getCart(resolvedConfig?.regionId, { token });
+          const candidate = Array.isArray(data) ? data[0] : data;
+          resolvedCart = candidate && !candidate.serverError && !candidate.error ? candidate : null;
         } else {
           const storedCartId = typeof window !== "undefined" ? localStorage.getItem("cartid") : null;
           if (storedCartId && resolvedActions?.getCartById) {
-            resolvedCart = await resolvedActions.getCartById(
+            const candidate = await resolvedActions.getCartById(
               storedCartId,
-              resolvedConfig?.regionId
+              resolvedConfig?.regionId,
+              { token: null }
             );
+            resolvedCart = candidate && !candidate.serverError && !candidate.error ? candidate : null;
           }
         }
         setCart(resolvedCart ?? null);
@@ -1100,7 +613,7 @@ var CoreProvider = ({
       }
     };
     loadCart();
-  }, [resolvedConfig?.regionId, auth?.isSignedIn]);
+  }, [resolvedConfig?.regionId, auth?.isSignedIn, auth?.token, auth?.access_token]);
   useEffect(() => {
     if (typeof document === "undefined") return;
     const root = document.documentElement;
@@ -1143,14 +656,11 @@ var CoreProvider = ({
       captureDeveloperException,
       posthogDeveloper: getDeveloperPostHog()
     }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       cart,
       isCartLoading,
       resolvedRegion,
-      // was wrong: was "region" (stale local state) and "config" (raw prop)
       resolvedConfig,
-      // was wrong: was raw "config" prop
       resolvedActions,
       toast,
       auth,
@@ -1617,7 +1127,9 @@ function useAddToCart() {
   const { cart, setCart, actions, toast, auth, config } = useCore();
   const [quantity, setQuantity] = useState(1);
   const [isAddToCartLoading, setIsAddToCartLoading] = useState(false);
-  const isSignedIn = auth?.isSignedIn ?? false;
+  const [deletingLineItemId, setDeletingLineItemId] = useState(null);
+  const userToken = auth?.token ?? auth?.access_token ?? null;
+  const isActuallySignedIn = !!((auth?.isSignedIn ?? false) && userToken);
   const regionId = config?.regionId ?? null;
   const cartItems = cart?.line_items ?? [];
   const normalizeCustomizations = (c) => {
@@ -1658,44 +1170,44 @@ function useAddToCart() {
   const refreshCart = async (cartId) => {
     try {
       let updatedCart;
-      if (isSignedIn) {
-        const data = await actions.getCart?.(regionId);
+      if (isActuallySignedIn && userToken) {
+        const data = await actions.getCart?.(regionId, { token: userToken });
         updatedCart = Array.isArray(data) ? data[0] : data;
-      } else {
+      } else if (cartId) {
         updatedCart = await actions.getCartById?.(cartId, regionId);
       }
-      console.log("refreshCart", { updatedCart });
       setCart(updatedCart ?? null);
     } catch (err) {
       console.error("[useAddToCart] refreshCart error:", err);
     }
   };
   const addItemToCart = async (product, resolvedCartId, customizations = [], overrideQty = null) => {
-    console.log({ product, resolvedCartId, customizations, overrideQty });
     const sellingQTY = product?.selling_quantity?.values?.[0]?.label;
     const qty = overrideQty !== null ? overrideQty : quantity ?? 1;
     const existingLineItem = getCartItem(product, customizations);
     if (existingLineItem && !sellingQTY) {
       const newQty = existingLineItem.quantity + qty;
-      await actions.updateLineItem?.(existingLineItem.id, { quantity: newQty });
+      await actions.updateLineItem?.(
+        existingLineItem.id,
+        { quantity: newQty },
+        { token: userToken }
+      );
     } else {
       const body = {
         line_itemable_id: product?.id,
         quantity: qty,
         line_items_customizations: customizations,
-        ...resolvedCartId && !isSignedIn ? { cart_id: resolvedCartId } : {},
+        ...resolvedCartId && !isActuallySignedIn ? { cart_id: resolvedCartId } : {},
         ...regionId ? { region_id: regionId } : {}
       };
-      await actions.createLineItem?.(body);
+      await actions.createLineItem?.(body, { token: userToken });
     }
     setQuantity(sellingQTY ? Number(sellingQTY) : 1);
-    console.log({ resolvedCartId });
     if (resolvedCartId) {
       await refreshCart(resolvedCartId);
     }
   };
   const handleAddToCart = async (product, customizations = [], overrideQty = null) => {
-    console.log({ product, customizations, overrideQty });
     try {
       setIsAddToCartLoading(true);
       const storedCartId = typeof window !== "undefined" ? localStorage.getItem("cartid") : null;
@@ -1710,18 +1222,18 @@ function useAddToCart() {
           order_type: "delivery",
           ...regionId ? { region_id: regionId } : {}
         };
-        const createdCart = await actions.createCart?.(payload);
+        const createdCart = await actions.createCart?.(payload, {
+          token: userToken
+        });
         if (createdCart?.id) {
           resolvedCartId = createdCart.id;
-          if (!isSignedIn) {
+          if (!isActuallySignedIn) {
             localStorage.setItem("cartid", createdCart.id);
           }
-          console.log("createdCart", { createdCart });
           setCart(createdCart);
         }
       }
       await addItemToCart(product, resolvedCartId, customizations, overrideQty);
-      console.log({ product });
       const userId = auth?.user?.id ?? auth?.user?.userId ?? null;
       const currency = config?.currency ?? "INR";
       const qty = overrideQty !== null ? overrideQty : quantity ?? 1;
@@ -1746,11 +1258,16 @@ function useAddToCart() {
     try {
       setIsAddToCartLoading(true);
       if (existingLineItem.quantity <= 1) {
-        await actions.deleteLineItem?.(existingLineItem.id);
-      } else {
-        await actions.updateLineItem?.(existingLineItem.id, {
-          quantity: existingLineItem.quantity - 1
+        setDeletingLineItemId(existingLineItem.id);
+        await actions.deleteLineItem?.(existingLineItem.id, {
+          token: userToken
         });
+      } else {
+        await actions.updateLineItem?.(
+          existingLineItem.id,
+          { quantity: existingLineItem.quantity - 1 },
+          { token: userToken }
+        );
       }
       const activeCartId = cart?.id;
       if (activeCartId) {
@@ -1766,11 +1283,18 @@ function useAddToCart() {
       }
     } finally {
       setIsAddToCartLoading(false);
+      setDeletingLineItemId(null);
     }
   };
   const handleDeleteLineItem = async (product) => {
     try {
-      await actions.deleteLineItem?.(product?.id);
+      setIsAddToCartLoading(true);
+      const lineItem = product?.line_itemable ? product : getCartItem(product) || product;
+      const lineItemId = lineItem?.id;
+      if (lineItemId) {
+        setDeletingLineItemId(lineItemId);
+      }
+      await actions.deleteLineItem?.(lineItemId || product?.id);
       const activeCartId = cart?.id;
       if (activeCartId) {
         await refreshCart(activeCartId);
@@ -1797,6 +1321,7 @@ function useAddToCart() {
       }
     } finally {
       setIsAddToCartLoading(false);
+      setDeletingLineItemId(null);
     }
   };
   return {
@@ -1807,6 +1332,7 @@ function useAddToCart() {
     quantity,
     setQuantity,
     isAddToCartLoading,
+    deletingLineItemId,
     cartItems,
     cart
   };
@@ -1854,6 +1380,7 @@ var useLogout = () => {
       }
       localStorage.removeItem("cartid");
       localStorage.removeItem("access_token");
+      localStorage.removeItem("user");
       try {
         Cookies.remove("access_token", { path: "/" });
       } catch (e) {
@@ -2014,6 +1541,23 @@ function useVariantSelection(rawProduct) {
   };
 }
 
+// src/hooks/useAddresses.js
+function useAddresses() {
+  const { addresses, isAddressLoading, refreshAddresses, actions, auth } = useCore();
+  const token = auth?.token ?? auth?.access_token ?? null;
+  const isSignedIn = !!((auth?.isSignedIn ?? false) && token);
+  return {
+    addresses: isSignedIn ? addresses : [],
+    isAddressLoading,
+    isSignedIn,
+    refreshAddresses: actions?.refreshAddresses || refreshAddresses,
+    createAddress: actions?.createAddress,
+    updateAddress: actions?.updateAddress,
+    deleteAddress: actions?.deleteAddress,
+    getUserAddress: actions?.getUserAddress
+  };
+}
+
 // src/hooks/userCartInfo.js
 var useCartInfo = () => {
   const initialCartInfo = {
@@ -2041,6 +1585,103 @@ var useCartInfo = () => {
   return { initialCartInfo };
 };
 var userCartInfo_default = useCartInfo;
+var likedCache = /* @__PURE__ */ new Map();
+var CACHE_TTL_MS = 5 * 60 * 1e3;
+var isFresh = (entry) => entry && Date.now() - entry.fetchedAt < CACHE_TTL_MS;
+var likedSubscribers = /* @__PURE__ */ new Set();
+function useGetCurrentUserLikedProductsQuery(token = null, { page = 1, perPage = 11, skip = false } = {}) {
+  const isSkip = skip || !token;
+  const cacheKey = token ? `likedProducts-${token}-${page}-${perPage}` : null;
+  const [data, setData] = useState(
+    () => cacheKey && isFresh(likedCache.get(cacheKey)) ? likedCache.get(cacheKey).data : void 0
+  );
+  const [isLoading, setIsLoading] = useState(
+    !isSkip && !(cacheKey && isFresh(likedCache.get(cacheKey)))
+  );
+  const [isFetching, setIsFetching] = useState(false);
+  const [error, setError] = useState(null);
+  const inFlightRef = useRef(null);
+  const runFetch = useCallback(
+    async (forceRefresh = false) => {
+      if (isSkip) return;
+      if (!forceRefresh && cacheKey && isFresh(likedCache.get(cacheKey))) {
+        setData(likedCache.get(cacheKey).data);
+        setIsLoading(false);
+        return likedCache.get(cacheKey).data;
+      }
+      if (inFlightRef.current) {
+        return inFlightRef.current;
+      }
+      setIsFetching(true);
+      const promise = (async () => {
+        try {
+          const result = await getCurrentUserLikedProductsAction(page, perPage, {
+            token,
+            cache: forceRefresh ? "no-store" : void 0
+          });
+          if (cacheKey) {
+            likedCache.set(cacheKey, { data: result, fetchedAt: Date.now() });
+          }
+          setData(result);
+          setError(null);
+          return result;
+        } catch (err) {
+          setError(err);
+          return void 0;
+        } finally {
+          setIsLoading(false);
+          setIsFetching(false);
+          inFlightRef.current = null;
+        }
+      })();
+      inFlightRef.current = promise;
+      return promise;
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [isSkip, cacheKey, token, page, perPage]
+  );
+  useEffect(() => {
+    if (!isSkip) {
+      runFetch();
+    } else {
+      setIsLoading(false);
+    }
+  }, [runFetch, isSkip]);
+  useEffect(() => {
+    if (isSkip) return;
+    const listener = () => {
+      runFetch(true);
+    };
+    likedSubscribers.add(listener);
+    return () => {
+      likedSubscribers.delete(listener);
+    };
+  }, [runFetch, isSkip]);
+  return {
+    data,
+    isLoading,
+    isFetching,
+    isSuccess: !isLoading && !error && data !== void 0,
+    isError: !!error,
+    error,
+    refetch: () => runFetch(true)
+  };
+}
+function invalidateLikedProductsCache(token) {
+  if (!token) return;
+  for (const key of likedCache.keys()) {
+    if (key.startsWith(`likedProducts-${token}`)) {
+      likedCache.delete(key);
+    }
+  }
+  likedSubscribers.forEach((subscriber) => {
+    try {
+      subscriber();
+    } catch (e) {
+      console.error("[invalidateLikedProductsCache] Subscriber error:", e);
+    }
+  });
+}
 var normalizeMode = (value) => {
   if (value === "sign-up" || value === "signup") return "signup";
   return "signin";
@@ -2392,13 +2033,36 @@ var CartItem = ({
   renderActions = null,
   className = ""
 }) => {
-  const { handleAddToCart, handleDecreaseQty, handleDeleteLineItem, isAddToCartLoading } = useAddToCart();
+  const {
+    handleAddToCart,
+    handleDecreaseQty,
+    handleDeleteLineItem,
+    isAddToCartLoading,
+    deletingLineItemId
+  } = useAddToCart();
   const { formatCurrency } = useCurrencyFormat();
+  const [isDeleting, setIsDeleting] = useState(false);
   const product = item?.line_itemable;
   const name = product?.name ?? item?.name ?? "Product";
   const price = item?.price ?? product?.price ?? 0;
   const quantity = item?.quantity ?? 0;
   const imageUrl = product?.product_images?.[0]?.product_image_url ?? product?.image_url ?? null;
+  const isItemDeleting = isDeleting || Boolean(item?.id) && deletingLineItemId === item?.id;
+  const isActionDisabled = isAddToCartLoading || isItemDeleting;
+  const sq = product?.selling_quantity ?? item?.selling_quantity ?? product?.product?.selling_quantity;
+  const hasSellingQuantity = Boolean(product?.selling_quantity_id) || Boolean(item?.selling_quantity_id) || Boolean(product?.is_selling_quantity) || Boolean(item?.is_selling_quantity) || (sq && typeof sq === "object" ? Array.isArray(sq.values) ? sq.values.length > 0 : Object.keys(sq).length > 0 : Boolean(sq));
+  const numQty = Number(quantity);
+  const isDecimalQuantity = !isNaN(numQty) && (numQty % 1 !== 0 || !Number.isInteger(numQty));
+  const isSellingQty = hasSellingQuantity || isDecimalQuantity;
+  const handleDelete = async () => {
+    if (isActionDisabled) return;
+    try {
+      setIsDeleting(true);
+      await handleDeleteLineItem(item);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
   const s = {
     row: {
       display: "flex",
@@ -2478,39 +2142,42 @@ var CartItem = ({
         " \xD7 ",
         quantity
       ] }),
-      renderActions ? renderActions(item) : /* @__PURE__ */ jsxs("div", { style: s.controls, children: [
+      renderActions ? renderActions(item) : !isSellingQty ? /* @__PURE__ */ jsxs("div", { style: s.controls, children: [
         /* @__PURE__ */ jsx(
           "button",
           {
             style: s.qtyBtn,
             onClick: () => handleDecreaseQty(product),
-            disabled: isAddToCartLoading,
+            disabled: isActionDisabled,
             "aria-label": "Decrease quantity",
             children: "\u2212"
           }
         ),
-        /* @__PURE__ */ jsx("span", { style: s.qty, children: isAddToCartLoading ? /* @__PURE__ */ jsx(Spinner, { size: "sm" }) : quantity }),
+        /* @__PURE__ */ jsx("span", { style: s.qty, children: isItemDeleting || isAddToCartLoading ? /* @__PURE__ */ jsx(Spinner, { size: "sm" }) : quantity }),
         /* @__PURE__ */ jsx(
           "button",
           {
             style: s.qtyBtn,
             onClick: () => handleAddToCart(product),
-            disabled: isAddToCartLoading,
+            disabled: isActionDisabled,
             "aria-label": "Increase quantity",
             children: "+"
           }
         )
-      ] })
+      ] }) : /* @__PURE__ */ jsx("div", { style: s.controls, children: /* @__PURE__ */ jsx("span", { style: s.qty, children: quantity }) })
     ] }),
     /* @__PURE__ */ jsx(
       "button",
       {
-        style: s.deleteBtn,
-        onClick: () => handleDeleteLineItem(product),
-        disabled: isAddToCartLoading,
+        style: {
+          ...s.deleteBtn,
+          ...isActionDisabled ? { opacity: 0.5, cursor: "not-allowed", pointerEvents: "none" } : {}
+        },
+        onClick: handleDelete,
+        disabled: isActionDisabled,
         "aria-label": "Remove item",
         title: "Remove",
-        children: "\u2715"
+        children: isItemDeleting ? /* @__PURE__ */ jsx(Spinner, { size: "sm" }) : "\u2715"
       }
     )
   ] });
@@ -2858,16 +2525,23 @@ var ViewCustomizationModal = ({
   ] }) });
 };
 var ViewCustomizationModal_default = ViewCustomizationModal;
-var DeleteIcon = ({ onClick, disabled, className, title }) => /* @__PURE__ */ jsx(
+var DeleteIcon = ({ onClick, disabled, loading, className, title }) => /* @__PURE__ */ jsx(
   "button",
   {
     type: "button",
     onClick,
-    disabled,
-    className,
+    disabled: disabled || loading,
+    className: `w-6 h-6 flex items-center justify-center shrink-0 ${className || ""} ${disabled || loading ? "cursor-not-allowed opacity-50 pointer-events-none" : ""}`,
     title,
     "aria-label": title || "Delete",
-    children: /* @__PURE__ */ jsxs(
+    children: loading ? /* @__PURE__ */ jsx(
+      "div",
+      {
+        className: "w-4 h-4 border-2 border-[var(--core-primary)] border-t-transparent rounded-full animate-spin shrink-0",
+        role: "status",
+        "aria-label": "Deleting..."
+      }
+    ) : /* @__PURE__ */ jsxs(
       "svg",
       {
         width: "18",
@@ -2878,6 +2552,7 @@ var DeleteIcon = ({ onClick, disabled, className, title }) => /* @__PURE__ */ js
         strokeWidth: "1.8",
         strokeLinecap: "round",
         strokeLinejoin: "round",
+        className: "shrink-0",
         children: [
           /* @__PURE__ */ jsx("polyline", { points: "3 6 5 6 21 6" }),
           /* @__PURE__ */ jsx("path", { d: "M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" }),
@@ -2899,15 +2574,21 @@ var ProductlistCard = ({ product, component, orderType }) => {
   const productImage = product?.image;
   const quantity = product?.quantity;
   const displayPrice = (price ?? 0) / 100;
-  const isSellingQty = !!product?.line_itemable?.selling_quantity_id;
+  const sq = product?.line_itemable?.selling_quantity;
+  const hasSellingQuantity = sq && typeof sq === "object" ? Array.isArray(sq.values) ? sq.values.length > 0 : Object.keys(sq).length > 0 : Boolean(sq);
+  const isSellingQty = hasSellingQuantity;
   const variantOptions = product?.line_itemable?.variant_options ?? [];
   const { formatCurrency } = useCurrencyFormat();
   const {
     handleDeleteLineItem,
     handleDecreaseQty,
     handleAddToCart,
-    isAddToCartLoading
+    isAddToCartLoading,
+    deletingLineItemId
   } = useAddToCart();
+  const [isDeleting, setIsDeleting] = useState(false);
+  const isItemDeleting = isDeleting || Boolean(product?.id) && deletingLineItemId === product?.id;
+  const isActionDisabled = isAddToCartLoading || isItemDeleting;
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const handleNavigateToProduct = () => {
@@ -2925,8 +2606,15 @@ var ProductlistCard = ({ product, component, orderType }) => {
     event.currentTarget.onerror = null;
     event.currentTarget.src = noProductImage;
   };
-  const handleDeleteItem = async () => {
-    await handleDeleteLineItem(product);
+  const handleDeleteItem = async (e) => {
+    e?.stopPropagation?.();
+    if (isActionDisabled) return;
+    try {
+      setIsDeleting(true);
+      await handleDeleteLineItem(product);
+    } finally {
+      setIsDeleting(false);
+    }
   };
   const handleEditConfirm = async (newCustomizations, newQty) => {
     try {
@@ -2945,182 +2633,197 @@ var ProductlistCard = ({ product, component, orderType }) => {
   const hasCustomizations = product?.line_items_customizations?.length > 0 || customizationsList.length > 0;
   const isDeleted = !product?.line_itemable || product?.line_itemable_deleted;
   if (isDeleted) {
-    return /* @__PURE__ */ jsxs("div", { className: "flex justify-between gap-4", children: [
-      /* @__PURE__ */ jsxs("div", { className: "flex gap-[10px] flex-1 min-w-0 opacity-50", children: [
-        /* @__PURE__ */ jsxs("div", { className: "w-[112px] h-[124px] flex-shrink-0 overflow-hidden relative", children: [
-          /* @__PURE__ */ jsx(
-            "img",
-            {
-              src: productImage || noProductImage,
-              alt: name || "Product",
-              className: "w-[112px] h-[124px] object-cover rounded-lg",
-              onError: handleImageError
-            }
-          ),
-          /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-lg", children: /* @__PURE__ */ jsx("span", { className: "text-white text-xs font-[var(--font-bold)] text-center", children: "UNAVAILABLE" }) })
-        ] }),
-        /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between h-[124px] flex-1 min-w-0", children: [
-          /* @__PURE__ */ jsx("div", { className: "min-w-0", children: /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
-            /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)] line-clamp-1", children: name }),
-            /* @__PURE__ */ jsx("span", { className: "text-xs bg-red-100 text-red-700 px-2 py-1 rounded font-[var(--font-medium)] flex-shrink-0", children: "Deleted" })
-          ] }) }),
-          /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)]", children: [
-            quantity,
-            " x ",
-            formatCurrency(displayPrice)
-          ] }) })
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between items-end h-[124px] flex-shrink-0", children: [
-        /* @__PURE__ */ jsx("div", { className: "flex flex-col items-end text-right opacity-50", children: /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)] line-clamp-2", children: formatCurrency(displayPrice * quantity) }) }),
-        component !== "order" && /* @__PURE__ */ jsx(
-          DeleteIcon,
-          {
-            onClick: handleDeleteItem,
-            className: "cursor-pointer opacity-100 hover:opacity-80 transition-opacity",
-            title: "Delete item"
-          }
-        )
-      ] })
-    ] });
-  }
-  return /* @__PURE__ */ jsxs("div", { className: "flex justify-between gap-4", children: [
-    /* @__PURE__ */ jsxs(
+    return /* @__PURE__ */ jsxs(
       "div",
       {
-        className: "flex gap-[10px] flex-1 min-w-0 cursor-pointer",
-        onClick: handleNavigateToProduct,
-        title: "View product",
+        className: `flex justify-between gap-4 transition-all duration-200 ${isItemDeleting ? "opacity-40 pointer-events-none scale-[0.99]" : ""}`,
         children: [
-          /* @__PURE__ */ jsx("div", { className: "w-[112px] h-[124px] flex-shrink-0 overflow-hidden", children: /* @__PURE__ */ jsx(
-            "img",
-            {
-              src: productImage || noProductImage,
-              alt: name || "Product",
-              className: "w-[112px] h-[124px] object-cover rounded-lg hover:opacity-90 transition-opacity",
-              onError: handleImageError
-            }
-          ) }),
-          /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between h-[124px] flex-1 min-w-0", children: [
-            /* @__PURE__ */ jsxs("div", { className: "min-w-0", children: [
-              /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
-                /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)] line-clamp-1 hover:underline", children: name }),
-                product?.bogo_benefit?.benefit_type === "free" && /* @__PURE__ */ jsx("span", { className: "text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-[var(--font-medium)] flex-shrink-0 whitespace-nowrap", children: "FREE" })
-              ] }),
-              variantOptions.length > 0 && /* @__PURE__ */ jsx("div", { className: "mt-1 flex flex-wrap gap-1", children: variantOptions.map((vo, i) => /* @__PURE__ */ jsxs(
-                "span",
+          /* @__PURE__ */ jsxs("div", { className: "flex gap-[10px] flex-1 min-w-0 opacity-50", children: [
+            /* @__PURE__ */ jsxs("div", { className: "w-[112px] h-[124px] flex-shrink-0 overflow-hidden relative", children: [
+              /* @__PURE__ */ jsx(
+                "img",
                 {
-                  className: "text-[11px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-[var(--font-medium)]",
-                  children: [
-                    vo?.option_type?.presentation ?? vo?.option_type?.name,
-                    ":",
-                    " ",
-                    vo?.option_value?.presentation ?? vo?.option_value?.name
-                  ]
-                },
-                i
-              )) }),
-              product?.line_items_customizations?.length > 0 && /* @__PURE__ */ jsx("div", { className: "mt-1 flex flex-col gap-0.5", children: product.line_items_customizations.length > 3 ? /* @__PURE__ */ jsx(
-                "button",
-                {
-                  onClick: (e) => {
-                    e.stopPropagation();
-                    setIsViewModalOpen(true);
-                  },
-                  className: "text-xs text-[var(--core-primary)] underline hover:text-[var(--core-primary)] transition-colors text-left font-medium",
-                  children: "customizations: view"
+                  src: productImage || noProductImage,
+                  alt: name || "Product",
+                  className: "w-[112px] h-[124px] object-cover rounded-lg",
+                  onError: handleImageError
                 }
-              ) : product.line_items_customizations.map((c) => /* @__PURE__ */ jsxs(
-                "p",
-                {
-                  className: "text-xs text-gray-500 line-clamp-1",
-                  children: [
-                    /* @__PURE__ */ jsxs("span", { className: "font-medium", children: [
-                      c.name || "Custom",
-                      ":"
-                    ] }),
-                    " ",
-                    c.value
-                  ]
-                },
-                c.product_customization_id
-              )) })
+              ),
+              /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-lg", children: /* @__PURE__ */ jsx("span", { className: "text-white text-xs font-[var(--font-bold)] text-center", children: "UNAVAILABLE" }) })
             ] }),
-            /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)]", children: [
-              quantity,
-              " x ",
-              formatCurrency(displayPrice)
-            ] }) })
+            /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between h-[124px] flex-1 min-w-0", children: [
+              /* @__PURE__ */ jsx("div", { className: "min-w-0", children: /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
+                /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)] line-clamp-1", children: name }),
+                /* @__PURE__ */ jsx("span", { className: "text-xs bg-red-100 text-red-700 px-2 py-1 rounded font-[var(--font-medium)] flex-shrink-0", children: "Deleted" })
+              ] }) }),
+              /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)]", children: [
+                quantity,
+                " x ",
+                formatCurrency(displayPrice)
+              ] }) })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between items-end h-[124px] flex-shrink-0", children: [
+            /* @__PURE__ */ jsx("div", { className: "flex flex-col items-end text-right opacity-50", children: /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)] line-clamp-2", children: formatCurrency(displayPrice * quantity) }) }),
+            component !== "order" && /* @__PURE__ */ jsx(
+              DeleteIcon,
+              {
+                onClick: handleDeleteItem,
+                disabled: isActionDisabled,
+                loading: isItemDeleting,
+                className: "cursor-pointer opacity-100 hover:opacity-80 transition-opacity",
+                title: "Delete item"
+              }
+            )
           ] })
         ]
       }
-    ),
-    /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between items-end h-[124px] flex-shrink-0", children: [
-      /* @__PURE__ */ jsx("div", { className: "flex flex-col items-end text-right", children: component !== "order" ? /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)] line-clamp-1", children: formatCurrency(displayPrice * quantity) }) : /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)] line-clamp-2", children: formatCurrency(displayPrice * quantity) }) }),
-      component !== "order" && /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3", children: [
-        !isSellingQty ? /* @__PURE__ */ jsxs("div", { className: "flex items-center border border-[#e8e5df] rounded-md h-[28px] bg-[#f9f9f9]", children: [
-          /* @__PURE__ */ jsx(
-            "button",
-            {
-              onClick: () => handleDecreaseQty(
-                product?.line_itemable,
-                product?.line_items_customizations
-              ),
-              disabled: isAddToCartLoading,
-              className: "w-7 h-full flex items-center justify-center text-lg text-gray-500 hover:text-[var(--core-primary)] transition-colors disabled:opacity-50 pb-0.5",
-              children: "-"
-            }
-          ),
-          /* @__PURE__ */ jsx("span", { className: "w-6 text-center text-sm font-semibold text-[var(--core-primary)] bg-white h-full flex items-center justify-center border-x border-[#e8e5df]", children: quantity }),
-          /* @__PURE__ */ jsx(
-            "button",
-            {
-              onClick: () => handleAddToCart(
-                product?.line_itemable,
-                product?.line_items_customizations,
-                1
-              ),
-              disabled: isAddToCartLoading,
-              className: "w-7 h-full flex items-center justify-center text-base text-gray-500 hover:text-[var(--core-primary)] transition-colors disabled:opacity-50 pb-0.5",
-              children: "+"
-            }
-          )
-        ] }) : /* @__PURE__ */ jsx("div", { className: "flex items-center border border-[#e8e5df] rounded-md h-[28px] bg-[#f9f9f9] px-3", children: /* @__PURE__ */ jsx("span", { className: "text-sm font-semibold text-[var(--core-primary)]", children: quantity }) }),
-        /* @__PURE__ */ jsx(
-          DeleteIcon,
+    );
+  }
+  return /* @__PURE__ */ jsxs(
+    "div",
+    {
+      className: `flex justify-between gap-4 transition-all duration-200 ${isItemDeleting ? "opacity-40 pointer-events-none scale-[0.99]" : ""}`,
+      children: [
+        /* @__PURE__ */ jsxs(
+          "div",
           {
-            onClick: handleDeleteItem,
-            disabled: isAddToCartLoading,
-            className: "cursor-pointer opacity-100 hover:opacity-80 transition-opacity disabled:opacity-50",
-            title: "Delete item"
+            className: "flex gap-[10px] flex-1 min-w-0 cursor-pointer",
+            onClick: handleNavigateToProduct,
+            title: "View product",
+            children: [
+              /* @__PURE__ */ jsx("div", { className: "w-[112px] h-[124px] flex-shrink-0 overflow-hidden", children: /* @__PURE__ */ jsx(
+                "img",
+                {
+                  src: productImage || noProductImage,
+                  alt: name || "Product",
+                  className: "w-[112px] h-[124px] object-cover rounded-lg hover:opacity-90 transition-opacity",
+                  onError: handleImageError
+                }
+              ) }),
+              /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between h-[124px] flex-1 min-w-0", children: [
+                /* @__PURE__ */ jsxs("div", { className: "min-w-0", children: [
+                  /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
+                    /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)] line-clamp-1 hover:underline", children: name }),
+                    product?.bogo_benefit?.benefit_type === "free" && /* @__PURE__ */ jsx("span", { className: "text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-[var(--font-medium)] flex-shrink-0 whitespace-nowrap", children: "FREE" })
+                  ] }),
+                  variantOptions.length > 0 && /* @__PURE__ */ jsx("div", { className: "mt-1 flex flex-wrap gap-1", children: variantOptions.map((vo, i) => /* @__PURE__ */ jsxs(
+                    "span",
+                    {
+                      className: "text-[11px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-[var(--font-medium)]",
+                      children: [
+                        vo?.option_type?.presentation ?? vo?.option_type?.name,
+                        ":",
+                        " ",
+                        vo?.option_value?.presentation ?? vo?.option_value?.name
+                      ]
+                    },
+                    i
+                  )) }),
+                  product?.line_items_customizations?.length > 0 && /* @__PURE__ */ jsx("div", { className: "mt-1 flex flex-col gap-0.5", children: product.line_items_customizations.length > 3 ? /* @__PURE__ */ jsx(
+                    "button",
+                    {
+                      onClick: (e) => {
+                        e.stopPropagation();
+                        setIsViewModalOpen(true);
+                      },
+                      className: "text-xs text-[var(--core-primary)] underline hover:text-[var(--core-primary)] transition-colors text-left font-medium",
+                      children: "customizations: view"
+                    }
+                  ) : product.line_items_customizations.map((c) => /* @__PURE__ */ jsxs(
+                    "p",
+                    {
+                      className: "text-xs text-gray-500 line-clamp-1",
+                      children: [
+                        /* @__PURE__ */ jsxs("span", { className: "font-medium", children: [
+                          c.name || "Custom",
+                          ":"
+                        ] }),
+                        " ",
+                        c.value
+                      ]
+                    },
+                    c.product_customization_id
+                  )) })
+                ] }),
+                /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)]", children: [
+                  quantity,
+                  " x ",
+                  formatCurrency(displayPrice)
+                ] }) })
+              ] })
+            ]
+          }
+        ),
+        /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between items-end h-[124px] flex-shrink-0", children: [
+          /* @__PURE__ */ jsx("div", { className: "flex flex-col items-end text-right", children: component !== "order" ? /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)] line-clamp-1", children: formatCurrency(displayPrice * quantity) }) : /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)] line-clamp-2", children: formatCurrency(displayPrice * quantity) }) }),
+          component !== "order" && /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3", children: [
+            !isSellingQty ? /* @__PURE__ */ jsxs("div", { className: "flex items-center border border-[#e8e5df] rounded-md h-[28px] bg-[#f9f9f9]", children: [
+              /* @__PURE__ */ jsx(
+                "button",
+                {
+                  onClick: () => handleDecreaseQty(
+                    product?.line_itemable,
+                    product?.line_items_customizations
+                  ),
+                  disabled: isActionDisabled,
+                  className: "w-7 h-full flex items-center justify-center text-lg text-gray-500 hover:text-[var(--core-primary)] transition-colors disabled:opacity-50 pb-0.5",
+                  children: "-"
+                }
+              ),
+              /* @__PURE__ */ jsx("span", { className: "w-6 text-center text-sm font-semibold text-[var(--core-primary)] bg-white h-full flex items-center justify-center border-x border-[#e8e5df]", children: quantity }),
+              /* @__PURE__ */ jsx(
+                "button",
+                {
+                  onClick: () => handleAddToCart(
+                    product?.line_itemable,
+                    product?.line_items_customizations,
+                    1
+                  ),
+                  disabled: isActionDisabled,
+                  className: "w-7 h-full flex items-center justify-center text-base text-gray-500 hover:text-[var(--core-primary)] transition-colors disabled:opacity-50 pb-0.5",
+                  children: "+"
+                }
+              )
+            ] }) : /* @__PURE__ */ jsx("div", { className: "flex items-center border border-[#e8e5df] rounded-md h-[28px] bg-[#f9f9f9] px-3", children: /* @__PURE__ */ jsx("span", { className: "text-sm font-semibold text-[var(--core-primary)]", children: quantity }) }),
+            /* @__PURE__ */ jsx(
+              DeleteIcon,
+              {
+                onClick: handleDeleteItem,
+                disabled: isActionDisabled,
+                loading: isItemDeleting,
+                className: "cursor-pointer opacity-100 hover:opacity-80 transition-opacity disabled:opacity-50",
+                title: "Delete item"
+              }
+            )
+          ] })
+        ] }),
+        hasCustomizations && /* @__PURE__ */ jsx(
+          CustomizationModal_default,
+          {
+            isOpen: isEditModalOpen,
+            onClose: () => setIsEditModalOpen(false),
+            product: product?.line_itemable,
+            customizationsList,
+            onConfirm: handleEditConfirm,
+            initialValues: initialCustomizationObj,
+            initialQuantity: quantity,
+            isEditMode: true,
+            isAddToCartLoading
+          }
+        ),
+        /* @__PURE__ */ jsx(
+          ViewCustomizationModal_default,
+          {
+            isOpen: isViewModalOpen,
+            onClose: () => setIsViewModalOpen(false),
+            customizations: product?.line_items_customizations || [],
+            productName: name
           }
         )
-      ] })
-    ] }),
-    hasCustomizations && /* @__PURE__ */ jsx(
-      CustomizationModal_default,
-      {
-        isOpen: isEditModalOpen,
-        onClose: () => setIsEditModalOpen(false),
-        product: product?.line_itemable,
-        customizationsList,
-        onConfirm: handleEditConfirm,
-        initialValues: initialCustomizationObj,
-        initialQuantity: quantity,
-        isEditMode: true,
-        isAddToCartLoading
-      }
-    ),
-    /* @__PURE__ */ jsx(
-      ViewCustomizationModal_default,
-      {
-        isOpen: isViewModalOpen,
-        onClose: () => setIsViewModalOpen(false),
-        customizations: product?.line_items_customizations || [],
-        productName: name
-      }
-    )
-  ] });
+      ]
+    }
+  );
 };
 var ProductlistCard_default = ProductlistCard;
 var Popup = ({
@@ -3203,6 +2906,8 @@ var AddressForm = ({
 }) => {
   const { actions, toast } = useCore();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [formData, setFormData] = useState({
     address_type: initialData?.address_type || "shipping",
     address1: initialData?.address1 || "",
@@ -3434,27 +3139,107 @@ var AddressForm = ({
           "button",
           {
             type: "button",
-            disabled: isSubmitting,
-            onClick: async () => {
-              if (window.confirm("Are you sure you want to delete this address?")) {
-                setIsSubmitting(true);
-                try {
-                  await actions.deleteAddress(initialData.id);
-                  toast?.success?.("Address deleted successfully.");
-                  onSuccess?.();
-                } catch (err) {
-                  toast?.error?.("Failed to delete address.");
-                } finally {
-                  setIsSubmitting(false);
-                }
-              }
-            },
-            className: "flex-1 py-3 border border-red-100 text-red-500 rounded-md font-[var(--font-bold)] hover:bg-red-50 transition-colors uppercase tracking-widest text-[12px]",
+            disabled: isSubmitting || isDeleting,
+            onClick: () => setShowDeleteConfirm(true),
+            className: "flex-1 py-3 border border-red-100 text-red-500 rounded-md font-[var(--font-bold)] hover:bg-red-50 transition-colors uppercase tracking-widest text-[12px] disabled:opacity-50",
             children: "Delete Address"
           }
         )
       ] })
-    ] })
+    ] }),
+    showDeleteConfirm && typeof document !== "undefined" && createPortal(
+      /* @__PURE__ */ jsx(
+        "div",
+        {
+          className: "fixed inset-0 z-[1000000] flex items-center justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-[2px] transition-all duration-300",
+          onClick: (e) => {
+            if (e.target === e.currentTarget && !isDeleting) {
+              setShowDeleteConfirm(false);
+            }
+          },
+          children: /* @__PURE__ */ jsxs("div", { className: "relative w-full max-w-[400px] overflow-hidden rounded-xl border border-gray-100 bg-white p-6 shadow-2xl animate-in fade-in zoom-in duration-200", children: [
+            /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between pb-3 mb-2 border-b border-gray-100", children: [
+              /* @__PURE__ */ jsx("h3", { className: "text-[17px] font-[var(--font-bold)] text-[var(--core-primary)] uppercase tracking-wide", children: "Delete Address" }),
+              !isDeleting && /* @__PURE__ */ jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => setShowDeleteConfirm(false),
+                  className: "text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-full hover:bg-gray-100",
+                  "aria-label": "Close",
+                  children: /* @__PURE__ */ jsx(
+                    "svg",
+                    {
+                      className: "w-5 h-5",
+                      fill: "none",
+                      stroke: "currentColor",
+                      viewBox: "0 0 24 24",
+                      children: /* @__PURE__ */ jsx(
+                        "path",
+                        {
+                          strokeLinecap: "round",
+                          strokeLinejoin: "round",
+                          strokeWidth: 2,
+                          d: "M6 18L18 6M6 6l12 12"
+                        }
+                      )
+                    }
+                  )
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxs("p", { className: "py-3 text-[14px] font-[var(--font-regular)] text-gray-600 leading-relaxed", children: [
+              "Are you sure you want to delete",
+              " ",
+              /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-bold)] text-[var(--core-primary)]", children: [
+                '"',
+                initialData?.label || initialData?.address_type || "this address",
+                '"'
+              ] }),
+              "? This action cannot be undone."
+            ] }),
+            /* @__PURE__ */ jsxs("div", { className: "flex gap-3 mt-4 pt-2", children: [
+              /* @__PURE__ */ jsx(
+                "button",
+                {
+                  type: "button",
+                  disabled: isDeleting,
+                  onClick: () => setShowDeleteConfirm(false),
+                  className: "flex-1 py-2.5 border border-gray-200 rounded-lg text-gray-700 font-[var(--font-bold)] hover:bg-gray-50 transition-colors uppercase tracking-widest text-[12px] disabled:opacity-50",
+                  children: "Cancel"
+                }
+              ),
+              /* @__PURE__ */ jsx(
+                "button",
+                {
+                  type: "button",
+                  disabled: isDeleting,
+                  onClick: async () => {
+                    setIsDeleting(true);
+                    try {
+                      await actions.deleteAddress(initialData.id);
+                      toast?.success?.("Address deleted successfully.");
+                      setShowDeleteConfirm(false);
+                      onSuccess?.();
+                    } catch (err) {
+                      toast?.error?.("Failed to delete address.");
+                    } finally {
+                      setIsDeleting(false);
+                    }
+                  },
+                  className: "flex-1 py-2.5 bg-red-600 text-white rounded-lg font-[var(--font-bold)] hover:bg-red-700 transition-colors uppercase tracking-widest text-[12px] flex items-center justify-center gap-2 shadow-sm disabled:opacity-50",
+                  children: isDeleting ? /* @__PURE__ */ jsxs(Fragment, { children: [
+                    /* @__PURE__ */ jsx("div", { className: "w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" }),
+                    /* @__PURE__ */ jsx("span", { children: "Deleting..." })
+                  ] }) : "Delete"
+                }
+              )
+            ] })
+          ] })
+        }
+      ),
+      document.body
+    )
   ] });
 };
 var AddressFormInline = ({ refetch }) => {
@@ -3880,12 +3665,20 @@ function CartMismatchBanner({
     }
   );
 }
-var Checkout = ({ hasDeletedItems }) => {
+var normalizeAddresses = (payload) => payload?.data ?? payload?.addresses ?? (Array.isArray(payload) ? payload : []);
+var Checkout = ({ hasDeletedItems, onPaymentSuccess }) => {
   const { auth, config } = useCore();
   const { isSignedIn, isLoading } = auth || {};
   if (isLoading)
     return /* @__PURE__ */ jsx("div", { className: "w-full h-[400px] flex items-center justify-center", children: /* @__PURE__ */ jsx("div", { className: "w-8 h-8 border-4 border-[var(--core-primary)] border-t-transparent rounded-full animate-spin" }) });
-  return !isSignedIn ? /* @__PURE__ */ jsx(LoginPage, {}) : /* @__PURE__ */ jsx(OrderInfo, { user: auth.user, hasDeletedItems });
+  return !isSignedIn ? /* @__PURE__ */ jsx(LoginPage, {}) : /* @__PURE__ */ jsx(
+    OrderInfo,
+    {
+      user: auth.user,
+      hasDeletedItems,
+      onPaymentSuccess
+    }
+  );
 };
 var LoginPage = () => {
   return /* @__PURE__ */ jsxs("div", { className: "w-full h-full flex flex-col items-center justify-center gap-6", children: [
@@ -3910,7 +3703,7 @@ var LoginPage = () => {
     /* @__PURE__ */ jsx("div", { className: "w-full", children: /* @__PURE__ */ jsx(AuthManager, {}) })
   ] });
 };
-var OrderInfo = ({ user, hasDeletedItems }) => {
+var OrderInfo = ({ user, hasDeletedItems, onPaymentSuccess }) => {
   const router = useRouter();
   const { Razorpay } = useRazorpay();
   const { cart, setCart, actions, config, auth, orgData, primaryColor, toast } = useCore();
@@ -3933,6 +3726,15 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
   const [isAddressLoading, setIsAddressLoading] = useState(true);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [isRedirectingOrder, setIsRedirectingOrder] = useState(false);
+  const isRedirectingRef = useRef(false);
+  useEffect(() => {
+    return () => {
+      if (isRedirectingRef.current) {
+        setCart(null);
+      }
+    };
+  }, [setCart]);
   const [cartMismatch, setCartMismatch] = useState(null);
   useEffect(() => {
     let isMounted = true;
@@ -3967,20 +3769,26 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
     billingAddressId: cart?.billing_address?.id ?? null
   });
   const { shippingAddressId, billingAddressId } = selectedAddress;
-  const fetchAddresses = useCallback(async () => {
-    try {
-      setIsAddressLoading(true);
-      if (actions?.getUserAddress && auth?.isSignedIn) {
-        const data = await actions.getUserAddress();
-        setAddresses(Array.isArray(data) ? data : [data]);
+  const fetchAddresses = useCallback(
+    async (options = {}) => {
+      try {
+        setIsAddressLoading(true);
+        const token = auth?.token ?? auth?.access_token ?? null;
+        if (actions?.getUserAddress && auth?.isSignedIn && token) {
+          const data = await actions.getUserAddress(options);
+          setAddresses(normalizeAddresses(data));
+        } else {
+          setAddresses([]);
+        }
+      } catch (err) {
+        console.error("Failed to fetch addresses:", err);
+        setAddresses([]);
+      } finally {
+        setIsAddressLoading(false);
       }
-    } catch (err) {
-      console.error("Failed to fetch addresses:", err);
-      setAddresses([]);
-    } finally {
-      setIsAddressLoading(false);
-    }
-  }, [actions, auth?.isSignedIn]);
+    },
+    [actions?.getUserAddress, auth?.isSignedIn, auth?.token, auth?.access_token]
+  );
   useEffect(() => {
     fetchAddresses();
   }, [fetchAddresses]);
@@ -4101,8 +3909,18 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
               metaOverrides: { source: "checkout" }
             });
             trackMetaPurchase(cart);
-            setCart(null);
-            router.push(`/account/orders/${order?.order_id}`);
+            onPaymentSuccess?.();
+            setIsRedirectingOrder(true);
+            setIsProcessingPayment(true);
+            isRedirectingRef.current = true;
+            const orderTargetUrl = `/account/orders/${order.order_id}`;
+            router.prefetch?.(orderTargetUrl);
+            router.replace(orderTargetUrl);
+            setTimeout(() => {
+              if (typeof window !== "undefined" && !window.location.pathname.includes(`/orders/${order.order_id}`)) {
+                window.location.replace(orderTargetUrl);
+              }
+            }, 3e3);
           } else {
             setIsProcessingPayment(false);
             const msg = typeof lastError === "string" ? lastError : "Payment could not be updated. Please contact support.";
@@ -4241,7 +4059,7 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
         cart,
         setCart,
         user,
-        refetch: fetchAddresses,
+        refetch: () => fetchAddresses({ force: true }),
         sameAsShipping,
         setSameAsShipping,
         shippingAddressId,
@@ -4250,7 +4068,7 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
         isCartHaveBillingAddress,
         isCarthaveShippingAddress
       }
-    ) : /* @__PURE__ */ jsx(AddressFormInline, { refetch: fetchAddresses }) }),
+    ) : /* @__PURE__ */ jsx(AddressFormInline, { refetch: () => fetchAddresses({ force: true }) }) }),
     /* @__PURE__ */ jsxs("div", { className: "mt-[32px]", children: [
       /* @__PURE__ */ jsx("h1", { className: "font-[var(--font-medium)] text-[20px] text-[var(--main)]", children: "PAYMENT" }),
       /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[14px] text-[var(--secondary)]", children: "All transactions are secure and encrypted." }),
@@ -4300,21 +4118,29 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
               if (typeof window !== "undefined") {
                 localStorage.removeItem("cartid");
               }
+              onPaymentSuccess?.();
+              setIsRedirectingOrder(true);
+              setIsProcessingPayment(true);
+              isRedirectingRef.current = true;
               try {
                 const regionId = config?.regionId ?? null;
                 const updatedCart = await actions?.getCart?.(regionId);
                 const cartData = Array.isArray(updatedCart) ? updatedCart[0] : updatedCart;
-                console.log({ regionId, updatedCart, cartData });
                 const orderId = cartData?.order_id;
-                setCart(null);
                 if (orderId) {
-                  router.push(`/account/orders/${orderId}`);
+                  const orderTargetUrl = `/account/orders/${orderId}`;
+                  router.prefetch?.(orderTargetUrl);
+                  router.replace(orderTargetUrl);
+                  setTimeout(() => {
+                    if (typeof window !== "undefined" && !window.location.pathname.includes(`/orders/${orderId}`)) {
+                      window.location.replace(orderTargetUrl);
+                    }
+                  }, 3e3);
                 } else {
-                  router.push("/account/orders");
+                  router.replace("/account/orders");
                 }
               } catch {
-                setCart(null);
-                router.push("/account/orders");
+                router.replace("/account/orders");
               }
             }
           }
@@ -4395,15 +4221,11 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
       ] }),
       /* @__PURE__ */ jsxs("div", { className: "text-center space-y-4", children: [
         /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
-          /* @__PURE__ */ jsx("h2", { className: "font-serif italic text-3xl text-[var(--core-primary)] tracking-tight", children: "Processing your payment" }),
+          /* @__PURE__ */ jsx("h2", { className: "font-serif italic text-3xl text-[var(--core-primary)] tracking-tight", children: isRedirectingOrder ? "Payment Successful!" : "Processing your payment" }),
           /* @__PURE__ */ jsx("div", { className: "w-12 h-[1px] bg-[var(--core-secondary)] mx-auto opacity-50" })
         ] }),
         /* @__PURE__ */ jsxs("div", { className: "space-y-2", children: [
-          /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-medium)] text-[#2d2d2d] text-base", children: [
-            "We're finalizing your order with ",
-            paymentGatewayLabel,
-            "."
-          ] }),
+          /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-[#2d2d2d] text-base", children: isRedirectingOrder ? "Redirecting to your order details..." : `We're finalizing your order with ${paymentGatewayLabel}.` }),
           /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-regular)] text-[#8c92a4] text-sm leading-relaxed", children: [
             "Please do not refresh the page or close this window. ",
             /* @__PURE__ */ jsx("br", {}),
@@ -4522,7 +4344,9 @@ var CouponSection = () => {
       setErrorMessage(msg);
       if (msg.toLowerCase().includes("already applied") || msg.toLowerCase().includes("discount is already")) {
         if (actions?.getCart && auth?.isSignedIn) {
-          const res = await actions.getCart(config?.regionId);
+          const res = await actions.getCart(config?.regionId, {
+            token: auth?.token ?? auth?.access_token
+          });
           setCart(Array.isArray(res) ? res[0] : res);
         } else if (actions?.getCartById && cart?.id) {
           const res = await actions.getCartById(cart.id, config?.regionId);
@@ -4569,7 +4393,9 @@ var CouponSection = () => {
       setErrorMessage(msg);
       if (msg.toLowerCase().includes("already applied") || msg.toLowerCase().includes("discount is already")) {
         if (actions?.getCart && auth?.isSignedIn) {
-          const res = await actions.getCart(config?.regionId);
+          const res = await actions.getCart(config?.regionId, {
+            token: auth?.token ?? auth?.access_token
+          });
           setCart(Array.isArray(res) ? res[0] : res);
         } else if (actions?.getCartById && cart?.id) {
           const res = await actions.getCartById(cart.id, config?.regionId);
@@ -4760,6 +4586,7 @@ var CouponSection = () => {
 var CouponSection_default = CouponSection;
 var ViewCart = () => {
   const [discountOpen, setDiscountOpen] = useState(false);
+  const [isPaymentRedirecting, setIsPaymentRedirecting] = useState(false);
   const { cart, cartItems } = useAddToCart();
   const { isCartLoading } = useCart();
   const { formatCurrency } = useCurrencyFormat();
@@ -4810,13 +4637,16 @@ var ViewCart = () => {
     }
     prevDiscountIdRef.current = activeDiscountId;
   }, [activeDiscountId, items?.length, toast]);
-  return /* @__PURE__ */ jsx("div", { className: "mx-4 md:mx-[24px] my-[100px] flex justify-center", children: isLoading ? /* @__PURE__ */ jsx("div", { className: "flex justify-center items-center w-full h-[400px]", children: /* @__PURE__ */ jsx(
-    "div",
-    {
-      className: "animate-spin rounded-full h-10 w-10 border-t-2 border-b-2",
-      style: { borderColor: "var(--core-primary)" }
-    }
-  ) }) : items.length === 0 ? /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center justify-center p-12 bg-gray-50/50 border border-gray-100 rounded-2xl min-h-[400px] gap-y-6 max-w-[600px] w-full mx-auto", children: [
+  return /* @__PURE__ */ jsx("div", { className: "mx-4 md:mx-[24px] my-[100px] flex justify-center", children: isLoading || isPaymentRedirecting ? /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-center items-center w-full h-[400px] gap-4", children: [
+    /* @__PURE__ */ jsx(
+      "div",
+      {
+        className: "animate-spin rounded-full h-10 w-10 border-t-2 border-b-2",
+        style: { borderColor: "var(--core-primary)" }
+      }
+    ),
+    isPaymentRedirecting && /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-gray-600 text-sm animate-pulse", children: "Redirecting to your order..." })
+  ] }) : items.length === 0 ? /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center justify-center p-12 bg-gray-50/50 border border-gray-100 rounded-2xl min-h-[400px] gap-y-6 max-w-[600px] w-full mx-auto", children: [
     /* @__PURE__ */ jsx("div", { className: "p-4 bg-white rounded-full shadow-sm border border-gray-100", children: /* @__PURE__ */ jsxs(
       "svg",
       {
@@ -4851,7 +4681,13 @@ var ViewCart = () => {
       }
     )
   ] }) : /* @__PURE__ */ jsxs("div", { className: "flex flex-row flex-wrap gap-[16px] max-w-[1248px] w-full", children: [
-    /* @__PURE__ */ jsx("div", { className: "flex-1 mt-8 md:mt-0", children: /* @__PURE__ */ jsx(Checkout_default, { hasDeletedItems }) }),
+    /* @__PURE__ */ jsx("div", { className: "flex-1 mt-8 md:mt-0", children: /* @__PURE__ */ jsx(
+      Checkout_default,
+      {
+        hasDeletedItems,
+        onPaymentSuccess: () => setIsPaymentRedirecting(true)
+      }
+    ) }),
     /* @__PURE__ */ jsx("div", { className: "border border-[var(--borders)] sticky hidden md:block" }),
     /* @__PURE__ */ jsxs("div", { className: "flex-1 md:sticky top-4 self-start mt-[18px] md:mt-0 order-first md:order-last", children: [
       hasDeletedItems && /* @__PURE__ */ jsx("div", { className: "bg-yellow-50 border border-yellow-200 rounded-md p-3 mb-4", children: /* @__PURE__ */ jsx("p", { className: "text-sm text-yellow-800 font-[var(--font-medium)]", children: "\u26A0\uFE0F Some items in your cart are no longer available. Please remove them before checkout." }) }),
@@ -4861,7 +4697,7 @@ var ViewCart = () => {
           items.length,
           ")"
         ] }),
-        /* @__PURE__ */ jsx("div", { className: "max-h-[500px] overflow-auto mt-3", children: /* @__PURE__ */ jsx("div", { className: "flex flex-col gap-y-[16px]", children: items.map((item) => /* @__PURE__ */ jsx(
+        /* @__PURE__ */ jsx("div", { className: "max-h-[540px] overflow-y-auto overflow-x-hidden mt-3 pr-1 [scrollbar-gutter:stable]", children: /* @__PURE__ */ jsx("div", { className: "flex flex-col gap-y-[16px]", children: items.map((item) => /* @__PURE__ */ jsx(
           ProductlistCard_default,
           {
             product: item,
@@ -5254,24 +5090,34 @@ var ProfileForm = ({ user, onSuccess, onCancel }) => {
     ] })
   ] });
 };
+var normalizeAddresses2 = (payload) => payload?.data ?? payload?.addresses ?? (Array.isArray(payload) ? payload : []);
 var UserInfo = ({ user, isLoading, refetch }) => {
-  const { actions, config } = useCore();
+  const { actions, config, auth } = useCore();
   const [addresses, setAddresses] = useState([]);
   const [isAddrLoading, setIsAddrLoading] = useState(false);
   const [modalState, setModalState] = useState({ type: null, data: null });
-  const fetchAddresses = useCallback(async () => {
-    if (!actions?.getUserAddress) return;
-    setIsAddrLoading(true);
-    try {
-      const addrs = await actions.getUserAddress();
-      console.log("addrs", { addrs });
-      setAddresses(addrs || []);
-    } catch (error) {
-      console.error("Error fetching addresses:", error);
-    } finally {
-      setIsAddrLoading(false);
-    }
-  }, [actions]);
+  const fetchAddresses = useCallback(
+    async (options = {}) => {
+      const token = auth?.token ?? auth?.access_token ?? null;
+      const signedIn = !!((auth?.isSignedIn ?? false) && token);
+      if (!actions?.getUserAddress || !signedIn) {
+        setAddresses([]);
+        setIsAddrLoading(false);
+        return;
+      }
+      setIsAddrLoading(true);
+      try {
+        const addrs = await actions.getUserAddress(options);
+        setAddresses(normalizeAddresses2(addrs));
+      } catch (error) {
+        console.error("Error fetching addresses:", error);
+        setAddresses([]);
+      } finally {
+        setIsAddrLoading(false);
+      }
+    },
+    [actions?.getUserAddress, auth?.isSignedIn, auth?.token, auth?.access_token]
+  );
   useEffect(() => {
     fetchAddresses();
   }, [fetchAddresses]);
@@ -5368,7 +5214,7 @@ var UserInfo = ({ user, isLoading, refetch }) => {
           {
             initialData: modalState.data,
             onSuccess: () => {
-              fetchAddresses();
+              fetchAddresses({ force: true });
               closeModal();
             },
             onCancel: closeModal,
@@ -5514,7 +5360,6 @@ var AccountPage = ({ initialTab = "profile" }) => {
     try {
       if (actions?.getUser) {
         const user = await actions.getUser();
-        console.log("user", { user });
         setUserData(user);
       } else {
         setUserData(auth?.user);
@@ -5532,7 +5377,6 @@ var AccountPage = ({ initialTab = "profile" }) => {
     { id: "profile", label: "My Profile" },
     { id: "orders", label: "My Orders" }
   ];
-  console.log({ userData });
   return /* @__PURE__ */ jsx("div", { className: "min-h-screen bg-white", children: /* @__PURE__ */ jsxs("div", { className: "px-4 md:px-8 lg:px-[32px] py-[40px] md:py-[100px] flex flex-col md:flex-row items-start justify-between gap-8 w-full", children: [
     /* @__PURE__ */ jsxs("aside", { className: "w-full md:w-[280px] lg:w-[320px] md:sticky top-[40px]", children: [
       /* @__PURE__ */ jsx("h1", { className: "font-[var(--font-regular)] text-[40px] md:text-[48px] leading-[1.05] text-[var(--core-primary)] mb-8 tracking-tight uppercase", children: "MY ACCOUNT" }),
@@ -5704,26 +5548,37 @@ var AccountLayout = ({
     /* @__PURE__ */ jsx("main", { className: `flex-1 p-8 max-md:p-5 ${mainClassName}`, children })
   ] }) }) });
 };
-var normalizeAddresses = (payload) => payload?.data ?? payload?.addresses ?? (Array.isArray(payload) ? payload : []);
+var normalizeAddresses3 = (payload) => payload?.data ?? payload?.addresses ?? (Array.isArray(payload) ? payload : []);
 var AccountAddressesPage = () => {
-  const { actions, toast } = useCore();
+  const { actions, toast, auth } = useCore();
   const [addresses, setAddresses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [editingAddress, setEditingAddress] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
-  const fetchAddresses = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const res = await actions?.getUserAddress?.();
-      setAddresses(normalizeAddresses(res));
-    } catch (error) {
-      console.error("Failed to fetch addresses", error);
-      toast?.error?.("Failed to fetch addresses");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [actions, toast]);
+  const [deleteConfirmAddress, setDeleteConfirmAddress] = useState(null);
+  const fetchAddresses = useCallback(
+    async (options = {}) => {
+      const token = auth?.token ?? auth?.access_token ?? null;
+      const signedIn = !!((auth?.isSignedIn ?? false) && token);
+      if (!signedIn) {
+        setAddresses([]);
+        setIsLoading(false);
+        return;
+      }
+      setIsLoading(true);
+      try {
+        const res = await actions?.getUserAddress?.(options);
+        setAddresses(normalizeAddresses3(res));
+      } catch (error) {
+        console.error("Failed to fetch addresses", error);
+        toast?.error?.("Failed to fetch addresses");
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [actions, toast, auth?.isSignedIn, auth?.token, auth?.access_token]
+  );
   useEffect(() => {
     fetchAddresses();
   }, [fetchAddresses]);
@@ -5740,7 +5595,7 @@ var AccountAddressesPage = () => {
     setDeletingId(addressId);
     try {
       await actions?.deleteAddress?.(addressId);
-      await fetchAddresses();
+      await fetchAddresses({ force: true });
       toast?.success?.("Address deleted successfully");
     } catch (error) {
       console.error("Failed to delete address", error);
@@ -5775,7 +5630,7 @@ var AccountAddressesPage = () => {
       ] }),
       /* @__PURE__ */ jsxs("div", { className: "mt-1 flex flex-shrink-0 items-center gap-2", children: [
         /* @__PURE__ */ jsx("button", { type: "button", onClick: () => openEditModal(address), className: "flex items-center justify-center rounded-full p-1.5 text-[#888888] transition-colors hover:bg-gray-100 hover:text-[var(--core-primary)]", children: /* @__PURE__ */ jsx(AccountPencilIcon, { className: "h-4 w-4" }) }),
-        /* @__PURE__ */ jsx("button", { type: "button", disabled: deletingId === address.id, onClick: () => deleteAddress(address.id), className: "flex items-center justify-center rounded-full p-1.5 text-[#888888] transition-colors hover:bg-gray-100 hover:text-red-500 disabled:opacity-50", children: deletingId === address.id ? /* @__PURE__ */ jsx("div", { className: "h-4 w-4 animate-spin rounded-full border-2 border-red-500 border-t-transparent" }) : /* @__PURE__ */ jsx(AccountTrashIcon, { className: "h-4 w-4" }) })
+        /* @__PURE__ */ jsx("button", { type: "button", disabled: deletingId === address.id, onClick: () => setDeleteConfirmAddress(address), className: "flex items-center justify-center rounded-full p-1.5 text-[#888888] transition-colors hover:bg-gray-100 hover:text-red-500 disabled:opacity-50", children: deletingId === address.id ? /* @__PURE__ */ jsx("div", { className: "h-4 w-4 animate-spin rounded-full border-2 border-red-500 border-t-transparent" }) : /* @__PURE__ */ jsx(AccountTrashIcon, { className: "h-4 w-4" }) })
       ] })
     ] }, address.id)) }),
     /* @__PURE__ */ jsx(Popup, { isOpen: isModalOpen, onClose: () => setIsModalOpen(false), children: /* @__PURE__ */ jsx(
@@ -5785,11 +5640,60 @@ var AccountAddressesPage = () => {
         onCancel: () => setIsModalOpen(false),
         onSuccess: () => {
           setIsModalOpen(false);
-          fetchAddresses();
+          fetchAddresses({ force: true });
         },
         submitLabel: editingAddress?.id ? "Save Changes" : "Save Address"
       }
-    ) })
+    ) }),
+    deleteConfirmAddress && /* @__PURE__ */ jsx(
+      Popup,
+      {
+        isOpen: !!deleteConfirmAddress,
+        onClose: () => !deletingId && setDeleteConfirmAddress(null),
+        title: "Delete Address",
+        maxWidth: "max-w-[400px]",
+        children: /* @__PURE__ */ jsxs("div", { className: "py-2", children: [
+          /* @__PURE__ */ jsxs("p", { className: "text-[14px] font-[var(--font-regular)] text-gray-600 mb-6 leading-relaxed", children: [
+            "Are you sure you want to delete",
+            " ",
+            /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-bold)] text-[var(--core-primary)]", children: [
+              '"',
+              deleteConfirmAddress.label || deleteConfirmAddress.address_type || "this address",
+              '"'
+            ] }),
+            "? This action cannot be undone."
+          ] }),
+          /* @__PURE__ */ jsxs("div", { className: "flex gap-3", children: [
+            /* @__PURE__ */ jsx(
+              "button",
+              {
+                type: "button",
+                disabled: !!deletingId,
+                onClick: () => setDeleteConfirmAddress(null),
+                className: "flex-1 py-2.5 border border-gray-200 rounded-lg text-gray-700 font-[var(--font-bold)] hover:bg-gray-50 transition-colors uppercase tracking-widest text-[12px] disabled:opacity-50",
+                children: "Cancel"
+              }
+            ),
+            /* @__PURE__ */ jsx(
+              "button",
+              {
+                type: "button",
+                disabled: !!deletingId,
+                onClick: async () => {
+                  await deleteAddress(deleteConfirmAddress.id);
+                  setDeleteConfirmAddress(null);
+                },
+                className: "flex-1 py-2.5 bg-red-600 text-white rounded-lg font-[var(--font-bold)] hover:bg-red-700 transition-colors uppercase tracking-widest text-[12px] flex items-center justify-center gap-2 shadow-sm disabled:opacity-50",
+                children: deletingId ? /* @__PURE__ */ jsxs(Fragment, { children: [
+                  /* @__PURE__ */ jsx("div", { className: "w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" }),
+                  /* @__PURE__ */ jsx("span", { children: "Deleting..." })
+                ] }) : "Delete"
+              }
+            )
+          ] })
+        ] })
+      }
+    )
   ] });
 };
 var AccountOrdersPage = ({ initialOrders = [], pagination }) => {
@@ -5801,7 +5705,10 @@ var AccountOrdersPage = ({ initialOrders = [], pagination }) => {
   const isServerPaginated = pagination && pagination.total_pages !== void 0;
   const currentPage = isServerPaginated ? pagination.current_page : parseInt(searchParams.get("page") || "1", 10);
   const totalPages = isServerPaginated ? pagination.total_pages : Math.ceil(initialOrders.length / itemsPerPage) || 1;
-  const currentOrders = isServerPaginated ? initialOrders : initialOrders.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const currentOrders = isServerPaginated ? initialOrders : initialOrders.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
   const handlePageChange = (page) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("page", page.toString());
@@ -5810,11 +5717,11 @@ var AccountOrdersPage = ({ initialOrders = [], pagination }) => {
   const getVisiblePages = (current, total) => {
     if (total <= 5) return Array.from({ length: total }, (_, i) => i + 1);
     if (current <= 3) return [1, 2, 3, 4, 5, "...", total];
-    if (current >= total - 2) return [1, "...", total - 4, total - 3, total - 2, total - 1, total];
+    if (current >= total - 2)
+      return [1, "...", total - 4, total - 3, total - 2, total - 1, total];
     return [1, "...", current - 1, current, current + 1, "...", total];
   };
   const visiblePages = getVisiblePages(currentPage, totalPages);
-  console.log({ initialOrders, currentOrders, currentPage, totalPages });
   return /* @__PURE__ */ jsxs("div", { className: "animate-in fade-in duration-300", children: [
     /* @__PURE__ */ jsxs("h1", { className: "mb-6 flex items-center gap-2 text-[20px] font-[var(--font-bold)] text-[#1C1C1C]", children: [
       /* @__PURE__ */ jsx(AccountShoppingBagIcon, { className: "h-5 w-5 text-[var(--core-primary)]" }),
@@ -5878,8 +5785,15 @@ var AccountOrdersPage = ({ initialOrders = [], pagination }) => {
                     total
                   ] }),
                   /* @__PURE__ */ jsxs("span", { className: "flex items-center gap-1.5 border-l border-gray-200 pl-4", children: [
-                    "Payment: ",
-                    /* @__PURE__ */ jsx("span", { className: `uppercase text-[11px] font-[var(--font-bold)] tracking-tight ${paymentStatus.toLowerCase() === "received" || paymentStatus.toLowerCase() === "paid" ? "text-green-600" : "text-orange-500"}`, children: paymentStatus })
+                    "Payment:",
+                    " ",
+                    /* @__PURE__ */ jsx(
+                      "span",
+                      {
+                        className: `uppercase text-[11px] font-[var(--font-bold)] tracking-tight ${paymentStatus.toLowerCase() === "received" || paymentStatus.toLowerCase() === "paid" ? "text-green-600" : "text-orange-500"}`,
+                        children: paymentStatus
+                      }
+                    )
                   ] })
                 ] })
               ] }),
@@ -5924,7 +5838,14 @@ var AccountOrdersPage = ({ initialOrders = [], pagination }) => {
           }
         ),
         /* @__PURE__ */ jsx("div", { className: "flex flex-wrap items-center justify-center gap-1", children: visiblePages.map(
-          (page, index) => page === "..." ? /* @__PURE__ */ jsx("span", { className: "flex h-9 w-6 items-center justify-center text-gray-400", children: "..." }, `ellipsis-${index}`) : /* @__PURE__ */ jsx(
+          (page, index) => page === "..." ? /* @__PURE__ */ jsx(
+            "span",
+            {
+              className: "flex h-9 w-6 items-center justify-center text-gray-400",
+              children: "..."
+            },
+            `ellipsis-${index}`
+          ) : /* @__PURE__ */ jsx(
             "button",
             {
               onClick: () => handlePageChange(page),
@@ -5989,6 +5910,29 @@ var AccountOrderDetailContent = ({ order, id }) => {
     setCopied(true);
     setTimeout(() => setCopied(false), 2e3);
   };
+  const getProductUrl = (item) => {
+    const lineItemable = item?.line_itemable || item?.variant || {};
+    const productId = lineItemable?.product_id || item?.product_id || item?.productId || lineItemable?.id || item?.id;
+    if (!productId) return null;
+    let variantId = null;
+    if (lineItemable?.product_id && lineItemable?.id && String(lineItemable.id) !== String(lineItemable.product_id)) {
+      variantId = lineItemable.id;
+    } else if (item?.variant_id && String(item.variant_id) !== String(productId)) {
+      variantId = item.variant_id;
+    } else if (item?.variantId && String(item.variantId) !== String(productId)) {
+      variantId = item.variantId;
+    }
+    const taxonId = lineItemable?.taxons?.[0]?.id || item?.taxon_id || item?.taxons?.[0]?.id;
+    const params = new URLSearchParams();
+    if (taxonId && taxonId !== "taxon") {
+      params.set("taxonid", taxonId);
+    }
+    if (variantId) {
+      params.set("variantId", variantId);
+    }
+    const qs = params.toString();
+    return `/product/${productId}${qs ? `?${qs}` : ""}`;
+  };
   return /* @__PURE__ */ jsxs("div", { className: "animate-in fade-in w-full pb-6 duration-300", children: [
     /* @__PURE__ */ jsxs("div", { className: "sticky top-0 z-10 mb-2 flex items-center gap-3 border-b border-gray-50/50 bg-white/95 py-2.5 backdrop-blur-md", children: [
       /* @__PURE__ */ jsx(
@@ -6042,22 +5986,47 @@ var AccountOrderDetailContent = ({ order, id }) => {
       /* @__PURE__ */ jsx("div", { className: "flex flex-col", children: lineItems.map((item, index) => {
         const unitValue = item.line_itemable?.selling_quantity?.values?.[0]?.label;
         const amount = item.display_price ?? item.line_itemable?.display_price ?? (item.line_itemable?.price || 0) / 100;
+        const variantOptions = item.line_itemable?.variant_options || item.variant_options || [];
+        const productUrl = getProductUrl(item);
+        const ItemWrapper = productUrl ? Link : "div";
+        const wrapperProps = productUrl ? {
+          href: productUrl,
+          className: "flex gap-3 border-b border-gray-50 p-3 transition last:border-0 hover:bg-gray-50 group cursor-pointer"
+        } : {
+          className: "flex gap-3 border-b border-gray-50 p-3 transition last:border-0 hover:bg-gray-50"
+        };
         return /* @__PURE__ */ jsxs(
-          "div",
+          ItemWrapper,
           {
-            className: "flex gap-3 border-b border-gray-50 p-3 transition last:border-0 hover:bg-gray-50",
+            ...wrapperProps,
             children: [
-              /* @__PURE__ */ jsx("div", { className: "h-14 w-14 shrink-0 rounded-lg border border-gray-50 bg-[#F8F8F8] p-1", children: /* @__PURE__ */ jsx(
+              /* @__PURE__ */ jsx("div", { className: "h-14 w-14 shrink-0 rounded-lg border border-gray-50 bg-[#F8F8F8] p-1 overflow-hidden", children: /* @__PURE__ */ jsx(
                 "img",
                 {
                   src: item.image || "/NoProductImage.png",
                   alt: item.name || item.line_itemable?.name || "item",
-                  className: "h-full w-full object-contain"
+                  className: "h-full w-full object-contain transition-transform duration-200 group-hover:scale-105"
                 }
               ) }),
-              /* @__PURE__ */ jsxs("div", { className: "flex flex-1 flex-col justify-center gap-0.5", children: [
-                /* @__PURE__ */ jsx("h3", { className: "line-clamp-1 text-[13px] font-[var(--font-semibold)] leading-snug text-[#1C1C1C]", children: item.name || item.line_itemable?.name }),
-                /* @__PURE__ */ jsxs("div", { className: "flex w-full items-center justify-between", children: [
+              /* @__PURE__ */ jsxs("div", { className: "flex flex-1 flex-col justify-center gap-0.5 min-w-0", children: [
+                /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between gap-2", children: [
+                  /* @__PURE__ */ jsx("h3", { className: "line-clamp-1 text-[13px] font-[var(--font-semibold)] leading-snug text-[#1C1C1C] group-hover:text-[var(--core-primary)] transition-colors", children: item.name || item.line_itemable?.name }),
+                  /* @__PURE__ */ jsx("span", { className: "text-[13px] font-[var(--font-bold)] text-[#1C1C1C] shrink-0", children: formatCurrency(amount) })
+                ] }),
+                variantOptions.length > 0 && /* @__PURE__ */ jsx("div", { className: "flex flex-wrap items-center gap-1.5 text-[11px] text-[#777777] mt-0.5", children: variantOptions.map((vo, i) => /* @__PURE__ */ jsxs(
+                  "span",
+                  {
+                    className: "inline-flex items-center rounded bg-gray-100 px-1.5 py-0.5 font-[var(--font-medium)] text-[#555555]",
+                    children: [
+                      vo?.option_type?.presentation || vo?.option_type?.name || "Option",
+                      ":",
+                      " ",
+                      /* @__PURE__ */ jsx("span", { className: "ml-1 font-semibold text-[#1C1C1C]", children: vo?.option_value?.presentation || vo?.option_value?.name })
+                    ]
+                  },
+                  i
+                )) }),
+                /* @__PURE__ */ jsxs("div", { className: "flex w-full items-center justify-between mt-0.5", children: [
                   /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
                     unitValue && /* @__PURE__ */ jsx("span", { className: "text-[11px] font-[var(--font-medium)] text-[#888888]", children: unitValue }),
                     /* @__PURE__ */ jsxs("span", { className: "text-[11px] font-[var(--font-medium)] text-[#888888]", children: [
@@ -6065,7 +6034,7 @@ var AccountOrderDetailContent = ({ order, id }) => {
                       item.quantity || 1
                     ] })
                   ] }),
-                  /* @__PURE__ */ jsx("span", { className: "text-[13px] font-[var(--font-bold)] text-[#1C1C1C]", children: formatCurrency(amount) })
+                  productUrl && /* @__PURE__ */ jsx("span", { className: "text-[11px] font-[var(--font-medium)] text-[var(--core-primary)] opacity-0 group-hover:opacity-100 transition-opacity", children: "View product \u2192" })
                 ] })
               ] })
             ]
@@ -6189,8 +6158,33 @@ var AccountOrderDetailContent = ({ order, id }) => {
     ] })
   ] });
 };
-var AccountWishlistPage = ({ products = [], isLoading = false, renderProduct }) => {
+var AccountWishlistPage = ({
+  products = [],
+  pagination,
+  isLoading = false,
+  renderProduct
+}) => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const itemsPerPage = 12;
+  const isServerPaginated = pagination && pagination.total_pages !== void 0;
+  const currentPage = isServerPaginated ? pagination.current_page : parseInt(searchParams?.get("page") || "1", 10);
+  const totalPages = isServerPaginated ? pagination.total_pages : Math.ceil(products.length / itemsPerPage) || 1;
+  const currentProducts = isServerPaginated ? products : products.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const handlePageChange = (page) => {
+    const params = new URLSearchParams(searchParams?.toString() || "");
+    params.set("page", page.toString());
+    router.push(`${pathname}?${params.toString()}`);
+  };
+  const getVisiblePages = (current, total) => {
+    if (total <= 5) return Array.from({ length: total }, (_, i) => i + 1);
+    if (current <= 3) return [1, 2, 3, 4, 5, "...", total];
+    if (current >= total - 2)
+      return [1, "...", total - 4, total - 3, total - 2, total - 1, total];
+    return [1, "...", current - 1, current, current + 1, "...", total];
+  };
+  const visiblePages = getVisiblePages(currentPage, totalPages);
   if (isLoading) {
     return /* @__PURE__ */ jsxs("div", { className: "flex min-h-[400px] flex-col items-center justify-center py-20", children: [
       /* @__PURE__ */ jsx("div", { className: "h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-green-600" }),
@@ -6203,25 +6197,121 @@ var AccountWishlistPage = ({ products = [], isLoading = false, renderProduct }) 
       "My Wishlist"
     ] }),
     products.length === 0 ? /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center justify-center rounded-xl border border-gray-100 bg-white p-12 text-center shadow-sm", children: [
-      /* @__PURE__ */ jsx("div", { className: "mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-50", children: /* @__PURE__ */ jsx(AccountHeartIcon, { className: "h-8 w-8 text-red-300", strokeWidth: 2 }) }),
+      /* @__PURE__ */ jsx("div", { className: "mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-50", children: /* @__PURE__ */ jsx(
+        AccountHeartIcon,
+        {
+          className: "h-8 w-8 text-red-300",
+          strokeWidth: 2
+        }
+      ) }),
       /* @__PURE__ */ jsx("h2", { className: "mb-2 text-[18px] font-[var(--font-bold)] text-gray-800", children: "Your wishlist is empty" }),
       /* @__PURE__ */ jsx("p", { className: "mb-6 text-[14px] font-[var(--font-medium)] text-gray-500", children: "Save items you love and buy them later." }),
-      /* @__PURE__ */ jsx("button", { onClick: () => router.push("/"), className: "rounded-lg bg-[var(--core-primary)] px-6 py-2.5 font-[var(--font-bold)] text-white shadow-sm transition hover:opacity-90", children: "Start Shopping" })
-    ] }) : /* @__PURE__ */ jsx("div", { className: "grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-5", children: products.map((product, index) => renderProduct ? renderProduct(product, index) : /* @__PURE__ */ jsxs("button", { onClick: () => router.push(`/product/${product.id}`), className: "overflow-hidden rounded-lg border border-gray-100 bg-white text-left shadow-sm transition hover:shadow-md", children: [
-      /* @__PURE__ */ jsx("img", { src: product.image || product.product_image_url || "/NoProductImage.png", alt: product.name || "Product", className: "h-40 w-full object-cover" }),
-      /* @__PURE__ */ jsx("div", { className: "p-3", children: /* @__PURE__ */ jsx("p", { className: "line-clamp-2 text-[13px] font-[var(--font-semibold)] text-[#1C1C1C]", children: product.name || "Product" }) })
-    ] }, product.id ?? index)) })
+      /* @__PURE__ */ jsx(
+        "button",
+        {
+          onClick: () => router.push("/"),
+          className: "rounded-lg bg-[var(--core-primary)] px-6 py-2.5 font-[var(--font-bold)] text-white shadow-sm transition hover:opacity-90",
+          children: "Start Shopping"
+        }
+      )
+    ] }) : /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-6", children: [
+      /* @__PURE__ */ jsx("div", { className: "grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-5", children: currentProducts.map(
+        (product, index) => renderProduct ? renderProduct(product, index) : /* @__PURE__ */ jsxs(
+          "button",
+          {
+            onClick: () => router.push(`/product/${product.id}`),
+            className: "overflow-hidden rounded-lg border border-gray-100 bg-white text-left shadow-sm transition hover:shadow-md",
+            children: [
+              /* @__PURE__ */ jsx(
+                "img",
+                {
+                  src: product.image || product.product_image_url || "/NoProductImage.png",
+                  alt: product.name || "Product",
+                  className: "h-40 w-full object-cover"
+                }
+              ),
+              /* @__PURE__ */ jsx("div", { className: "p-3", children: /* @__PURE__ */ jsx("p", { className: "line-clamp-2 text-[13px] font-[var(--font-semibold)] text-[#1C1C1C]", children: product.name || "Product" }) })
+            ]
+          },
+          product.id ?? index
+        )
+      ) }),
+      totalPages > 1 && /* @__PURE__ */ jsxs("div", { className: "mt-4 flex flex-wrap items-center justify-center gap-2 md:gap-4", children: [
+        /* @__PURE__ */ jsx(
+          "button",
+          {
+            onClick: () => handlePageChange(Math.max(1, currentPage - 1)),
+            disabled: currentPage === 1,
+            className: "flex h-9 items-center justify-center rounded-lg border border-gray-200 px-3 text-[13px] font-[var(--font-medium)] text-gray-600 transition-colors hover:bg-gray-50 disabled:opacity-50 disabled:hover:bg-transparent",
+            children: "Previous"
+          }
+        ),
+        /* @__PURE__ */ jsx("div", { className: "flex flex-wrap items-center justify-center gap-1", children: visiblePages.map(
+          (page, index) => page === "..." ? /* @__PURE__ */ jsx(
+            "span",
+            {
+              className: "flex h-9 w-6 items-center justify-center text-gray-400",
+              children: "..."
+            },
+            `ellipsis-${index}`
+          ) : /* @__PURE__ */ jsx(
+            "button",
+            {
+              onClick: () => handlePageChange(page),
+              className: `flex h-9 w-9 items-center justify-center rounded-lg text-[13px] font-[var(--font-bold)] transition-colors ${currentPage === page ? "bg-[var(--core-primary)] text-white" : "text-gray-600 hover:bg-gray-100"}`,
+              children: page
+            },
+            page
+          )
+        ) }),
+        /* @__PURE__ */ jsx(
+          "button",
+          {
+            onClick: () => handlePageChange(Math.min(totalPages, currentPage + 1)),
+            disabled: currentPage === totalPages,
+            className: "flex h-9 items-center justify-center rounded-lg border border-gray-200 px-3 text-[13px] font-[var(--font-medium)] text-gray-600 transition-colors hover:bg-gray-50 disabled:opacity-50 disabled:hover:bg-transparent",
+            children: "Next"
+          }
+        )
+      ] })
+    ] })
   ] });
 };
-var DownloadIcon = () => /* @__PURE__ */ jsxs("svg", { width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: [
-  /* @__PURE__ */ jsx("path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" }),
-  /* @__PURE__ */ jsx("polyline", { points: "7 10 12 15 17 10" }),
-  /* @__PURE__ */ jsx("line", { x1: "12", y1: "15", x2: "12", y2: "3" })
-] });
-var OrderConfirmationIcon = () => /* @__PURE__ */ jsxs("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: [
-  /* @__PURE__ */ jsx("path", { d: "M22 11.08V12a10 10 0 1 1-5.93-9.14" }),
-  /* @__PURE__ */ jsx("polyline", { points: "22 4 12 14.01 9 11.01" })
-] });
+var DownloadIcon = () => /* @__PURE__ */ jsxs(
+  "svg",
+  {
+    width: "20",
+    height: "20",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    children: [
+      /* @__PURE__ */ jsx("path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" }),
+      /* @__PURE__ */ jsx("polyline", { points: "7 10 12 15 17 10" }),
+      /* @__PURE__ */ jsx("line", { x1: "12", y1: "15", x2: "12", y2: "3" })
+    ]
+  }
+);
+var OrderConfirmationIcon = () => /* @__PURE__ */ jsxs(
+  "svg",
+  {
+    width: "24",
+    height: "24",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    children: [
+      /* @__PURE__ */ jsx("path", { d: "M22 11.08V12a10 10 0 1 1-5.93-9.14" }),
+      /* @__PURE__ */ jsx("polyline", { points: "22 4 12 14.01 9 11.01" })
+    ]
+  }
+);
 var fallbackToast = {
   error: (msg) => console.error(msg),
   success: (msg) => console.log(msg)
@@ -6229,7 +6319,6 @@ var fallbackToast = {
 var Order = (props) => {
   const params = useParams();
   const id = params?.orderid;
-  console.log({ id });
   const searchParams = useSearchParams();
   const router = useRouter();
   const { formatCurrency } = useCurrencyFormat();
@@ -6241,7 +6330,6 @@ var Order = (props) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
   const [isFetchingInvoice, setIsFetchingInvoice] = useState(false);
-  console.log({ data });
   useEffect(() => {
     if (!id) return;
     const fetchOrder = async () => {
@@ -6252,7 +6340,6 @@ var Order = (props) => {
           throw new Error("getOrderById action is not available");
         }
         const orderData = await actions.getOrderById(id);
-        console.log({ orderData });
         setData(orderData);
       } catch (err) {
         console.error("Failed to fetch order", err);
@@ -6263,7 +6350,16 @@ var Order = (props) => {
     };
     fetchOrder();
   }, [id, actions, config?.storeId]);
-  const { order_number, created_at, cart, order_type, state, order_status, payment_state, payment_status } = data || {};
+  const {
+    order_number,
+    created_at,
+    cart,
+    order_type,
+    state,
+    order_status,
+    payment_state,
+    payment_status
+  } = data || {};
   const {
     shipping_address,
     billing_address,
@@ -6342,9 +6438,19 @@ var Order = (props) => {
         "div",
         {
           className: "flex items-start gap-3 p-4 rounded-lg border-l-4",
-          style: { borderColor: "var(--core-secondary)", background: "color-mix(in srgb, var(--core-secondary) 8%, white)" },
+          style: {
+            borderColor: "var(--core-secondary)",
+            background: "color-mix(in srgb, var(--core-secondary) 8%, white)"
+          },
           children: [
-            /* @__PURE__ */ jsx("div", { className: "mt-0.5 shrink-0", style: { color: "var(--core-secondary)" }, children: /* @__PURE__ */ jsx(OrderConfirmationIcon, {}) }),
+            /* @__PURE__ */ jsx(
+              "div",
+              {
+                className: "mt-0.5 shrink-0",
+                style: { color: "var(--core-secondary)" },
+                children: /* @__PURE__ */ jsx(OrderConfirmationIcon, {})
+              }
+            ),
             /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-1", children: [
               /* @__PURE__ */ jsx("p", { className: "font-[var(--font-bold)] text-[16px] text-[var(--core-primary)] uppercase tracking-wide", children: "Thank you. Your order has been received" }),
               /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-regular)] text-[13px] text-gray-500", children: [
@@ -6353,7 +6459,8 @@ var Order = (props) => {
                   "#",
                   order_number
                 ] }),
-                " is confirmed and being processed."
+                " ",
+                "is confirmed and being processed."
               ] })
             ] })
           ]
@@ -6376,101 +6483,157 @@ var Order = (props) => {
             }
           )
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "border rounded-lg overflow-hidden", style: { borderColor: "color-mix(in srgb, var(--core-primary) 20%, #e8e5df)" }, children: [
-          /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-2 divide-x", style: { divideColor: "color-mix(in srgb, var(--core-primary) 15%, #e8e5df)" }, children: [
-            /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-1", children: [
-              /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Order Number" }),
-              /* @__PURE__ */ jsx("p", { className: "font-[var(--font-bold)] text-[14px] text-[var(--core-primary)]", children: order_number || "\u2014" })
-            ] }),
-            /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-1", children: [
-              /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Order Status" }),
-              /* @__PURE__ */ jsx(
-                "span",
+        /* @__PURE__ */ jsxs(
+          "div",
+          {
+            className: "border rounded-lg overflow-hidden",
+            style: {
+              borderColor: "color-mix(in srgb, var(--core-primary) 20%, #e8e5df)"
+            },
+            children: [
+              /* @__PURE__ */ jsxs(
+                "div",
                 {
-                  className: "inline-flex self-start font-[var(--font-bold)] text-[12px] px-2.5 py-0.5 rounded-full uppercase tracking-wide",
+                  className: "grid grid-cols-2 divide-x",
                   style: {
-                    background: "color-mix(in srgb, var(--core-secondary) 15%, white)",
-                    color: "var(--core-primary)",
-                    border: "1px solid color-mix(in srgb, var(--core-secondary) 40%, white)"
+                    divideColor: "color-mix(in srgb, var(--core-primary) 15%, #e8e5df)"
                   },
-                  children: order_status || "Processing"
-                }
-              )
-            ] })
-          ] }),
-          /* @__PURE__ */ jsx("div", { className: "border-t", style: { borderColor: "color-mix(in srgb, var(--core-primary) 12%, #e8e5df)" } }),
-          /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-2 divide-x", style: { divideColor: "color-mix(in srgb, var(--core-primary) 15%, #e8e5df)" }, children: [
-            /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-1", children: [
-              /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Order Date" }),
-              /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-[14px] text-[var(--core-primary)]", children: orderDate || "\u2014" })
-            ] }),
-            /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-1", children: [
-              /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Payment Status" }),
-              /* @__PURE__ */ jsx(
-                "p",
-                {
-                  className: "font-[var(--font-bold)] text-[13px] uppercase",
-                  style: { color: payment_status === "paid" || payment_status === "received" ? "#16a34a" : "var(--core-secondary)" },
-                  children: payment_status || "Pending"
-                }
-              )
-            ] })
-          ] }),
-          /* @__PURE__ */ jsx("div", { className: "border-t", style: { borderColor: "color-mix(in srgb, var(--core-primary) 12%, #e8e5df)" } }),
-          order_type === "pickup" ? /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-1", children: [
-            /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Pickup Address" }),
-            /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-[14px] text-[var(--core-primary)]", children: storePickUpAddress || "\u2014" })
-          ] }) : /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x", style: { borderColor: "color-mix(in srgb, var(--core-primary) 12%, #e8e5df)" }, children: [
-            /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-2", children: [
-              /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Delivery Address" }),
-              shipping_address?.label && /* @__PURE__ */ jsx(
-                "span",
-                {
-                  className: "self-start text-[10px] font-[var(--font-bold)] px-2 py-0.5 rounded-full uppercase tracking-widest",
-                  style: {
-                    background: "color-mix(in srgb, var(--core-primary) 10%, white)",
-                    color: "var(--core-primary)"
-                  },
-                  children: shipping_address.label
+                  children: [
+                    /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-1", children: [
+                      /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Order Number" }),
+                      /* @__PURE__ */ jsx("p", { className: "font-[var(--font-bold)] text-[14px] text-[var(--core-primary)]", children: order_number || "\u2014" })
+                    ] }),
+                    /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-1", children: [
+                      /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Order Status" }),
+                      /* @__PURE__ */ jsx(
+                        "span",
+                        {
+                          className: "inline-flex self-start font-[var(--font-bold)] text-[12px] px-2.5 py-0.5 rounded-full uppercase tracking-wide",
+                          style: {
+                            background: "color-mix(in srgb, var(--core-secondary) 15%, white)",
+                            color: "var(--core-primary)",
+                            border: "1px solid color-mix(in srgb, var(--core-secondary) 40%, white)"
+                          },
+                          children: order_status || "Processing"
+                        }
+                      )
+                    ] })
+                  ]
                 }
               ),
-              /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-0.5", children: [
-                /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-bold)] text-[13px] text-[var(--core-primary)]", children: [
-                  `${shipping_address?.firstname ?? ""} ${shipping_address?.lastname ?? ""}`.trim(),
-                  shipping_address?.phone && /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-regular)] text-gray-500", children: [
-                    " \xB7 ",
-                    shipping_address.phone
-                  ] })
-                ] }),
-                /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[13px] text-gray-500 leading-relaxed", children: fullShippingAddress })
-              ] })
-            ] }),
-            /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-2", children: [
-              /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Billing Address" }),
-              billing_address?.label && /* @__PURE__ */ jsx(
-                "span",
+              /* @__PURE__ */ jsx(
+                "div",
                 {
-                  className: "self-start text-[10px] font-[var(--font-bold)] px-2 py-0.5 rounded-full uppercase tracking-widest",
+                  className: "border-t",
                   style: {
-                    background: "color-mix(in srgb, var(--core-primary) 10%, white)",
-                    color: "var(--core-primary)"
-                  },
-                  children: billing_address.label
+                    borderColor: "color-mix(in srgb, var(--core-primary) 12%, #e8e5df)"
+                  }
                 }
               ),
-              /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-0.5", children: [
-                /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-bold)] text-[13px] text-[var(--core-primary)]", children: [
-                  `${billing_address?.firstname ?? ""} ${billing_address?.lastname ?? ""}`.trim(),
-                  billing_address?.phone && /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-regular)] text-gray-500", children: [
-                    " \xB7 ",
-                    billing_address.phone
-                  ] })
-                ] }),
-                /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[13px] text-gray-500 leading-relaxed", children: fullBillingAddress })
-              ] })
-            ] })
-          ] })
-        ] })
+              /* @__PURE__ */ jsxs(
+                "div",
+                {
+                  className: "grid grid-cols-2 divide-x",
+                  style: {
+                    divideColor: "color-mix(in srgb, var(--core-primary) 15%, #e8e5df)"
+                  },
+                  children: [
+                    /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-1", children: [
+                      /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Order Date" }),
+                      /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-[14px] text-[var(--core-primary)]", children: orderDate || "\u2014" })
+                    ] }),
+                    /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-1", children: [
+                      /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Payment Status" }),
+                      /* @__PURE__ */ jsx(
+                        "p",
+                        {
+                          className: "font-[var(--font-bold)] text-[13px] uppercase",
+                          style: {
+                            color: payment_status === "paid" || payment_status === "received" ? "#16a34a" : "var(--core-secondary)"
+                          },
+                          children: payment_status || "Pending"
+                        }
+                      )
+                    ] })
+                  ]
+                }
+              ),
+              /* @__PURE__ */ jsx(
+                "div",
+                {
+                  className: "border-t",
+                  style: {
+                    borderColor: "color-mix(in srgb, var(--core-primary) 12%, #e8e5df)"
+                  }
+                }
+              ),
+              order_type === "pickup" ? /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-1", children: [
+                /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Pickup Address" }),
+                /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-[14px] text-[var(--core-primary)]", children: storePickUpAddress || "\u2014" })
+              ] }) : /* @__PURE__ */ jsxs(
+                "div",
+                {
+                  className: "grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x",
+                  style: {
+                    borderColor: "color-mix(in srgb, var(--core-primary) 12%, #e8e5df)"
+                  },
+                  children: [
+                    /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-2", children: [
+                      /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Delivery Address" }),
+                      shipping_address?.label && /* @__PURE__ */ jsx(
+                        "span",
+                        {
+                          className: "self-start text-[10px] font-[var(--font-bold)] px-2 py-0.5 rounded-full uppercase tracking-widest",
+                          style: {
+                            background: "color-mix(in srgb, var(--core-primary) 10%, white)",
+                            color: "var(--core-primary)"
+                          },
+                          children: shipping_address.label
+                        }
+                      ),
+                      /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-0.5", children: [
+                        /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-bold)] text-[13px] text-[var(--core-primary)]", children: [
+                          `${shipping_address?.firstname ?? ""} ${shipping_address?.lastname ?? ""}`.trim(),
+                          shipping_address?.phone && /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-regular)] text-gray-500", children: [
+                            " ",
+                            "\xB7 ",
+                            shipping_address.phone
+                          ] })
+                        ] }),
+                        /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[13px] text-gray-500 leading-relaxed", children: fullShippingAddress })
+                      ] })
+                    ] }),
+                    /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-2", children: [
+                      /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Billing Address" }),
+                      billing_address?.label && /* @__PURE__ */ jsx(
+                        "span",
+                        {
+                          className: "self-start text-[10px] font-[var(--font-bold)] px-2 py-0.5 rounded-full uppercase tracking-widest",
+                          style: {
+                            background: "color-mix(in srgb, var(--core-primary) 10%, white)",
+                            color: "var(--core-primary)"
+                          },
+                          children: billing_address.label
+                        }
+                      ),
+                      /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-0.5", children: [
+                        /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-bold)] text-[13px] text-[var(--core-primary)]", children: [
+                          `${billing_address?.firstname ?? ""} ${billing_address?.lastname ?? ""}`.trim(),
+                          billing_address?.phone && /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-regular)] text-gray-500", children: [
+                            " ",
+                            "\xB7 ",
+                            billing_address.phone
+                          ] })
+                        ] }),
+                        /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[13px] text-gray-500 leading-relaxed", children: fullBillingAddress })
+                      ] })
+                    ] })
+                  ]
+                }
+              )
+            ]
+          }
+        )
       ] }),
       /* @__PURE__ */ jsx(
         "button",
@@ -6507,64 +6670,97 @@ var Order = (props) => {
           );
         }) })
       ] }),
-      /* @__PURE__ */ jsxs("div", { className: "border rounded-lg overflow-hidden", style: { borderColor: "color-mix(in srgb, var(--core-primary) 20%, #e8e5df)" }, children: [
-        /* @__PURE__ */ jsx("div", { className: "px-4 py-3", style: { background: "color-mix(in srgb, var(--core-primary) 6%, white)" }, children: /* @__PURE__ */ jsx("h3", { className: "font-[var(--font-bold)] text-[15px] text-[var(--core-primary)] uppercase tracking-wider", children: "Bill Summary" }) }),
-        /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-3", children: [
-          /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
-            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-regular)] text-[14px] text-gray-500", children: "Item Total" }),
-            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-medium)] text-[14px] text-[var(--core-primary)]", children: formatCurrency(display_item_total) })
-          ] }),
-          appliedDiscounts?.length > 0 ? appliedDiscounts.map((coupon, idx) => {
-            const amt = getDiscountAmount(coupon) ?? (appliedDiscounts.length === 1 ? totalSavings : 0);
-            return /* @__PURE__ */ jsxs(
+      /* @__PURE__ */ jsxs(
+        "div",
+        {
+          className: "border rounded-lg overflow-hidden",
+          style: {
+            borderColor: "color-mix(in srgb, var(--core-primary) 20%, #e8e5df)"
+          },
+          children: [
+            /* @__PURE__ */ jsx(
               "div",
               {
-                className: "flex justify-between items-center text-[14px]",
-                children: [
-                  /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-medium)] text-[#FF6500] flex items-center gap-1.5 flex-wrap", children: [
-                    /* @__PURE__ */ jsx("span", { children: "Discount" }),
-                    coupon?.code && /* @__PURE__ */ jsx("span", { className: "font-mono text-xs font-semibold px-2 py-0.5 rounded bg-orange-50 text-[#FF6500] border border-orange-200", children: coupon.code }),
-                    coupon?.display_action_value && /* @__PURE__ */ jsxs("span", { className: "text-xs text-[#FF6500]/90", children: [
-                      "(",
-                      coupon.display_action_value,
-                      ")"
-                    ] })
-                  ] }),
-                  /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-medium)] text-[#FF6500]", children: [
-                    "-",
-                    formatCurrency(amt)
-                  ] })
-                ]
-              },
-              coupon?.id || coupon?.discount_id || coupon?.code || idx
-            );
-          }) : hasPromoTotal ? /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center text-[14px]", children: [
-            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-medium)] text-[#FF6500]", children: "Discount" }),
-            /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-medium)] text-[#FF6500]", children: [
-              "-",
-              formatCurrency(promoTotalAmount)
+                className: "px-4 py-3",
+                style: {
+                  background: "color-mix(in srgb, var(--core-primary) 6%, white)"
+                },
+                children: /* @__PURE__ */ jsx("h3", { className: "font-[var(--font-bold)] text-[15px] text-[var(--core-primary)] uppercase tracking-wider", children: "Bill Summary" })
+              }
+            ),
+            /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-3", children: [
+              /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
+                /* @__PURE__ */ jsx("span", { className: "font-[var(--font-regular)] text-[14px] text-gray-500", children: "Item Total" }),
+                /* @__PURE__ */ jsx("span", { className: "font-[var(--font-medium)] text-[14px] text-[var(--core-primary)]", children: formatCurrency(display_item_total) })
+              ] }),
+              appliedDiscounts?.length > 0 ? appliedDiscounts.map((coupon, idx) => {
+                const amt = getDiscountAmount(coupon) ?? (appliedDiscounts.length === 1 ? totalSavings : 0);
+                return /* @__PURE__ */ jsxs(
+                  "div",
+                  {
+                    className: "flex justify-between items-center text-[14px]",
+                    children: [
+                      /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-medium)] text-[#FF6500] flex items-center gap-1.5 flex-wrap", children: [
+                        /* @__PURE__ */ jsx("span", { children: "Discount" }),
+                        coupon?.code && /* @__PURE__ */ jsx("span", { className: "font-mono text-xs font-semibold px-2 py-0.5 rounded bg-orange-50 text-[#FF6500] border border-orange-200", children: coupon.code }),
+                        coupon?.display_action_value && /* @__PURE__ */ jsxs("span", { className: "text-xs text-[#FF6500]/90", children: [
+                          "(",
+                          coupon.display_action_value,
+                          ")"
+                        ] })
+                      ] }),
+                      /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-medium)] text-[#FF6500]", children: [
+                        "-",
+                        formatCurrency(amt)
+                      ] })
+                    ]
+                  },
+                  coupon?.id || coupon?.discount_id || coupon?.code || idx
+                );
+              }) : hasPromoTotal ? /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center text-[14px]", children: [
+                /* @__PURE__ */ jsx("span", { className: "font-[var(--font-medium)] text-[#FF6500]", children: "Discount" }),
+                /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-medium)] text-[#FF6500]", children: [
+                  "-",
+                  formatCurrency(promoTotalAmount)
+                ] })
+              ] }) : null,
+              /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
+                /* @__PURE__ */ jsx("span", { className: "font-[var(--font-regular)] text-[14px] text-gray-500", children: "Tax" }),
+                /* @__PURE__ */ jsx("span", { className: "font-[var(--font-medium)] text-[14px] text-[var(--core-primary)]", children: formatCurrency(display_tax_total) })
+              ] }),
+              order_type !== "pickup" && /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
+                /* @__PURE__ */ jsx("span", { className: "font-[var(--font-regular)] text-[14px] text-gray-500", children: "Shipping" }),
+                /* @__PURE__ */ jsx("span", { className: "font-[var(--font-medium)] text-[14px] text-[var(--core-primary)]", children: display_ship_total === "0.00" || display_ship_total === 0 || display_ship_total === "0" ? /* @__PURE__ */ jsx(
+                  "span",
+                  {
+                    style: { color: "#16a34a" },
+                    className: "font-[var(--font-bold)]",
+                    children: "Free"
+                  }
+                ) : formatCurrency(display_ship_total) })
+              ] }),
+              /* @__PURE__ */ jsx(
+                "div",
+                {
+                  className: "h-px my-1",
+                  style: {
+                    background: "color-mix(in srgb, var(--core-secondary) 35%, #e8e5df)"
+                  }
+                }
+              ),
+              /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
+                /* @__PURE__ */ jsx("span", { className: "font-[var(--font-bold)] text-[15px] text-[var(--core-primary)]", children: "Total" }),
+                /* @__PURE__ */ jsx("span", { className: "font-[var(--font-bold)] text-[17px] text-[var(--core-primary)]", children: formatCurrency(display_total) })
+              ] }),
+              totalSavings > 0 && /* @__PURE__ */ jsxs("p", { className: "text-[13px] font-[var(--font-bold)] text-[#16a34a] mt-[6px] text-right", children: [
+                "You save ",
+                formatCurrency(totalSavings),
+                " on this order \u{1F389}"
+              ] })
             ] })
-          ] }) : null,
-          /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
-            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-regular)] text-[14px] text-gray-500", children: "Tax" }),
-            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-medium)] text-[14px] text-[var(--core-primary)]", children: formatCurrency(display_tax_total) })
-          ] }),
-          order_type !== "pickup" && /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
-            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-regular)] text-[14px] text-gray-500", children: "Shipping" }),
-            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-medium)] text-[14px] text-[var(--core-primary)]", children: display_ship_total === "0.00" || display_ship_total === 0 || display_ship_total === "0" ? /* @__PURE__ */ jsx("span", { style: { color: "#16a34a" }, className: "font-[var(--font-bold)]", children: "Free" }) : formatCurrency(display_ship_total) })
-          ] }),
-          /* @__PURE__ */ jsx("div", { className: "h-px my-1", style: { background: "color-mix(in srgb, var(--core-secondary) 35%, #e8e5df)" } }),
-          /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
-            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-bold)] text-[15px] text-[var(--core-primary)]", children: "Total" }),
-            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-bold)] text-[17px] text-[var(--core-primary)]", children: formatCurrency(display_total) })
-          ] }),
-          totalSavings > 0 && /* @__PURE__ */ jsxs("p", { className: "text-[13px] font-[var(--font-bold)] text-[#16a34a] mt-[6px] text-right", children: [
-            "You save ",
-            formatCurrency(totalSavings),
-            " on this order \u{1F389}"
-          ] })
-        ] })
-      ] })
+          ]
+        }
+      )
     ] }),
     /* @__PURE__ */ jsx(
       "button",
@@ -6579,7 +6775,6 @@ var Order = (props) => {
 };
 var Hello = () => {
   const { cart, isCartLoading } = useCore();
-  console.log("Cart:", cart, isCartLoading);
   return /* @__PURE__ */ jsx("div", { children: isCartLoading ? "Loading..." : "Core Working \u2705" });
 };
 var DeveloperErrorBoundary = class extends Component {
@@ -6632,6 +6827,6 @@ var DeveloperErrorBoundary = class extends Component {
   }
 };
 
-export { AccountAddressesPage, AccountLayout, AccountOrderDetailContent, AccountOrdersPage, AccountPage, AccountSidebar, AccountWishlistPage, AddressCard2 as AddressCard, AddressForm, AuthManager, CartItem, CartMismatchBanner, CartPage, CartSummary, CoreProvider, CouponSection_default as CouponSection, CustomOTPAuth, DEFAULT_NAV_ITEMS as DEFAULT_ACCOUNT_NAV_ITEMS, DeveloperErrorBoundary, EmptyState, Hello, Order, OrdersList, POSTHOG_INSTANCES, Popup, ProfileForm, Spinner, ThirdPartyScripts, UserInfo, ViewCart, applyDiscount, applyDiscountAction, buildItem, buildMeta, captureDeveloperException, clearEcommerce, createAddressAction, createCartAction, createLineItemAction, createRazorpayOrderAction, deleteAddressAction, deleteLineItemAction, devLogger, getAddressesAction, getAvailableDiscountsAction, getCartAction, getCartByIdAction, getDeveloperPostHog, getMerchantPostHog, getOrderByIdAction, getOrderInvoiceAction, getOrdersAction, getPostHogInstance, getUserAction, identifyDeveloperUser, initDeveloperPostHog, initGtmConfig, initMerchantPostHog, initMetaPixelConfig, initPostHog, injectContentSquare, injectHotjar, logDeveloper, loginUser, nameToSlug, pushToDataLayer, removeDiscountAction, removeDiscountById, resetDeveloperPostHog, sanitizePostHogToken, setDeveloperSuperProperties, signUpUser, trackAddPaymentInfo, trackAddShippingInfo, trackAddToCart, trackApplyCoupon, trackBeginCheckout, trackCustomEvent, trackDiscountEventAction, trackMetaAddPaymentInfo, trackMetaAddToCart, trackMetaCompleteRegistration, trackMetaInitiateCheckout, trackMetaLead, trackMetaPageView, trackMetaPurchase, trackMetaSearch, trackMetaViewContent, trackPageView, trackPaymentFailed, trackPurchase, trackSearch, trackViewItem, updateAddressAction, updateCartAction, updateCartIdLineItemsAction, updateLineItemAction, updateRazorpayPaymentAction, updateUserAction, useAddToCart, useAuth, useCart, userCartInfo_default as useCartInfo, useCore, useCurrencyFormat, useLogout, useVariantSelection, validateCartTotal, verifyOtp };
+export { AccountAddressesPage, AccountLayout, AccountOrderDetailContent, AccountOrdersPage, AccountPage, AccountSidebar, AccountWishlistPage, AddressCard2 as AddressCard, AddressForm, AuthManager, CartItem, CartMismatchBanner, CartPage, CartSummary, CoreProvider, CouponSection_default as CouponSection, CustomOTPAuth, DEFAULT_NAV_ITEMS as DEFAULT_ACCOUNT_NAV_ITEMS, DeveloperErrorBoundary, EmptyState, Hello, Order, OrdersList, POSTHOG_INSTANCES, Popup, ProfileForm, Spinner, ThirdPartyScripts, UserInfo, ViewCart, buildItem, buildMeta, captureDeveloperException, clearEcommerce, devLogger, getDeveloperPostHog, getMerchantPostHog, getPostHogInstance, identifyDeveloperUser, initDeveloperPostHog, initGtmConfig, initMerchantPostHog, initMetaPixelConfig, initPostHog, injectContentSquare, injectHotjar, invalidateLikedProductsCache, logDeveloper, nameToSlug, pushToDataLayer, resetDeveloperPostHog, sanitizePostHogToken, setDeveloperSuperProperties, trackAddPaymentInfo, trackAddShippingInfo, trackAddToCart, trackApplyCoupon, trackBeginCheckout, trackCustomEvent, trackMetaAddPaymentInfo, trackMetaAddToCart, trackMetaCompleteRegistration, trackMetaInitiateCheckout, trackMetaLead, trackMetaPageView, trackMetaPurchase, trackMetaSearch, trackMetaViewContent, trackPageView, trackPaymentFailed, trackPurchase, trackSearch, trackViewItem, useAddToCart, useAddresses, useAuth, useCart, userCartInfo_default as useCartInfo, useCore, useCurrencyFormat, useGetCurrentUserLikedProductsQuery, useLogout, useVariantSelection };
 //# sourceMappingURL=index.js.map
 //# sourceMappingURL=index.js.map

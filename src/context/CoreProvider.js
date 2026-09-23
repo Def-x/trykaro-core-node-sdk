@@ -6,6 +6,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import * as storefrontActions from "../actions/storefrontActions";
@@ -73,6 +74,11 @@ const inbuiltActions = {
 // which would cause useMemo/useEffect loops when no actions/config are passed.
 const EMPTY_ACTIONS = {};
 const EMPTY_CONFIG = {};
+
+const normalizeAddresses = (payload) =>
+  payload?.data ??
+  payload?.addresses ??
+  (Array.isArray(payload) ? payload : []);
 
 /**
  * CoreProvider
@@ -148,15 +154,6 @@ export const CoreProvider = ({
   const primaryColor = resolvedConfig?.primaryColor ?? "#00214c";
   const secondaryColor = resolvedConfig?.secondaryColor ?? "#c8a95a";
   const [cart, setCart] = useState();
-  const resolvedActions = useMemo(() => {
-    const merged = { ...actions };
-    Object.entries(inbuiltActions).forEach(([key, fn]) => {
-      if (!merged[key]) {
-        merged[key] = fn;
-      }
-    });
-    return merged;
-  }, [actions]);
   const [isCartLoading, setIsCartLoading] = useState(true);
   const [region, setRegion] = useState(resolvedConfig?.region ?? null);
   const [authState, setAuthState] = useState(() => injectedAuth ?? {});
@@ -220,6 +217,16 @@ export const CoreProvider = ({
       clearAuth,
     };
   }, [authType, injectedAuth, authState, setAuth, clearAuth]);
+
+  const resolvedActions = useMemo(() => {
+    const merged = { ...actions };
+    Object.entries(inbuiltActions).forEach(([key, fn]) => {
+      if (!merged[key]) {
+        merged[key] = fn;
+      }
+    });
+    return merged;
+  }, [actions]);
 
   // ── PostHog Developer Instance Initialization ──────────────────────────────
   useEffect(() => {
@@ -298,11 +305,13 @@ export const CoreProvider = ({
         setIsCartLoading(true);
 
         let resolvedCart = null;
-        const isSignedIn = auth?.isSignedIn ?? false;
+        const token = auth?.token ?? auth?.access_token ?? null;
+        const isActuallySignedIn = !!((auth?.isSignedIn ?? false) && token);
 
-        if (isSignedIn) {
-          const data = await resolvedActions.getCart(resolvedConfig?.regionId);
-          resolvedCart = Array.isArray(data) ? data[0] : data;
+        if (isActuallySignedIn && token) {
+          const data = await resolvedActions.getCart(resolvedConfig?.regionId, { token });
+          const candidate = Array.isArray(data) ? data[0] : data;
+          resolvedCart = candidate && !candidate.serverError && !candidate.error ? candidate : null;
         } else {
           const storedCartId =
             typeof window !== "undefined"
@@ -310,10 +319,12 @@ export const CoreProvider = ({
               : null;
 
           if (storedCartId && resolvedActions?.getCartById) {
-            resolvedCart = await resolvedActions.getCartById(
+            const candidate = await resolvedActions.getCartById(
               storedCartId,
               resolvedConfig?.regionId,
+              { token: null },
             );
+            resolvedCart = candidate && !candidate.serverError && !candidate.error ? candidate : null;
           }
         }
 
@@ -332,7 +343,7 @@ export const CoreProvider = ({
 
     loadCart();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resolvedConfig?.regionId, auth?.isSignedIn]);
+  }, [resolvedConfig?.regionId, auth?.isSignedIn, auth?.token, auth?.access_token]);
 
   useEffect(() => {
     if (typeof document === "undefined") return;
@@ -378,12 +389,11 @@ export const CoreProvider = ({
       captureDeveloperException,
       posthogDeveloper: getDeveloperPostHog(),
     }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       cart,
       isCartLoading,
-      resolvedRegion,   // was wrong: was "region" (stale local state) and "config" (raw prop)
-      resolvedConfig,   // was wrong: was raw "config" prop
+      resolvedRegion,
+      resolvedConfig,
       resolvedActions,
       toast,
       auth,

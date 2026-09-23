@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { createPortal } from "react-dom";
 import { useCore } from "../../context/CoreProvider";
 
 /**
@@ -22,6 +23,8 @@ export const AddressForm = ({
 }) => {
   const { actions, toast } = useCore();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [formData, setFormData] = useState({
     address_type: initialData?.address_type || "shipping",
     address1: initialData?.address1 || "",
@@ -238,28 +241,105 @@ export const AddressForm = ({
           {initialData?.id && actions?.deleteAddress && (
             <button
               type="button"
-              disabled={isSubmitting}
-              onClick={async () => {
-                if (window.confirm("Are you sure you want to delete this address?")) {
-                  setIsSubmitting(true);
-                  try {
-                    await actions.deleteAddress(initialData.id);
-                    toast?.success?.("Address deleted successfully.");
-                    onSuccess?.();
-                  } catch (err) {
-                    toast?.error?.("Failed to delete address.");
-                  } finally {
-                    setIsSubmitting(false);
-                  }
-                }
-              }}
-              className="flex-1 py-3 border border-red-100 text-red-500 rounded-md font-[var(--font-bold)] hover:bg-red-50 transition-colors uppercase tracking-widest text-[12px]"
+              disabled={isSubmitting || isDeleting}
+              onClick={() => setShowDeleteConfirm(true)}
+              className="flex-1 py-3 border border-red-100 text-red-500 rounded-md font-[var(--font-bold)] hover:bg-red-50 transition-colors uppercase tracking-widest text-[12px] disabled:opacity-50"
             >
               Delete Address
             </button>
           )}
         </div>
       </div>
+
+      {showDeleteConfirm &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[1000000] flex items-center justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-[2px] transition-all duration-300"
+            onClick={(e) => {
+              if (e.target === e.currentTarget && !isDeleting) {
+                setShowDeleteConfirm(false);
+              }
+            }}
+          >
+            <div className="relative w-full max-w-[400px] overflow-hidden rounded-xl border border-gray-100 bg-white p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+              <div className="flex items-center justify-between pb-3 mb-2 border-b border-gray-100">
+                <h3 className="text-[17px] font-[var(--font-bold)] text-[var(--core-primary)] uppercase tracking-wide">
+                  Delete Address
+                </h3>
+                {!isDeleting && (
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteConfirm(false)}
+                    className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-full hover:bg-gray-100"
+                    aria-label="Close"
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                )}
+              </div>
+
+              <p className="py-3 text-[14px] font-[var(--font-regular)] text-gray-600 leading-relaxed">
+                Are you sure you want to delete{" "}
+                <span className="font-[var(--font-bold)] text-[var(--core-primary)]">
+                  &quot;{initialData?.label || initialData?.address_type || "this address"}&quot;
+                </span>
+                ? This action cannot be undone.
+              </p>
+
+              <div className="flex gap-3 mt-4 pt-2">
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="flex-1 py-2.5 border border-gray-200 rounded-lg text-gray-700 font-[var(--font-bold)] hover:bg-gray-50 transition-colors uppercase tracking-widest text-[12px] disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={async () => {
+                    setIsDeleting(true);
+                    try {
+                      await actions.deleteAddress(initialData.id);
+                      toast?.success?.("Address deleted successfully.");
+                      setShowDeleteConfirm(false);
+                      onSuccess?.();
+                    } catch (err) {
+                      toast?.error?.("Failed to delete address.");
+                    } finally {
+                      setIsDeleting(false);
+                    }
+                  }}
+                  className="flex-1 py-2.5 bg-red-600 text-white rounded-lg font-[var(--font-bold)] hover:bg-red-700 transition-colors uppercase tracking-widest text-[12px] flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
+                >
+                  {isDeleting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Deleting...</span>
+                    </>
+                  ) : (
+                    "Delete"
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
     </form>
   );
 };

@@ -9,7 +9,13 @@ export { useCurrencyFormat } from "./hooks/useCurrencyFormat";
 export { useAuth } from "./hooks/useAuth";
 export { useLogout } from "./hooks/useLogout";
 export { useVariantSelection } from "./hooks/useVariantSelection";
+export { useAddresses } from "./hooks/useAddresses";
 export { default as useCartInfo } from "./hooks/userCartInfo";
+export {
+  useGetCurrentUserLikedProductsQuery,
+  invalidateLikedProductsCache,
+} from "./hooks/useLikedProducts";
+
 
 // ─── Auth Components ──────────────────────────────────────────────────────────
 export { AuthManager } from "./components/auth/AuthManager";

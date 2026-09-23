@@ -18,10 +18,19 @@ export const AccountOrdersPage = ({ initialOrders = [], pagination }) => {
 
   const itemsPerPage = 10;
   const isServerPaginated = pagination && pagination.total_pages !== undefined;
-  
-  const currentPage = isServerPaginated ? pagination.current_page : parseInt(searchParams.get("page") || "1", 10);
-  const totalPages = isServerPaginated ? pagination.total_pages : Math.ceil(initialOrders.length / itemsPerPage) || 1;
-  const currentOrders = isServerPaginated ? initialOrders : initialOrders.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const currentPage = isServerPaginated
+    ? pagination.current_page
+    : parseInt(searchParams.get("page") || "1", 10);
+  const totalPages = isServerPaginated
+    ? pagination.total_pages
+    : Math.ceil(initialOrders.length / itemsPerPage) || 1;
+  const currentOrders = isServerPaginated
+    ? initialOrders
+    : initialOrders.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage,
+      );
 
   const handlePageChange = (page) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -32,13 +41,13 @@ export const AccountOrdersPage = ({ initialOrders = [], pagination }) => {
   const getVisiblePages = (current, total) => {
     if (total <= 5) return Array.from({ length: total }, (_, i) => i + 1);
     if (current <= 3) return [1, 2, 3, 4, 5, "...", total];
-    if (current >= total - 2) return [1, "...", total - 4, total - 3, total - 2, total - 1, total];
+    if (current >= total - 2)
+      return [1, "...", total - 4, total - 3, total - 2, total - 1, total];
     return [1, "...", current - 1, current, current + 1, "...", total];
   };
 
   const visiblePages = getVisiblePages(currentPage, totalPages);
 
-  console.log({ initialOrders, currentOrders, currentPage, totalPages });
   return (
     <div className="animate-in fade-in duration-300">
       <h1 className="mb-6 flex items-center gap-2 text-[20px] font-[var(--font-bold)] text-[#1C1C1C]">
@@ -82,7 +91,8 @@ export const AccountOrdersPage = ({ initialOrders = [], pagination }) => {
               o?.cart?.display_total ?? o?.display_total ?? 0,
             );
             const status = o.order_status || o.status || "placed";
-            const paymentStatus = o.payment_status || o.cart?.payment_state || "Pending";
+            const paymentStatus =
+              o.payment_status || o.cart?.payment_state || "Pending";
             const lineItems = o.cart?.line_items || o.line_items || [];
 
             return (
@@ -110,7 +120,12 @@ export const AccountOrdersPage = ({ initialOrders = [], pagination }) => {
                       <AccountTagIcon className="h-3.5 w-3.5" /> {total}
                     </span>
                     <span className="flex items-center gap-1.5 border-l border-gray-200 pl-4">
-                      Payment: <span className={`uppercase text-[11px] font-[var(--font-bold)] tracking-tight ${paymentStatus.toLowerCase() === 'received' || paymentStatus.toLowerCase() === 'paid' ? 'text-green-600' : 'text-orange-500'}`}>{paymentStatus}</span>
+                      Payment:{" "}
+                      <span
+                        className={`uppercase text-[11px] font-[var(--font-bold)] tracking-tight ${paymentStatus.toLowerCase() === "received" || paymentStatus.toLowerCase() === "paid" ? "text-green-600" : "text-orange-500"}`}
+                      >
+                        {paymentStatus}
+                      </span>
                     </span>
                   </div>
                 </div>
@@ -160,7 +175,10 @@ export const AccountOrdersPage = ({ initialOrders = [], pagination }) => {
               <div className="flex flex-wrap items-center justify-center gap-1">
                 {visiblePages.map((page, index) =>
                   page === "..." ? (
-                    <span key={`ellipsis-${index}`} className="flex h-9 w-6 items-center justify-center text-gray-400">
+                    <span
+                      key={`ellipsis-${index}`}
+                      className="flex h-9 w-6 items-center justify-center text-gray-400"
+                    >
                       ...
                     </span>
                   ) : (
@@ -175,12 +193,14 @@ export const AccountOrdersPage = ({ initialOrders = [], pagination }) => {
                     >
                       {page}
                     </button>
-                  )
+                  ),
                 )}
               </div>
 
               <button
-                onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                onClick={() =>
+                  handlePageChange(Math.min(totalPages, currentPage + 1))
+                }
                 disabled={currentPage === totalPages}
                 className="flex h-9 items-center justify-center rounded-lg border border-gray-200 px-3 text-[13px] font-[var(--font-medium)] text-gray-600 transition-colors hover:bg-gray-50 disabled:opacity-50 disabled:hover:bg-transparent"
               >

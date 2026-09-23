@@ -1,6 +1,6 @@
 {
   "name": "@defx/storefront-core",
-  "version": "1.2.2",
+  "version": "1.2.3-beta.3",
   "description": "Shared UI and logic for Defx multi-store ecommerce storefronts",
   "type": "module",
   "packageManager": "yarn@4.12.0",
@@ -14,6 +14,10 @@
     "./stripe": {
       "import": "./dist/stripe.js",
       "default": "./dist/stripe.js"
+    },
+    "./actions": {
+      "import": "./dist/actions.js",
+      "default": "./dist/actions.js"
     }
   },
   "files": [

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useAddToCart } from "../../hooks/useAddToCart";
 import { useCurrencyFormat } from "../../hooks/useCurrencyFormat";
 import { Spinner } from "../ui/Spinner";
@@ -23,9 +23,15 @@ export const CartItem = ({
     renderActions = null,
     className = "",
 }) => {
-    const { handleAddToCart, handleDecreaseQty, handleDeleteLineItem, isAddToCartLoading } =
-        useAddToCart();
+    const {
+        handleAddToCart,
+        handleDecreaseQty,
+        handleDeleteLineItem,
+        isAddToCartLoading,
+        deletingLineItemId,
+    } = useAddToCart();
     const { formatCurrency } = useCurrencyFormat();
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const product = item?.line_itemable;
     const name = product?.name ?? item?.name ?? "Product";
@@ -35,6 +41,40 @@ export const CartItem = ({
         product?.product_images?.[0]?.product_image_url ??
         product?.image_url ??
         null;
+
+    const isItemDeleting =
+        isDeleting || (Boolean(item?.id) && deletingLineItemId === item?.id);
+    const isActionDisabled = isAddToCartLoading || isItemDeleting;
+
+    const sq =
+        product?.selling_quantity ??
+        item?.selling_quantity ??
+        product?.product?.selling_quantity;
+
+    const hasSellingQuantity =
+        Boolean(product?.selling_quantity_id) ||
+        Boolean(item?.selling_quantity_id) ||
+        Boolean(product?.is_selling_quantity) ||
+        Boolean(item?.is_selling_quantity) ||
+        (sq && typeof sq === "object"
+            ? (Array.isArray(sq.values) ? sq.values.length > 0 : Object.keys(sq).length > 0)
+            : Boolean(sq));
+
+    const numQty = Number(quantity);
+    const isDecimalQuantity =
+        !isNaN(numQty) && (numQty % 1 !== 0 || !Number.isInteger(numQty));
+
+    const isSellingQty = hasSellingQuantity || isDecimalQuantity;
+
+    const handleDelete = async () => {
+        if (isActionDisabled) return;
+        try {
+            setIsDeleting(true);
+            await handleDeleteLineItem(item);
+        } finally {
+            setIsDeleting(false);
+        }
+    };
 
     const s = {
         row: {
@@ -126,40 +166,51 @@ export const CartItem = ({
                 {/* Controls */}
                 {renderActions ? (
                     renderActions(item)
-                ) : (
+                ) : !isSellingQty ? (
                     <div style={s.controls}>
                         <button
                             style={s.qtyBtn}
                             onClick={() => handleDecreaseQty(product)}
-                            disabled={isAddToCartLoading}
+                            disabled={isActionDisabled}
                             aria-label="Decrease quantity"
                         >
                             −
                         </button>
                         <span style={s.qty}>
-                            {isAddToCartLoading ? <Spinner size="sm" /> : quantity}
+                            {isItemDeleting || isAddToCartLoading ? <Spinner size="sm" /> : quantity}
                         </span>
                         <button
                             style={s.qtyBtn}
                             onClick={() => handleAddToCart(product)}
-                            disabled={isAddToCartLoading}
+                            disabled={isActionDisabled}
                             aria-label="Increase quantity"
                         >
                             +
                         </button>
+                    </div>
+                ) : (
+                    <div style={s.controls}>
+                        <span style={s.qty}>
+                            {quantity}
+                        </span>
                     </div>
                 )}
             </div>
 
             {/* Delete */}
             <button
-                style={s.deleteBtn}
-                onClick={() => handleDeleteLineItem(product)}
-                disabled={isAddToCartLoading}
+                style={{
+                    ...s.deleteBtn,
+                    ...(isActionDisabled
+                        ? { opacity: 0.5, cursor: "not-allowed", pointerEvents: "none" }
+                        : {}),
+                }}
+                onClick={handleDelete}
+                disabled={isActionDisabled}
                 aria-label="Remove item"
                 title="Remove"
             >
-                ✕
+                {isItemDeleting ? <Spinner size="sm" /> : "✕"}
             </button>
         </div>
     );
