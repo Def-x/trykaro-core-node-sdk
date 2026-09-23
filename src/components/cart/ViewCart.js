@@ -15,6 +15,7 @@ import CouponSection from "./CouponSection";
 
 export const ViewCart = () => {
   const [discountOpen, setDiscountOpen] = useState(false);
+  const [isPaymentRedirecting, setIsPaymentRedirecting] = useState(false);
   const { cart, cartItems } = useAddToCart();
   const { isCartLoading } = useCart();
   const { formatCurrency } = useCurrencyFormat();
@@ -84,12 +85,17 @@ export const ViewCart = () => {
 
   return (
     <div className="mx-4 md:mx-[24px] my-[100px] flex justify-center">
-      {isLoading ? (
-        <div className="flex justify-center items-center w-full h-[400px]">
+      {isLoading || isPaymentRedirecting ? (
+        <div className="flex flex-col justify-center items-center w-full h-[400px] gap-4">
           <div
             className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2"
             style={{ borderColor: "var(--core-primary)" }}
           ></div>
+          {isPaymentRedirecting && (
+            <p className="font-[var(--font-medium)] text-gray-600 text-sm animate-pulse">
+              Redirecting to your order...
+            </p>
+          )}
         </div>
       ) : items.length === 0 ? (
         <div className="flex flex-col items-center justify-center p-12 bg-gray-50/50 border border-gray-100 rounded-2xl min-h-[400px] gap-y-6 max-w-[600px] w-full mx-auto">
@@ -132,7 +138,10 @@ export const ViewCart = () => {
         <div className="flex flex-row flex-wrap gap-[16px] max-w-[1248px] w-full">
           {/* ── Left: Checkout form ── */}
           <div className="flex-1 mt-8 md:mt-0">
-            <Checkout hasDeletedItems={hasDeletedItems} />
+            <Checkout
+              hasDeletedItems={hasDeletedItems}
+              onPaymentSuccess={() => setIsPaymentRedirecting(true)}
+            />
           </div>
 
           {/* ── Divider ── */}
@@ -155,7 +164,7 @@ export const ViewCart = () => {
                 ORDER ITEMS ({items.length})
               </div>
 
-              <div className="max-h-[500px] overflow-auto mt-3">
+              <div className="max-h-[540px] overflow-y-auto overflow-x-hidden mt-3 pr-1 [scrollbar-gutter:stable]">
                 <div className="flex flex-col gap-y-[16px]">
                   {items.map((item) => (
                     <ProductlistCard

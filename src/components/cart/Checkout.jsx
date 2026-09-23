@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRazorpay } from "react-razorpay";
@@ -34,7 +34,7 @@ const normalizeAddresses = (payload) =>
   (Array.isArray(payload) ? payload : []);
 
 // ─── Top-level Checkout ────────────────────────────────────────────────────────
-const Checkout = ({ hasDeletedItems }) => {
+const Checkout = ({ hasDeletedItems, onPaymentSuccess }) => {
   const { auth, config } = useCore();
   const { isSignedIn, isLoading } = auth || {};
 
@@ -48,7 +48,11 @@ const Checkout = ({ hasDeletedItems }) => {
   return !isSignedIn ? (
     <LoginPage />
   ) : (
-    <OrderInfo user={auth.user} hasDeletedItems={hasDeletedItems} />
+    <OrderInfo
+      user={auth.user}
+      hasDeletedItems={hasDeletedItems}
+      onPaymentSuccess={onPaymentSuccess}
+    />
   );
 };
 
@@ -80,7 +84,7 @@ const LoginPage = () => {
   );
 };
 
-const OrderInfo = ({ user, hasDeletedItems }) => {
+const OrderInfo = ({ user, hasDeletedItems, onPaymentSuccess }) => {
   const router = useRouter();
   const { Razorpay } = useRazorpay();
   const { cart, setCart, actions, config, auth, orgData, primaryColor, toast } =
@@ -129,6 +133,17 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
   const [isAddressLoading, setIsAddressLoading] = useState(true);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [isRedirectingOrder, setIsRedirectingOrder] = useState(false);
+  const isRedirectingRef = useRef(false);
+
+  // Clear context cart only after navigating away to the order page
+  useEffect(() => {
+    return () => {
+      if (isRedirectingRef.current) {
+        setCart(null);
+      }
+    };
+  }, [setCart]);
 
   // Cart price-mismatch guard state — set when a coupon expires at pay-time
   const [cartMismatch, setCartMismatch] = useState(null);
@@ -357,8 +372,24 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
             trackMetaPurchase(cart);
             // ─────────────────────────────────────────────────────────────
 
-            setCart(null);
-            router.push(`/account/orders/${order?.order_id}`);
+            onPaymentSuccess?.();
+            setIsRedirectingOrder(true);
+            setIsProcessingPayment(true);
+            isRedirectingRef.current = true;
+
+            const orderTargetUrl = `/account/orders/${order.order_id}`;
+            router.prefetch?.(orderTargetUrl);
+            router.replace(orderTargetUrl);
+
+            // Fallback safety timeout: ensure redirection occurs even if router soft navigation stalls
+            setTimeout(() => {
+              if (
+                typeof window !== "undefined" &&
+                !window.location.pathname.includes(`/orders/${order.order_id}`)
+              ) {
+                window.location.replace(orderTargetUrl);
+              }
+            }, 3000);
           } else {
             // All 5 attempts failed — stop showing the processing screen
             setIsProcessingPayment(false);
@@ -615,6 +646,10 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
                       if (typeof window !== "undefined") {
                         localStorage.removeItem("cartid");
                       }
+                      onPaymentSuccess?.();
+                      setIsRedirectingOrder(true);
+                      setIsProcessingPayment(true);
+                      isRedirectingRef.current = true;
                       // After Stripe payment, fetch the updated cart —
                       // the backend sets order_id on the cart once payment is processed.
                       try {
@@ -625,15 +660,23 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
                           : updatedCart;
 
                         const orderId = cartData?.order_id;
-                        setCart(null);
                         if (orderId) {
-                          router.push(`/account/orders/${orderId}`);
+                          const orderTargetUrl = `/account/orders/${orderId}`;
+                          router.prefetch?.(orderTargetUrl);
+                          router.replace(orderTargetUrl);
+                          setTimeout(() => {
+                            if (
+                              typeof window !== "undefined" &&
+                              !window.location.pathname.includes(`/orders/${orderId}`)
+                            ) {
+                              window.location.replace(orderTargetUrl);
+                            }
+                          }, 3000);
                         } else {
-                          router.push("/account/orders");
+                          router.replace("/account/orders");
                         }
                       } catch {
-                        setCart(null);
-                        router.push("/account/orders");
+                        router.replace("/account/orders");
                       }
                     }}
                   />
@@ -738,14 +781,18 @@ const OrderInfo = ({ user, hasDeletedItems }) => {
             <div className="text-center space-y-4">
               <div className="space-y-1">
                 <h2 className="font-serif italic text-3xl text-[var(--core-primary)] tracking-tight">
-                  Processing your payment
+                  {isRedirectingOrder
+                    ? "Payment Successful!"
+                    : "Processing your payment"}
                 </h2>
                 <div className="w-12 h-[1px] bg-[var(--core-secondary)] mx-auto opacity-50"></div>
               </div>
 
               <div className="space-y-2">
                 <p className="font-[var(--font-medium)] text-[#2d2d2d] text-base">
-                  We're finalizing your order with {paymentGatewayLabel}.
+                  {isRedirectingOrder
+                    ? "Redirecting to your order details..."
+                    : `We're finalizing your order with ${paymentGatewayLabel}.`}
                 </p>
                 <p className="font-[var(--font-regular)] text-[#8c92a4] text-sm leading-relaxed">
                   Please do not refresh the page or close this window. <br />

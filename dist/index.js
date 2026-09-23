@@ -2049,6 +2049,11 @@ var CartItem = ({
   const imageUrl = product?.product_images?.[0]?.product_image_url ?? product?.image_url ?? null;
   const isItemDeleting = isDeleting || Boolean(item?.id) && deletingLineItemId === item?.id;
   const isActionDisabled = isAddToCartLoading || isItemDeleting;
+  const sq = product?.selling_quantity ?? item?.selling_quantity ?? product?.product?.selling_quantity;
+  const hasSellingQuantity = Boolean(product?.selling_quantity_id) || Boolean(item?.selling_quantity_id) || Boolean(product?.is_selling_quantity) || Boolean(item?.is_selling_quantity) || (sq && typeof sq === "object" ? Array.isArray(sq.values) ? sq.values.length > 0 : Object.keys(sq).length > 0 : Boolean(sq));
+  const numQty = Number(quantity);
+  const isDecimalQuantity = !isNaN(numQty) && (numQty % 1 !== 0 || !Number.isInteger(numQty));
+  const isSellingQty = hasSellingQuantity || isDecimalQuantity;
   const handleDelete = async () => {
     if (isActionDisabled) return;
     try {
@@ -2137,7 +2142,7 @@ var CartItem = ({
         " \xD7 ",
         quantity
       ] }),
-      renderActions ? renderActions(item) : /* @__PURE__ */ jsxs("div", { style: s.controls, children: [
+      renderActions ? renderActions(item) : !isSellingQty ? /* @__PURE__ */ jsxs("div", { style: s.controls, children: [
         /* @__PURE__ */ jsx(
           "button",
           {
@@ -2159,7 +2164,7 @@ var CartItem = ({
             children: "+"
           }
         )
-      ] })
+      ] }) : /* @__PURE__ */ jsx("div", { style: s.controls, children: /* @__PURE__ */ jsx("span", { style: s.qty, children: quantity }) })
     ] }),
     /* @__PURE__ */ jsx(
       "button",
@@ -2526,13 +2531,13 @@ var DeleteIcon = ({ onClick, disabled, loading, className, title }) => /* @__PUR
     type: "button",
     onClick,
     disabled: disabled || loading,
-    className: `${className || ""} ${disabled || loading ? "cursor-not-allowed opacity-50 pointer-events-none" : ""}`,
+    className: `w-6 h-6 flex items-center justify-center shrink-0 ${className || ""} ${disabled || loading ? "cursor-not-allowed opacity-50 pointer-events-none" : ""}`,
     title,
     "aria-label": title || "Delete",
     children: loading ? /* @__PURE__ */ jsx(
       "div",
       {
-        className: "w-4 h-4 border-2 border-[var(--core-primary)] border-t-transparent rounded-full animate-spin",
+        className: "w-4 h-4 border-2 border-[var(--core-primary)] border-t-transparent rounded-full animate-spin shrink-0",
         role: "status",
         "aria-label": "Deleting..."
       }
@@ -2547,6 +2552,7 @@ var DeleteIcon = ({ onClick, disabled, loading, className, title }) => /* @__PUR
         strokeWidth: "1.8",
         strokeLinecap: "round",
         strokeLinejoin: "round",
+        className: "shrink-0",
         children: [
           /* @__PURE__ */ jsx("polyline", { points: "3 6 5 6 21 6" }),
           /* @__PURE__ */ jsx("path", { d: "M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" }),
@@ -2568,7 +2574,9 @@ var ProductlistCard = ({ product, component, orderType }) => {
   const productImage = product?.image;
   const quantity = product?.quantity;
   const displayPrice = (price ?? 0) / 100;
-  const isSellingQty = !!product?.line_itemable?.selling_quantity_id;
+  const sq = product?.line_itemable?.selling_quantity;
+  const hasSellingQuantity = sq && typeof sq === "object" ? Array.isArray(sq.values) ? sq.values.length > 0 : Object.keys(sq).length > 0 : Boolean(sq);
+  const isSellingQty = hasSellingQuantity;
   const variantOptions = product?.line_itemable?.variant_options ?? [];
   const { formatCurrency } = useCurrencyFormat();
   const {
@@ -2598,7 +2606,8 @@ var ProductlistCard = ({ product, component, orderType }) => {
     event.currentTarget.onerror = null;
     event.currentTarget.src = noProductImage;
   };
-  const handleDeleteItem = async () => {
+  const handleDeleteItem = async (e) => {
+    e?.stopPropagation?.();
     if (isActionDisabled) return;
     try {
       setIsDeleting(true);
@@ -2624,185 +2633,197 @@ var ProductlistCard = ({ product, component, orderType }) => {
   const hasCustomizations = product?.line_items_customizations?.length > 0 || customizationsList.length > 0;
   const isDeleted = !product?.line_itemable || product?.line_itemable_deleted;
   if (isDeleted) {
-    return /* @__PURE__ */ jsxs("div", { className: "flex justify-between gap-4", children: [
-      /* @__PURE__ */ jsxs("div", { className: "flex gap-[10px] flex-1 min-w-0 opacity-50", children: [
-        /* @__PURE__ */ jsxs("div", { className: "w-[112px] h-[124px] flex-shrink-0 overflow-hidden relative", children: [
-          /* @__PURE__ */ jsx(
-            "img",
-            {
-              src: productImage || noProductImage,
-              alt: name || "Product",
-              className: "w-[112px] h-[124px] object-cover rounded-lg",
-              onError: handleImageError
-            }
-          ),
-          /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-lg", children: /* @__PURE__ */ jsx("span", { className: "text-white text-xs font-[var(--font-bold)] text-center", children: "UNAVAILABLE" }) })
-        ] }),
-        /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between h-[124px] flex-1 min-w-0", children: [
-          /* @__PURE__ */ jsx("div", { className: "min-w-0", children: /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
-            /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)] line-clamp-1", children: name }),
-            /* @__PURE__ */ jsx("span", { className: "text-xs bg-red-100 text-red-700 px-2 py-1 rounded font-[var(--font-medium)] flex-shrink-0", children: "Deleted" })
-          ] }) }),
-          /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)]", children: [
-            quantity,
-            " x ",
-            formatCurrency(displayPrice)
-          ] }) })
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between items-end h-[124px] flex-shrink-0", children: [
-        /* @__PURE__ */ jsx("div", { className: "flex flex-col items-end text-right opacity-50", children: /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)] line-clamp-2", children: formatCurrency(displayPrice * quantity) }) }),
-        component !== "order" && /* @__PURE__ */ jsx(
-          DeleteIcon,
-          {
-            onClick: handleDeleteItem,
-            disabled: isActionDisabled,
-            loading: isItemDeleting,
-            className: "cursor-pointer opacity-100 hover:opacity-80 transition-opacity",
-            title: "Delete item"
-          }
-        )
-      ] })
-    ] });
-  }
-  return /* @__PURE__ */ jsxs("div", { className: "flex justify-between gap-4", children: [
-    /* @__PURE__ */ jsxs(
+    return /* @__PURE__ */ jsxs(
       "div",
       {
-        className: "flex gap-[10px] flex-1 min-w-0 cursor-pointer",
-        onClick: handleNavigateToProduct,
-        title: "View product",
+        className: `flex justify-between gap-4 transition-all duration-200 ${isItemDeleting ? "opacity-40 pointer-events-none scale-[0.99]" : ""}`,
         children: [
-          /* @__PURE__ */ jsx("div", { className: "w-[112px] h-[124px] flex-shrink-0 overflow-hidden", children: /* @__PURE__ */ jsx(
-            "img",
-            {
-              src: productImage || noProductImage,
-              alt: name || "Product",
-              className: "w-[112px] h-[124px] object-cover rounded-lg hover:opacity-90 transition-opacity",
-              onError: handleImageError
-            }
-          ) }),
-          /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between h-[124px] flex-1 min-w-0", children: [
-            /* @__PURE__ */ jsxs("div", { className: "min-w-0", children: [
-              /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
-                /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)] line-clamp-1 hover:underline", children: name }),
-                product?.bogo_benefit?.benefit_type === "free" && /* @__PURE__ */ jsx("span", { className: "text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-[var(--font-medium)] flex-shrink-0 whitespace-nowrap", children: "FREE" })
-              ] }),
-              variantOptions.length > 0 && /* @__PURE__ */ jsx("div", { className: "mt-1 flex flex-wrap gap-1", children: variantOptions.map((vo, i) => /* @__PURE__ */ jsxs(
-                "span",
+          /* @__PURE__ */ jsxs("div", { className: "flex gap-[10px] flex-1 min-w-0 opacity-50", children: [
+            /* @__PURE__ */ jsxs("div", { className: "w-[112px] h-[124px] flex-shrink-0 overflow-hidden relative", children: [
+              /* @__PURE__ */ jsx(
+                "img",
                 {
-                  className: "text-[11px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-[var(--font-medium)]",
-                  children: [
-                    vo?.option_type?.presentation ?? vo?.option_type?.name,
-                    ":",
-                    " ",
-                    vo?.option_value?.presentation ?? vo?.option_value?.name
-                  ]
-                },
-                i
-              )) }),
-              product?.line_items_customizations?.length > 0 && /* @__PURE__ */ jsx("div", { className: "mt-1 flex flex-col gap-0.5", children: product.line_items_customizations.length > 3 ? /* @__PURE__ */ jsx(
-                "button",
-                {
-                  onClick: (e) => {
-                    e.stopPropagation();
-                    setIsViewModalOpen(true);
-                  },
-                  className: "text-xs text-[var(--core-primary)] underline hover:text-[var(--core-primary)] transition-colors text-left font-medium",
-                  children: "customizations: view"
+                  src: productImage || noProductImage,
+                  alt: name || "Product",
+                  className: "w-[112px] h-[124px] object-cover rounded-lg",
+                  onError: handleImageError
                 }
-              ) : product.line_items_customizations.map((c) => /* @__PURE__ */ jsxs(
-                "p",
-                {
-                  className: "text-xs text-gray-500 line-clamp-1",
-                  children: [
-                    /* @__PURE__ */ jsxs("span", { className: "font-medium", children: [
-                      c.name || "Custom",
-                      ":"
-                    ] }),
-                    " ",
-                    c.value
-                  ]
-                },
-                c.product_customization_id
-              )) })
+              ),
+              /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-lg", children: /* @__PURE__ */ jsx("span", { className: "text-white text-xs font-[var(--font-bold)] text-center", children: "UNAVAILABLE" }) })
             ] }),
-            /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)]", children: [
-              quantity,
-              " x ",
-              formatCurrency(displayPrice)
-            ] }) })
+            /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between h-[124px] flex-1 min-w-0", children: [
+              /* @__PURE__ */ jsx("div", { className: "min-w-0", children: /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
+                /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)] line-clamp-1", children: name }),
+                /* @__PURE__ */ jsx("span", { className: "text-xs bg-red-100 text-red-700 px-2 py-1 rounded font-[var(--font-medium)] flex-shrink-0", children: "Deleted" })
+              ] }) }),
+              /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)]", children: [
+                quantity,
+                " x ",
+                formatCurrency(displayPrice)
+              ] }) })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between items-end h-[124px] flex-shrink-0", children: [
+            /* @__PURE__ */ jsx("div", { className: "flex flex-col items-end text-right opacity-50", children: /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)] line-clamp-2", children: formatCurrency(displayPrice * quantity) }) }),
+            component !== "order" && /* @__PURE__ */ jsx(
+              DeleteIcon,
+              {
+                onClick: handleDeleteItem,
+                disabled: isActionDisabled,
+                loading: isItemDeleting,
+                className: "cursor-pointer opacity-100 hover:opacity-80 transition-opacity",
+                title: "Delete item"
+              }
+            )
           ] })
         ]
       }
-    ),
-    /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between items-end h-[124px] flex-shrink-0", children: [
-      /* @__PURE__ */ jsx("div", { className: "flex flex-col items-end text-right", children: component !== "order" ? /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)] line-clamp-1", children: formatCurrency(displayPrice * quantity) }) : /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)] line-clamp-2", children: formatCurrency(displayPrice * quantity) }) }),
-      component !== "order" && /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3", children: [
-        !isSellingQty ? /* @__PURE__ */ jsxs("div", { className: "flex items-center border border-[#e8e5df] rounded-md h-[28px] bg-[#f9f9f9]", children: [
-          /* @__PURE__ */ jsx(
-            "button",
-            {
-              onClick: () => handleDecreaseQty(
-                product?.line_itemable,
-                product?.line_items_customizations
-              ),
-              disabled: isActionDisabled,
-              className: "w-7 h-full flex items-center justify-center text-lg text-gray-500 hover:text-[var(--core-primary)] transition-colors disabled:opacity-50 pb-0.5",
-              children: "-"
-            }
-          ),
-          /* @__PURE__ */ jsx("span", { className: "w-6 text-center text-sm font-semibold text-[var(--core-primary)] bg-white h-full flex items-center justify-center border-x border-[#e8e5df]", children: quantity }),
-          /* @__PURE__ */ jsx(
-            "button",
-            {
-              onClick: () => handleAddToCart(
-                product?.line_itemable,
-                product?.line_items_customizations,
-                1
-              ),
-              disabled: isActionDisabled,
-              className: "w-7 h-full flex items-center justify-center text-base text-gray-500 hover:text-[var(--core-primary)] transition-colors disabled:opacity-50 pb-0.5",
-              children: "+"
-            }
-          )
-        ] }) : /* @__PURE__ */ jsx("div", { className: "flex items-center border border-[#e8e5df] rounded-md h-[28px] bg-[#f9f9f9] px-3", children: /* @__PURE__ */ jsx("span", { className: "text-sm font-semibold text-[var(--core-primary)]", children: quantity }) }),
-        /* @__PURE__ */ jsx(
-          DeleteIcon,
+    );
+  }
+  return /* @__PURE__ */ jsxs(
+    "div",
+    {
+      className: `flex justify-between gap-4 transition-all duration-200 ${isItemDeleting ? "opacity-40 pointer-events-none scale-[0.99]" : ""}`,
+      children: [
+        /* @__PURE__ */ jsxs(
+          "div",
           {
-            onClick: handleDeleteItem,
-            disabled: isActionDisabled,
-            loading: isItemDeleting,
-            className: "cursor-pointer opacity-100 hover:opacity-80 transition-opacity disabled:opacity-50",
-            title: "Delete item"
+            className: "flex gap-[10px] flex-1 min-w-0 cursor-pointer",
+            onClick: handleNavigateToProduct,
+            title: "View product",
+            children: [
+              /* @__PURE__ */ jsx("div", { className: "w-[112px] h-[124px] flex-shrink-0 overflow-hidden", children: /* @__PURE__ */ jsx(
+                "img",
+                {
+                  src: productImage || noProductImage,
+                  alt: name || "Product",
+                  className: "w-[112px] h-[124px] object-cover rounded-lg hover:opacity-90 transition-opacity",
+                  onError: handleImageError
+                }
+              ) }),
+              /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between h-[124px] flex-1 min-w-0", children: [
+                /* @__PURE__ */ jsxs("div", { className: "min-w-0", children: [
+                  /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
+                    /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)] line-clamp-1 hover:underline", children: name }),
+                    product?.bogo_benefit?.benefit_type === "free" && /* @__PURE__ */ jsx("span", { className: "text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-[var(--font-medium)] flex-shrink-0 whitespace-nowrap", children: "FREE" })
+                  ] }),
+                  variantOptions.length > 0 && /* @__PURE__ */ jsx("div", { className: "mt-1 flex flex-wrap gap-1", children: variantOptions.map((vo, i) => /* @__PURE__ */ jsxs(
+                    "span",
+                    {
+                      className: "text-[11px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-[var(--font-medium)]",
+                      children: [
+                        vo?.option_type?.presentation ?? vo?.option_type?.name,
+                        ":",
+                        " ",
+                        vo?.option_value?.presentation ?? vo?.option_value?.name
+                      ]
+                    },
+                    i
+                  )) }),
+                  product?.line_items_customizations?.length > 0 && /* @__PURE__ */ jsx("div", { className: "mt-1 flex flex-col gap-0.5", children: product.line_items_customizations.length > 3 ? /* @__PURE__ */ jsx(
+                    "button",
+                    {
+                      onClick: (e) => {
+                        e.stopPropagation();
+                        setIsViewModalOpen(true);
+                      },
+                      className: "text-xs text-[var(--core-primary)] underline hover:text-[var(--core-primary)] transition-colors text-left font-medium",
+                      children: "customizations: view"
+                    }
+                  ) : product.line_items_customizations.map((c) => /* @__PURE__ */ jsxs(
+                    "p",
+                    {
+                      className: "text-xs text-gray-500 line-clamp-1",
+                      children: [
+                        /* @__PURE__ */ jsxs("span", { className: "font-medium", children: [
+                          c.name || "Custom",
+                          ":"
+                        ] }),
+                        " ",
+                        c.value
+                      ]
+                    },
+                    c.product_customization_id
+                  )) })
+                ] }),
+                /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)]", children: [
+                  quantity,
+                  " x ",
+                  formatCurrency(displayPrice)
+                ] }) })
+              ] })
+            ]
+          }
+        ),
+        /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between items-end h-[124px] flex-shrink-0", children: [
+          /* @__PURE__ */ jsx("div", { className: "flex flex-col items-end text-right", children: component !== "order" ? /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)] line-clamp-1", children: formatCurrency(displayPrice * quantity) }) : /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)] line-clamp-2", children: formatCurrency(displayPrice * quantity) }) }),
+          component !== "order" && /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3", children: [
+            !isSellingQty ? /* @__PURE__ */ jsxs("div", { className: "flex items-center border border-[#e8e5df] rounded-md h-[28px] bg-[#f9f9f9]", children: [
+              /* @__PURE__ */ jsx(
+                "button",
+                {
+                  onClick: () => handleDecreaseQty(
+                    product?.line_itemable,
+                    product?.line_items_customizations
+                  ),
+                  disabled: isActionDisabled,
+                  className: "w-7 h-full flex items-center justify-center text-lg text-gray-500 hover:text-[var(--core-primary)] transition-colors disabled:opacity-50 pb-0.5",
+                  children: "-"
+                }
+              ),
+              /* @__PURE__ */ jsx("span", { className: "w-6 text-center text-sm font-semibold text-[var(--core-primary)] bg-white h-full flex items-center justify-center border-x border-[#e8e5df]", children: quantity }),
+              /* @__PURE__ */ jsx(
+                "button",
+                {
+                  onClick: () => handleAddToCart(
+                    product?.line_itemable,
+                    product?.line_items_customizations,
+                    1
+                  ),
+                  disabled: isActionDisabled,
+                  className: "w-7 h-full flex items-center justify-center text-base text-gray-500 hover:text-[var(--core-primary)] transition-colors disabled:opacity-50 pb-0.5",
+                  children: "+"
+                }
+              )
+            ] }) : /* @__PURE__ */ jsx("div", { className: "flex items-center border border-[#e8e5df] rounded-md h-[28px] bg-[#f9f9f9] px-3", children: /* @__PURE__ */ jsx("span", { className: "text-sm font-semibold text-[var(--core-primary)]", children: quantity }) }),
+            /* @__PURE__ */ jsx(
+              DeleteIcon,
+              {
+                onClick: handleDeleteItem,
+                disabled: isActionDisabled,
+                loading: isItemDeleting,
+                className: "cursor-pointer opacity-100 hover:opacity-80 transition-opacity disabled:opacity-50",
+                title: "Delete item"
+              }
+            )
+          ] })
+        ] }),
+        hasCustomizations && /* @__PURE__ */ jsx(
+          CustomizationModal_default,
+          {
+            isOpen: isEditModalOpen,
+            onClose: () => setIsEditModalOpen(false),
+            product: product?.line_itemable,
+            customizationsList,
+            onConfirm: handleEditConfirm,
+            initialValues: initialCustomizationObj,
+            initialQuantity: quantity,
+            isEditMode: true,
+            isAddToCartLoading
+          }
+        ),
+        /* @__PURE__ */ jsx(
+          ViewCustomizationModal_default,
+          {
+            isOpen: isViewModalOpen,
+            onClose: () => setIsViewModalOpen(false),
+            customizations: product?.line_items_customizations || [],
+            productName: name
           }
         )
-      ] })
-    ] }),
-    hasCustomizations && /* @__PURE__ */ jsx(
-      CustomizationModal_default,
-      {
-        isOpen: isEditModalOpen,
-        onClose: () => setIsEditModalOpen(false),
-        product: product?.line_itemable,
-        customizationsList,
-        onConfirm: handleEditConfirm,
-        initialValues: initialCustomizationObj,
-        initialQuantity: quantity,
-        isEditMode: true,
-        isAddToCartLoading
-      }
-    ),
-    /* @__PURE__ */ jsx(
-      ViewCustomizationModal_default,
-      {
-        isOpen: isViewModalOpen,
-        onClose: () => setIsViewModalOpen(false),
-        customizations: product?.line_items_customizations || [],
-        productName: name
-      }
-    )
-  ] });
+      ]
+    }
+  );
 };
 var ProductlistCard_default = ProductlistCard;
 var Popup = ({
@@ -3645,12 +3666,19 @@ function CartMismatchBanner({
   );
 }
 var normalizeAddresses = (payload) => payload?.data ?? payload?.addresses ?? (Array.isArray(payload) ? payload : []);
-var Checkout = ({ hasDeletedItems }) => {
+var Checkout = ({ hasDeletedItems, onPaymentSuccess }) => {
   const { auth, config } = useCore();
   const { isSignedIn, isLoading } = auth || {};
   if (isLoading)
     return /* @__PURE__ */ jsx("div", { className: "w-full h-[400px] flex items-center justify-center", children: /* @__PURE__ */ jsx("div", { className: "w-8 h-8 border-4 border-[var(--core-primary)] border-t-transparent rounded-full animate-spin" }) });
-  return !isSignedIn ? /* @__PURE__ */ jsx(LoginPage, {}) : /* @__PURE__ */ jsx(OrderInfo, { user: auth.user, hasDeletedItems });
+  return !isSignedIn ? /* @__PURE__ */ jsx(LoginPage, {}) : /* @__PURE__ */ jsx(
+    OrderInfo,
+    {
+      user: auth.user,
+      hasDeletedItems,
+      onPaymentSuccess
+    }
+  );
 };
 var LoginPage = () => {
   return /* @__PURE__ */ jsxs("div", { className: "w-full h-full flex flex-col items-center justify-center gap-6", children: [
@@ -3675,7 +3703,7 @@ var LoginPage = () => {
     /* @__PURE__ */ jsx("div", { className: "w-full", children: /* @__PURE__ */ jsx(AuthManager, {}) })
   ] });
 };
-var OrderInfo = ({ user, hasDeletedItems }) => {
+var OrderInfo = ({ user, hasDeletedItems, onPaymentSuccess }) => {
   const router = useRouter();
   const { Razorpay } = useRazorpay();
   const { cart, setCart, actions, config, auth, orgData, primaryColor, toast } = useCore();
@@ -3698,6 +3726,15 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
   const [isAddressLoading, setIsAddressLoading] = useState(true);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [isRedirectingOrder, setIsRedirectingOrder] = useState(false);
+  const isRedirectingRef = useRef(false);
+  useEffect(() => {
+    return () => {
+      if (isRedirectingRef.current) {
+        setCart(null);
+      }
+    };
+  }, [setCart]);
   const [cartMismatch, setCartMismatch] = useState(null);
   useEffect(() => {
     let isMounted = true;
@@ -3872,8 +3909,18 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
               metaOverrides: { source: "checkout" }
             });
             trackMetaPurchase(cart);
-            setCart(null);
-            router.push(`/account/orders/${order?.order_id}`);
+            onPaymentSuccess?.();
+            setIsRedirectingOrder(true);
+            setIsProcessingPayment(true);
+            isRedirectingRef.current = true;
+            const orderTargetUrl = `/account/orders/${order.order_id}`;
+            router.prefetch?.(orderTargetUrl);
+            router.replace(orderTargetUrl);
+            setTimeout(() => {
+              if (typeof window !== "undefined" && !window.location.pathname.includes(`/orders/${order.order_id}`)) {
+                window.location.replace(orderTargetUrl);
+              }
+            }, 3e3);
           } else {
             setIsProcessingPayment(false);
             const msg = typeof lastError === "string" ? lastError : "Payment could not be updated. Please contact support.";
@@ -4071,20 +4118,29 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
               if (typeof window !== "undefined") {
                 localStorage.removeItem("cartid");
               }
+              onPaymentSuccess?.();
+              setIsRedirectingOrder(true);
+              setIsProcessingPayment(true);
+              isRedirectingRef.current = true;
               try {
                 const regionId = config?.regionId ?? null;
                 const updatedCart = await actions?.getCart?.(regionId);
                 const cartData = Array.isArray(updatedCart) ? updatedCart[0] : updatedCart;
                 const orderId = cartData?.order_id;
-                setCart(null);
                 if (orderId) {
-                  router.push(`/account/orders/${orderId}`);
+                  const orderTargetUrl = `/account/orders/${orderId}`;
+                  router.prefetch?.(orderTargetUrl);
+                  router.replace(orderTargetUrl);
+                  setTimeout(() => {
+                    if (typeof window !== "undefined" && !window.location.pathname.includes(`/orders/${orderId}`)) {
+                      window.location.replace(orderTargetUrl);
+                    }
+                  }, 3e3);
                 } else {
-                  router.push("/account/orders");
+                  router.replace("/account/orders");
                 }
               } catch {
-                setCart(null);
-                router.push("/account/orders");
+                router.replace("/account/orders");
               }
             }
           }
@@ -4165,15 +4221,11 @@ var OrderInfo = ({ user, hasDeletedItems }) => {
       ] }),
       /* @__PURE__ */ jsxs("div", { className: "text-center space-y-4", children: [
         /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
-          /* @__PURE__ */ jsx("h2", { className: "font-serif italic text-3xl text-[var(--core-primary)] tracking-tight", children: "Processing your payment" }),
+          /* @__PURE__ */ jsx("h2", { className: "font-serif italic text-3xl text-[var(--core-primary)] tracking-tight", children: isRedirectingOrder ? "Payment Successful!" : "Processing your payment" }),
           /* @__PURE__ */ jsx("div", { className: "w-12 h-[1px] bg-[var(--core-secondary)] mx-auto opacity-50" })
         ] }),
         /* @__PURE__ */ jsxs("div", { className: "space-y-2", children: [
-          /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-medium)] text-[#2d2d2d] text-base", children: [
-            "We're finalizing your order with ",
-            paymentGatewayLabel,
-            "."
-          ] }),
+          /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-[#2d2d2d] text-base", children: isRedirectingOrder ? "Redirecting to your order details..." : `We're finalizing your order with ${paymentGatewayLabel}.` }),
           /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-regular)] text-[#8c92a4] text-sm leading-relaxed", children: [
             "Please do not refresh the page or close this window. ",
             /* @__PURE__ */ jsx("br", {}),
@@ -4534,6 +4586,7 @@ var CouponSection = () => {
 var CouponSection_default = CouponSection;
 var ViewCart = () => {
   const [discountOpen, setDiscountOpen] = useState(false);
+  const [isPaymentRedirecting, setIsPaymentRedirecting] = useState(false);
   const { cart, cartItems } = useAddToCart();
   const { isCartLoading } = useCart();
   const { formatCurrency } = useCurrencyFormat();
@@ -4584,13 +4637,16 @@ var ViewCart = () => {
     }
     prevDiscountIdRef.current = activeDiscountId;
   }, [activeDiscountId, items?.length, toast]);
-  return /* @__PURE__ */ jsx("div", { className: "mx-4 md:mx-[24px] my-[100px] flex justify-center", children: isLoading ? /* @__PURE__ */ jsx("div", { className: "flex justify-center items-center w-full h-[400px]", children: /* @__PURE__ */ jsx(
-    "div",
-    {
-      className: "animate-spin rounded-full h-10 w-10 border-t-2 border-b-2",
-      style: { borderColor: "var(--core-primary)" }
-    }
-  ) }) : items.length === 0 ? /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center justify-center p-12 bg-gray-50/50 border border-gray-100 rounded-2xl min-h-[400px] gap-y-6 max-w-[600px] w-full mx-auto", children: [
+  return /* @__PURE__ */ jsx("div", { className: "mx-4 md:mx-[24px] my-[100px] flex justify-center", children: isLoading || isPaymentRedirecting ? /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-center items-center w-full h-[400px] gap-4", children: [
+    /* @__PURE__ */ jsx(
+      "div",
+      {
+        className: "animate-spin rounded-full h-10 w-10 border-t-2 border-b-2",
+        style: { borderColor: "var(--core-primary)" }
+      }
+    ),
+    isPaymentRedirecting && /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-gray-600 text-sm animate-pulse", children: "Redirecting to your order..." })
+  ] }) : items.length === 0 ? /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center justify-center p-12 bg-gray-50/50 border border-gray-100 rounded-2xl min-h-[400px] gap-y-6 max-w-[600px] w-full mx-auto", children: [
     /* @__PURE__ */ jsx("div", { className: "p-4 bg-white rounded-full shadow-sm border border-gray-100", children: /* @__PURE__ */ jsxs(
       "svg",
       {
@@ -4625,7 +4681,13 @@ var ViewCart = () => {
       }
     )
   ] }) : /* @__PURE__ */ jsxs("div", { className: "flex flex-row flex-wrap gap-[16px] max-w-[1248px] w-full", children: [
-    /* @__PURE__ */ jsx("div", { className: "flex-1 mt-8 md:mt-0", children: /* @__PURE__ */ jsx(Checkout_default, { hasDeletedItems }) }),
+    /* @__PURE__ */ jsx("div", { className: "flex-1 mt-8 md:mt-0", children: /* @__PURE__ */ jsx(
+      Checkout_default,
+      {
+        hasDeletedItems,
+        onPaymentSuccess: () => setIsPaymentRedirecting(true)
+      }
+    ) }),
     /* @__PURE__ */ jsx("div", { className: "border border-[var(--borders)] sticky hidden md:block" }),
     /* @__PURE__ */ jsxs("div", { className: "flex-1 md:sticky top-4 self-start mt-[18px] md:mt-0 order-first md:order-last", children: [
       hasDeletedItems && /* @__PURE__ */ jsx("div", { className: "bg-yellow-50 border border-yellow-200 rounded-md p-3 mb-4", children: /* @__PURE__ */ jsx("p", { className: "text-sm text-yellow-800 font-[var(--font-medium)]", children: "\u26A0\uFE0F Some items in your cart are no longer available. Please remove them before checkout." }) }),
@@ -4635,7 +4697,7 @@ var ViewCart = () => {
           items.length,
           ")"
         ] }),
-        /* @__PURE__ */ jsx("div", { className: "max-h-[500px] overflow-auto mt-3", children: /* @__PURE__ */ jsx("div", { className: "flex flex-col gap-y-[16px]", children: items.map((item) => /* @__PURE__ */ jsx(
+        /* @__PURE__ */ jsx("div", { className: "max-h-[540px] overflow-y-auto overflow-x-hidden mt-3 pr-1 [scrollbar-gutter:stable]", children: /* @__PURE__ */ jsx("div", { className: "flex flex-col gap-y-[16px]", children: items.map((item) => /* @__PURE__ */ jsx(
           ProductlistCard_default,
           {
             product: item,

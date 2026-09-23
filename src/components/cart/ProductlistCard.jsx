@@ -12,13 +12,13 @@ const DeleteIcon = ({ onClick, disabled, loading, className, title }) => (
     type="button"
     onClick={onClick}
     disabled={disabled || loading}
-    className={`${className || ""} ${disabled || loading ? "cursor-not-allowed opacity-50 pointer-events-none" : ""}`}
+    className={`w-6 h-6 flex items-center justify-center shrink-0 ${className || ""} ${disabled || loading ? "cursor-not-allowed opacity-50 pointer-events-none" : ""}`}
     title={title}
     aria-label={title || "Delete"}
   >
     {loading ? (
       <div
-        className="w-4 h-4 border-2 border-[var(--core-primary)] border-t-transparent rounded-full animate-spin"
+        className="w-4 h-4 border-2 border-[var(--core-primary)] border-t-transparent rounded-full animate-spin shrink-0"
         role="status"
         aria-label="Deleting..."
       />
@@ -32,6 +32,7 @@ const DeleteIcon = ({ onClick, disabled, loading, className, title }) => (
         strokeWidth="1.8"
         strokeLinecap="round"
         strokeLinejoin="round"
+        className="shrink-0"
       >
         <polyline points="3 6 5 6 21 6" />
         <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
@@ -54,7 +55,16 @@ const ProductlistCard = ({ product, component, orderType }) => {
   const productImage = product?.image;
   const quantity = product?.quantity;
   const displayPrice = (price ?? 0) / 100;
-  const isSellingQty = !!product?.line_itemable?.selling_quantity_id;
+
+  const sq = product?.line_itemable?.selling_quantity;
+  const hasSellingQuantity =
+    sq && typeof sq === "object"
+      ? Array.isArray(sq.values)
+        ? sq.values.length > 0
+        : Object.keys(sq).length > 0
+      : Boolean(sq);
+
+  const isSellingQty = hasSellingQuantity;
 
   // Variant options (e.g. Size: M, Color: Red)
   const variantOptions = product?.line_itemable?.variant_options ?? [];
@@ -98,7 +108,8 @@ const ProductlistCard = ({ product, component, orderType }) => {
     event.currentTarget.src = noProductImage;
   };
 
-  const handleDeleteItem = async () => {
+  const handleDeleteItem = async (e) => {
+    e?.stopPropagation?.();
     if (isActionDisabled) return;
     try {
       setIsDeleting(true);
@@ -139,7 +150,11 @@ const ProductlistCard = ({ product, component, orderType }) => {
 
   if (isDeleted) {
     return (
-      <div className="flex justify-between gap-4">
+      <div
+        className={`flex justify-between gap-4 transition-all duration-200 ${
+          isItemDeleting ? "opacity-40 pointer-events-none scale-[0.99]" : ""
+        }`}
+      >
         {/* Left section */}
         <div className="flex gap-[10px] flex-1 min-w-0 opacity-50">
           {/* Product Image */}
@@ -198,7 +213,11 @@ const ProductlistCard = ({ product, component, orderType }) => {
     );
   }
   return (
-    <div className="flex justify-between gap-4">
+    <div
+      className={`flex justify-between gap-4 transition-all duration-200 ${
+        isItemDeleting ? "opacity-40 pointer-events-none scale-[0.99]" : ""
+      }`}
+    >
       {/* Left section — clickable to navigate to product */}
       <div
         className="flex gap-[10px] flex-1 min-w-0 cursor-pointer"

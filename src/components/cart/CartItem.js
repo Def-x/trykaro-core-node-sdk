@@ -46,6 +46,26 @@ export const CartItem = ({
         isDeleting || (Boolean(item?.id) && deletingLineItemId === item?.id);
     const isActionDisabled = isAddToCartLoading || isItemDeleting;
 
+    const sq =
+        product?.selling_quantity ??
+        item?.selling_quantity ??
+        product?.product?.selling_quantity;
+
+    const hasSellingQuantity =
+        Boolean(product?.selling_quantity_id) ||
+        Boolean(item?.selling_quantity_id) ||
+        Boolean(product?.is_selling_quantity) ||
+        Boolean(item?.is_selling_quantity) ||
+        (sq && typeof sq === "object"
+            ? (Array.isArray(sq.values) ? sq.values.length > 0 : Object.keys(sq).length > 0)
+            : Boolean(sq));
+
+    const numQty = Number(quantity);
+    const isDecimalQuantity =
+        !isNaN(numQty) && (numQty % 1 !== 0 || !Number.isInteger(numQty));
+
+    const isSellingQty = hasSellingQuantity || isDecimalQuantity;
+
     const handleDelete = async () => {
         if (isActionDisabled) return;
         try {
@@ -146,7 +166,7 @@ export const CartItem = ({
                 {/* Controls */}
                 {renderActions ? (
                     renderActions(item)
-                ) : (
+                ) : !isSellingQty ? (
                     <div style={s.controls}>
                         <button
                             style={s.qtyBtn}
@@ -167,6 +187,12 @@ export const CartItem = ({
                         >
                             +
                         </button>
+                    </div>
+                ) : (
+                    <div style={s.controls}>
+                        <span style={s.qty}>
+                            {quantity}
+                        </span>
                     </div>
                 )}
             </div>
