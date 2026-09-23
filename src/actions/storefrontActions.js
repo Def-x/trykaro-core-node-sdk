@@ -862,21 +862,39 @@ export const getProductsFilterAction = async (options = {}) => {
   return requestJson(url, fetchConfig, "Failed to fetch products filter");
 };
 
-export const getRecentlyViewedProductsAction = async (options = {}) => {
+export const getRecentlyViewedProductsAction = async (
+  page = 1,
+  perPage = 15,
+  options = {},
+) => {
+  let opt = options;
+  let p = page;
+  let pp = perPage;
+  if (typeof page === "object" && page !== null) {
+    opt = page;
+    p = opt.page || 1;
+    pp = opt.perPage || opt.per_page || 15;
+  }
+
   // Guard: skip the API call entirely if no token is available (matching getCurrentUserLikedProductsAction)
-  const token = await getServerToken(options.token);
+  const token = await getServerToken(opt.token);
   if (!token) return { recently_viewed_products: [] };
 
-  const url = `${getApiBaseUrl(options)}/api/recently_viewed_products`;
+  const queryParts = [];
+  if (p) queryParts.push(`page=${p}`);
+  if (pp) queryParts.push(`per_page=${pp}`);
+  const queryStr = queryParts.length ? `?${queryParts.join("&")}` : "";
+
+  const url = `${getApiBaseUrl(opt)}/api/recently_viewed_products${queryStr}`;
   const fetchConfig = {
     method: "GET",
-    headers: await buildHeaders({ ...options, token }),
+    headers: await buildHeaders({ ...opt, token }),
   };
 
   if (typeof window === "undefined") {
     fetchConfig.next = { tags: ["recently-viewed-products"], revalidate: 300 };
   } else {
-    fetchConfig.cache = options.cache || "no-store";
+    fetchConfig.cache = opt.cache || "no-store";
   }
 
   return requestJson(

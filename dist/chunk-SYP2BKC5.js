@@ -658,18 +658,30 @@ var getProductsFilterAction = async (options = {}) => {
   );
   return requestJson(url, fetchConfig, "Failed to fetch products filter");
 };
-var getRecentlyViewedProductsAction = async (options = {}) => {
-  const token = await getServerToken(options.token);
+var getRecentlyViewedProductsAction = async (page = 1, perPage = 15, options = {}) => {
+  let opt = options;
+  let p = page;
+  let pp = perPage;
+  if (typeof page === "object" && page !== null) {
+    opt = page;
+    p = opt.page || 1;
+    pp = opt.perPage || opt.per_page || 15;
+  }
+  const token = await getServerToken(opt.token);
   if (!token) return { recently_viewed_products: [] };
-  const url = `${getApiBaseUrl(options)}/api/recently_viewed_products`;
+  const queryParts = [];
+  if (p) queryParts.push(`page=${p}`);
+  if (pp) queryParts.push(`per_page=${pp}`);
+  const queryStr = queryParts.length ? `?${queryParts.join("&")}` : "";
+  const url = `${getApiBaseUrl(opt)}/api/recently_viewed_products${queryStr}`;
   const fetchConfig = {
     method: "GET",
-    headers: await buildHeaders({ ...options, token })
+    headers: await buildHeaders({ ...opt, token })
   };
   if (typeof window === "undefined") {
     fetchConfig.next = { tags: ["recently-viewed-products"], revalidate: 300 };
   } else {
-    fetchConfig.cache = options.cache || "no-store";
+    fetchConfig.cache = opt.cache || "no-store";
   }
   return requestJson(
     url,
@@ -858,5 +870,5 @@ var applyDiscount = async ({
 };
 
 export { applyDiscount, applyDiscountAction, createAddressAction, createCartAction, createLineItemAction, createRazorpayOrderAction, deleteAddressAction, deleteLineItemAction, getAddressesAction, getAllTaxonsAction, getAvailableDiscountsAction, getCartAction, getCartByIdAction, getCurrentUserLikedProductsAction, getLikedProductsAction, getOrderByIdAction, getOrderInvoiceAction, getOrdersAction, getOrgVideosAction, getOrganizationAction, getProductByIdAction, getProductsAction, getProductsByIdsAction, getProductsFilterAction, getRecentlyViewedProductsAction, getRelatedProductsAction, getTaxonByIdAction, getTaxonomiesAction, getTaxonomyByIdAction, getUserAction, likeProductAction, loginUser, removeDiscountAction, removeDiscountById, signUpUser, trackDiscountEventAction, unlikeProductAction, updateAddressAction, updateCartAction, updateCartIdLineItemsAction, updateLineItemAction, updateRazorpayPaymentAction, updateUserAction, validateCartTotal, verifyOtp };
-//# sourceMappingURL=chunk-ZP3S5S3G.js.map
-//# sourceMappingURL=chunk-ZP3S5S3G.js.map
+//# sourceMappingURL=chunk-SYP2BKC5.js.map
+//# sourceMappingURL=chunk-SYP2BKC5.js.map
