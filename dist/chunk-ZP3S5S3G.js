@@ -541,7 +541,19 @@ var getProductByIdAction = async (productId, options = {}) => {
 var getRelatedProductsAction = async (taxonId, options = {}) => {
   let queryStr = "";
   if (typeof taxonId === "string") {
-    queryStr = taxonId.includes("=") || taxonId.startsWith("?") ? taxonId.startsWith("?") ? taxonId : `?${taxonId}` : `?taxon_id=${taxonId}`;
+    let clean = taxonId.startsWith("?") ? taxonId.slice(1) : taxonId;
+    if (clean.includes("&")) {
+      const parts = clean.split("&");
+      if (!parts[0].includes("=")) {
+        parts[0] = `taxon_id=${parts[0]}`;
+        clean = parts.join("&");
+      }
+      queryStr = `?${clean}`;
+    } else if (clean.includes("=")) {
+      queryStr = `?${clean}`;
+    } else if (clean) {
+      queryStr = `?taxon_id=${clean}`;
+    }
   } else if (taxonId && typeof taxonId === "object") {
     queryStr = buildQueryString(taxonId);
   }
@@ -846,5 +858,5 @@ var applyDiscount = async ({
 };
 
 export { applyDiscount, applyDiscountAction, createAddressAction, createCartAction, createLineItemAction, createRazorpayOrderAction, deleteAddressAction, deleteLineItemAction, getAddressesAction, getAllTaxonsAction, getAvailableDiscountsAction, getCartAction, getCartByIdAction, getCurrentUserLikedProductsAction, getLikedProductsAction, getOrderByIdAction, getOrderInvoiceAction, getOrdersAction, getOrgVideosAction, getOrganizationAction, getProductByIdAction, getProductsAction, getProductsByIdsAction, getProductsFilterAction, getRecentlyViewedProductsAction, getRelatedProductsAction, getTaxonByIdAction, getTaxonomiesAction, getTaxonomyByIdAction, getUserAction, likeProductAction, loginUser, removeDiscountAction, removeDiscountById, signUpUser, trackDiscountEventAction, unlikeProductAction, updateAddressAction, updateCartAction, updateCartIdLineItemsAction, updateLineItemAction, updateRazorpayPaymentAction, updateUserAction, validateCartTotal, verifyOtp };
-//# sourceMappingURL=chunk-5PX3D5IT.js.map
-//# sourceMappingURL=chunk-5PX3D5IT.js.map
+//# sourceMappingURL=chunk-ZP3S5S3G.js.map
+//# sourceMappingURL=chunk-ZP3S5S3G.js.map
