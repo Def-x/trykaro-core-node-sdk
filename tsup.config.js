@@ -8,6 +8,7 @@ export default defineConfig({
   entry: [
     "src/index.js", // main bundle — zero Stripe code
     "src/stripe.js", // optional Stripe sub-package — only imported by Stripe projects
+    "src/phonepe.js", // PhonePe sub-package & helpers
     "src/actions.js", // actions bundle — pure async helpers, safe in server components
   ],
   banner: {

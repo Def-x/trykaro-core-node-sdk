@@ -24,6 +24,7 @@ export function nameToSlug(name = "") {
   if (n.includes("whatsapp catalog") || n.includes("whatsapp catelog")) return "whatsapp-catalog";
   if (n.includes("whatsapp"))          return "whatsapp";
   if (n.includes("shiprocket"))        return "shiprocket";
+  if (n.includes("phonepe") || n.includes("phone-pe") || n.includes("phone_pe")) return "phonepe";
   if (n.includes("razorpay"))          return "razorpay";
   if (n.includes("stripe"))            return "stripe";
   if (n.includes("contentsquare") || n.includes("content square")) return "content-square";

@@ -217,6 +217,31 @@ var updateRazorpayPaymentAction = async (paymentId, razorpayPaymentId, options =
   },
   "Failed to update Razorpay payment id"
 );
+var createCartPaymentAction = async (cartId, options = {}) => requestJson(
+  `${getApiBaseUrl(options)}/api/cart_payments`,
+  {
+    method: "POST",
+    headers: await buildHeaders({ ...options, requireAuth: true }),
+    body: JSON.stringify({ cart_id: cartId }),
+    cache: "no-store"
+  },
+  "Failed to create cart payment"
+);
+var createPhonePeOrderAction = async (cartId, options = {}) => createCartPaymentAction(cartId, options);
+var updateCartPaymentAction = async (paymentId, data = {}, options = {}) => requestJson(
+  `${getApiBaseUrl(options)}/api/cart_payments/${paymentId}`,
+  {
+    method: "PUT",
+    headers: await buildHeaders({ ...options, requireAuth: true }),
+    body: JSON.stringify(data),
+    cache: "no-store"
+  },
+  "Failed to update cart payment"
+);
+var updatePhonePePaymentAction = async (paymentId, phonepeData = {}, options = {}) => {
+  const body = typeof phonepeData === "string" ? { transaction_id: phonepeData, phonepe_payment_id: phonepeData } : phonepeData;
+  return updateCartPaymentAction(paymentId, body, options);
+};
 var getAddressesAction = async (options = {}) => {
   const token = await getServerToken(options?.token);
   if (!token) return { data: [] };
@@ -793,82 +818,6 @@ var getOrgVideosAction = async (options = {}) => {
   return requestJson(url, fetchConfig, "Failed to fetch organization videos");
 };
 
-// src/actions/discountActions.js
-var buildHeaders2 = (token, orgId) => {
-  const headers = {
-    "Content-Type": "application/json",
-    accept: "application/vnd.defx-store.v2"
-  };
-  if (orgId) {
-    headers["Set-Organization"] = orgId;
-  } else if (process.env.NEXT_PUBLIC_ORGANIZATION_ID) {
-    headers["Set-Organization"] = process.env.NEXT_PUBLIC_ORGANIZATION_ID;
-  } else if (process.env.ORG_ID) {
-    headers["Set-Organization"] = process.env.ORG_ID;
-  }
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-  return headers;
-};
-var wrapResponse = async (res, fallbackMessage) => {
-  const data = await res.json().catch(() => null);
-  if (!res.ok) {
-    const err = new Error(
-      data?.error || data?.message || fallbackMessage || "Discount action failed"
-    );
-    err.data = data;
-    err.status = res.status;
-    throw err;
-  }
-  return data;
-};
-var removeDiscountById = async ({
-  token,
-  discount_id,
-  region_id,
-  apiBaseUrl,
-  orgId
-} = {}) => {
-  const baseUrl = apiBaseUrl || process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL;
-  if (!baseUrl) throw new Error("API base URL is not configured");
-  const url = new URL(`${baseUrl}/api/discounts/remove`);
-  if (discount_id) url.searchParams.set("discount_id", discount_id);
-  if (region_id) url.searchParams.set("region_id", region_id);
-  const res = await fetch(url.toString(), {
-    method: "DELETE",
-    headers: buildHeaders2(token, orgId),
-    cache: "no-store"
-  });
-  return wrapResponse(res, "Failed to remove discount");
-};
-var applyDiscount = async ({
-  token,
-  code,
-  discount_id,
-  source,
-  region_id,
-  apiBaseUrl,
-  orgId
-} = {}) => {
-  const baseUrl = apiBaseUrl || process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL;
-  if (!baseUrl) throw new Error("API base URL is not configured");
-  const url = new URL(`${baseUrl}/api/discounts/apply`);
-  const payload = {
-    source: source || "web"
-  };
-  if (code) payload.code = code;
-  if (discount_id) payload.discount_id = discount_id;
-  if (region_id) payload.region_id = region_id;
-  const res = await fetch(url.toString(), {
-    method: "POST",
-    headers: buildHeaders2(token, orgId),
-    body: JSON.stringify(payload),
-    cache: "no-store"
-  });
-  return wrapResponse(res, "Failed to apply discount");
-};
-
-export { applyDiscount, applyDiscountAction, createAddressAction, createCartAction, createLineItemAction, createRazorpayOrderAction, deleteAddressAction, deleteLineItemAction, getAddressesAction, getAllTaxonsAction, getAvailableDiscountsAction, getCartAction, getCartByIdAction, getCurrentUserLikedProductsAction, getLikedProductsAction, getOrderByIdAction, getOrderInvoiceAction, getOrdersAction, getOrgVideosAction, getOrganizationAction, getProductByIdAction, getProductsAction, getProductsByIdsAction, getProductsFilterAction, getRecentlyViewedProductsAction, getRelatedProductsAction, getTaxonByIdAction, getTaxonomiesAction, getTaxonomyByIdAction, getUserAction, likeProductAction, loginUser, removeDiscountAction, removeDiscountById, signUpUser, trackDiscountEventAction, unlikeProductAction, updateAddressAction, updateCartAction, updateCartIdLineItemsAction, updateLineItemAction, updateRazorpayPaymentAction, updateUserAction, validateCartTotal, verifyOtp };
-//# sourceMappingURL=chunk-SYP2BKC5.js.map
-//# sourceMappingURL=chunk-SYP2BKC5.js.map
+export { applyDiscountAction, createAddressAction, createCartAction, createCartPaymentAction, createLineItemAction, createPhonePeOrderAction, createRazorpayOrderAction, deleteAddressAction, deleteLineItemAction, getAddressesAction, getAllTaxonsAction, getAvailableDiscountsAction, getCartAction, getCartByIdAction, getCurrentUserLikedProductsAction, getLikedProductsAction, getOrderByIdAction, getOrderInvoiceAction, getOrdersAction, getOrgVideosAction, getOrganizationAction, getProductByIdAction, getProductsAction, getProductsByIdsAction, getProductsFilterAction, getRecentlyViewedProductsAction, getRelatedProductsAction, getTaxonByIdAction, getTaxonomiesAction, getTaxonomyByIdAction, getUserAction, likeProductAction, loginUser, removeDiscountAction, signUpUser, trackDiscountEventAction, unlikeProductAction, updateAddressAction, updateCartAction, updateCartIdLineItemsAction, updateCartPaymentAction, updateLineItemAction, updatePhonePePaymentAction, updateRazorpayPaymentAction, updateUserAction, validateCartTotal, verifyOtp };
+//# sourceMappingURL=chunk-UNYTWMOI.js.map
+//# sourceMappingURL=chunk-UNYTWMOI.js.map

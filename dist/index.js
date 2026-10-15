@@ -1,5 +1,7 @@
-import { trackDiscountEventAction, removeDiscountById, removeDiscountAction, applyDiscountAction, getAvailableDiscountsAction, getOrderInvoiceAction, getOrderByIdAction, getOrdersAction, updateUserAction, getUserAction, deleteAddressAction, updateAddressAction, createAddressAction, getAddressesAction, updateRazorpayPaymentAction, createRazorpayOrderAction, deleteLineItemAction, updateLineItemAction, createLineItemAction, updateCartIdLineItemsAction, updateCartAction, createCartAction, getCartByIdAction, getCartAction, getCurrentUserLikedProductsAction, verifyOtp, signUpUser, loginUser, validateCartTotal } from './chunk-SYP2BKC5.js';
-export { applyDiscount, applyDiscountAction, createAddressAction, createCartAction, createLineItemAction, createRazorpayOrderAction, deleteAddressAction, deleteLineItemAction, getAddressesAction, getAllTaxonsAction, getAvailableDiscountsAction, getCartAction, getCartByIdAction, getCurrentUserLikedProductsAction, getLikedProductsAction, getOrderByIdAction, getOrderInvoiceAction, getOrdersAction, getOrgVideosAction, getOrganizationAction, getProductByIdAction, getProductsAction, getProductsByIdsAction, getProductsFilterAction, getRecentlyViewedProductsAction, getRelatedProductsAction, getTaxonByIdAction, getTaxonomiesAction, getTaxonomyByIdAction, getUserAction, likeProductAction, loginUser, removeDiscountAction, removeDiscountById, signUpUser, trackDiscountEventAction, unlikeProductAction, updateAddressAction, updateCartAction, updateCartIdLineItemsAction, updateLineItemAction, updateRazorpayPaymentAction, updateUserAction, validateCartTotal, verifyOtp } from './chunk-SYP2BKC5.js';
+import { removeDiscountById } from './chunk-XOA6RI53.js';
+export { applyDiscount, removeDiscountById } from './chunk-XOA6RI53.js';
+import { trackDiscountEventAction, removeDiscountAction, applyDiscountAction, getAvailableDiscountsAction, getOrderInvoiceAction, getOrderByIdAction, getOrdersAction, updateUserAction, getUserAction, deleteAddressAction, updateAddressAction, createAddressAction, getAddressesAction, updatePhonePePaymentAction, createPhonePeOrderAction, updateCartPaymentAction, createCartPaymentAction, updateRazorpayPaymentAction, createRazorpayOrderAction, deleteLineItemAction, updateLineItemAction, createLineItemAction, updateCartIdLineItemsAction, updateCartAction, createCartAction, getCartByIdAction, getCartAction, getCurrentUserLikedProductsAction, verifyOtp, signUpUser, loginUser, validateCartTotal } from './chunk-UNYTWMOI.js';
+export { applyDiscountAction, createAddressAction, createCartAction, createCartPaymentAction, createLineItemAction, createPhonePeOrderAction, createRazorpayOrderAction, deleteAddressAction, deleteLineItemAction, getAddressesAction, getAllTaxonsAction, getAvailableDiscountsAction, getCartAction, getCartByIdAction, getCurrentUserLikedProductsAction, getLikedProductsAction, getOrderByIdAction, getOrderInvoiceAction, getOrdersAction, getOrgVideosAction, getOrganizationAction, getProductByIdAction, getProductsAction, getProductsByIdsAction, getProductsFilterAction, getRecentlyViewedProductsAction, getRelatedProductsAction, getTaxonByIdAction, getTaxonomiesAction, getTaxonomyByIdAction, getUserAction, likeProductAction, loginUser, removeDiscountAction, signUpUser, trackDiscountEventAction, unlikeProductAction, updateAddressAction, updateCartAction, updateCartIdLineItemsAction, updateCartPaymentAction, updateLineItemAction, updatePhonePePaymentAction, updateRazorpayPaymentAction, updateUserAction, validateCartTotal, verifyOtp } from './chunk-UNYTWMOI.js';
 import { getPaymentGateway } from './chunk-ZXSZ7SQJ.js';
 import React8, { createContext, useEffect, useMemo, useState, useCallback, useContext, useRef, Component } from 'react';
 import posthog from 'posthog-js';
@@ -22,6 +24,7 @@ function nameToSlug(name = "") {
   if (n.includes("whatsapp catalog") || n.includes("whatsapp catelog")) return "whatsapp-catalog";
   if (n.includes("whatsapp")) return "whatsapp";
   if (n.includes("shiprocket")) return "shiprocket";
+  if (n.includes("phonepe") || n.includes("phone-pe") || n.includes("phone_pe")) return "phonepe";
   if (n.includes("razorpay")) return "razorpay";
   if (n.includes("stripe")) return "stripe";
   if (n.includes("contentsquare") || n.includes("content square")) return "content-square";
@@ -411,6 +414,10 @@ var inbuiltActions = {
   // Payments
   createRazorOrder: createRazorpayOrderAction,
   updateRazorPayment: updateRazorpayPaymentAction,
+  createCartPayment: createCartPaymentAction,
+  updateCartPayment: updateCartPaymentAction,
+  createPhonePeOrder: createPhonePeOrderAction,
+  updatePhonePePayment: updatePhonePePaymentAction,
   // Addresses
   getUserAddress: getAddressesAction,
   createAddress: createAddressAction,
@@ -3480,7 +3487,7 @@ var AddressCard = ({
   onClick,
   paymentLabel
 }) => {
-  const isPayment = type === "stripe" || type === "payment";
+  const isPayment = type === "stripe" || type === "payment" || type === "phonepe" || type === "razorpay";
   return /* @__PURE__ */ jsx(
     "div",
     {
@@ -3503,7 +3510,7 @@ var AddressCard = ({
             }
           )
         ] }),
-        /* @__PURE__ */ jsx("div", { className: "ml-4 flex-shrink-0", children: /* @__PURE__ */ jsx("div", { className: "w-[60px] h-[30px] bg-[var(--secondaryBg)] border border-[var(--borders)] rounded flex items-center justify-center", children: /* @__PURE__ */ jsx("span", { className: "text-[10px] font-[var(--font-bold)] text-[var(--main)]", children: paymentLabel ?? (type === "stripe" ? "Razorpay" : "Payment") }) }) })
+        /* @__PURE__ */ jsx("div", { className: "ml-4 flex-shrink-0", children: /* @__PURE__ */ jsx("div", { className: "px-2.5 h-[30px] min-w-[60px] bg-[var(--secondaryBg)] border border-[var(--borders)] rounded flex items-center justify-center", children: /* @__PURE__ */ jsx("span", { className: "text-[11px] font-[var(--font-bold)] text-[var(--main)] whitespace-nowrap", children: paymentLabel ?? (type === "stripe" ? "Stripe" : type === "phonepe" ? "PhonePe" : type === "razorpay" ? "Razorpay" : "Payment") }) }) })
       ] }) : /* @__PURE__ */ jsxs("div", { children: [
         /* @__PURE__ */ jsx("div", { className: "flex flex-row justify-between items-center", children: /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)]", children: addressType }) }),
         /* @__PURE__ */ jsx(
@@ -3715,9 +3722,11 @@ var OrderInfo = ({ user, hasDeletedItems, onPaymentSuccess }) => {
   orgPaymentConfig?.mode || orgPaymentConfig?.gateway || "";
   const paymentGateway = String(rawPaymentGateway || "razorpay").toLowerCase();
   const isStripeGateway = paymentGateway === "stripe";
+  const isPhonePeGateway = paymentGateway === "phonepe" || paymentGateway === "phone_pe" || paymentGateway === "phonepe_pg" || paymentGateway === "phone-pe";
+  const isRazorpayGateway = !isStripeGateway && !isPhonePeGateway;
   const stripePublishableKey = paymentConfig?.stripe_publishable_key ?? orgPaymentConfig?.stripe_publishable_key ?? "";
   const razorpayKeyId = paymentConfig?.razor_pay_key_id ?? orgPaymentConfig?.razor_pay_key_id ?? "";
-  const paymentGatewayLabel = paymentGateway ? paymentGateway.charAt(0).toUpperCase() + paymentGateway.slice(1).replace(/_/g, " ") : "Razorpay";
+  const paymentGatewayLabel = isPhonePeGateway ? "PhonePe" : isStripeGateway ? "Stripe" : isRazorpayGateway ? "Razorpay" : paymentGateway ? paymentGateway.charAt(0).toUpperCase() + paymentGateway.slice(1).replace(/_/g, " ") : "Razorpay";
   const [StripeCheckout, setStripeCheckout] = useState(
     () => getPaymentGateway("stripe")
   );
@@ -3962,6 +3971,65 @@ var OrderInfo = ({ user, hasDeletedItems, onPaymentSuccess }) => {
     });
     razorpay.open();
   };
+  const onPhonePeHandler = (res) => {
+    try {
+      const redirectUrl = res?.redirect_url || res?.url || res?.redirectUrl || res?.data?.instrumentResponse?.redirectInfo?.url || res?.data?.redirectUrl;
+      if (redirectUrl) {
+        if (typeof window !== "undefined") {
+          try {
+            sessionStorage.setItem(
+              "defx_phonepe_pending",
+              JSON.stringify({
+                cartId: cart?.id,
+                paymentId: res?.id || res?.cart_payment_id || null,
+                orderId: res?.order_id || null,
+                timestamp: Date.now()
+              })
+            );
+          } catch (e) {
+            console.warn("[Checkout] Failed to store pending PhonePe session:", e);
+          }
+        }
+        setIsProcessingPayment(true);
+        window.location.href = redirectUrl;
+        return;
+      }
+      if (res?.order_id) {
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("cartid");
+        }
+        const userId = auth?.userId ?? auth?.user?.id ?? user?.id ?? null;
+        const currency = config?.currency ?? "INR";
+        trackPurchase({
+          userId,
+          transactionId: String(res.order_id),
+          cart,
+          currency,
+          metaOverrides: { source: "checkout" }
+        });
+        trackMetaPurchase(cart);
+        onPaymentSuccess?.();
+        setIsRedirectingOrder(true);
+        setIsProcessingPayment(true);
+        isRedirectingRef.current = true;
+        const orderTargetUrl = `/account/orders/${res.order_id}`;
+        router.prefetch?.(orderTargetUrl);
+        router.replace(orderTargetUrl);
+        setTimeout(() => {
+          if (typeof window !== "undefined" && !window.location.pathname.includes(`/orders/${res.order_id}`)) {
+            window.location.replace(orderTargetUrl);
+          }
+        }, 3e3);
+        return;
+      }
+      console.error("[Checkout] No redirect URL found in PhonePe response:", res);
+      const errorMsg = res?.error || res?.message || "Could not initialize PhonePe payment. Please try again.";
+      toast?.error?.(errorMsg);
+    } catch (err) {
+      console.error("[Checkout] Error redirecting to PhonePe:", err);
+      toast?.error?.("Failed to redirect to PhonePe. Please try again.");
+    }
+  };
   const onPlaceOrder = async () => {
     if (hasDeletedItems || !cart?.id) return;
     const clientTotal = Number(cart?.total ?? cart?.display_total ?? 0);
@@ -3984,10 +4052,67 @@ var OrderInfo = ({ user, hasDeletedItems, onPaymentSuccess }) => {
       setShowStripeForm(true);
       return;
     }
+    if (isPhonePeGateway) {
+      try {
+        setIsPlacingOrder(true);
+        const createOrderFn = actions?.createPhonePeOrder || actions?.createCartPayment || actions?.createRazorOrder;
+        if (createOrderFn) {
+          const orderResponse = await createOrderFn(cart.id);
+          if (orderResponse?.serverError) {
+            toast?.error?.(orderResponse.serverError);
+            return;
+          }
+          const userId = auth?.userId ?? auth?.user?.id ?? user?.id ?? null;
+          const currency = config?.currency ?? "INR";
+          trackBeginCheckout({
+            userId,
+            cart,
+            currency,
+            transactionId: String(orderResponse?.id ?? ""),
+            metaOverrides: { source: "checkout" }
+          });
+          trackMetaInitiateCheckout(cart);
+          trackAddShippingInfo({
+            userId,
+            cart,
+            shippingTier: orderType === "pickup" ? "Pickup" : "Standard",
+            currency,
+            metaOverrides: { source: "checkout" }
+          });
+          trackAddPaymentInfo({
+            userId,
+            cart,
+            paymentType: paymentGatewayLabel,
+            currency,
+            metaOverrides: { source: "checkout" }
+          });
+          trackMetaAddPaymentInfo(cart);
+          onPhonePeHandler(orderResponse);
+        } else {
+          toast?.error?.("PhonePe payment action not configured");
+        }
+      } catch (err) {
+        console.error("Failed to create PhonePe order:", err);
+        const errorMsg = err?.data?.error || err?.message;
+        if (errorMsg && typeof errorMsg === "string") {
+          toast?.error?.(errorMsg);
+        } else {
+          toast?.error?.("Failed to process payment");
+        }
+      } finally {
+        setIsPlacingOrder(false);
+      }
+      return;
+    }
     try {
       setIsPlacingOrder(true);
-      if (actions?.createRazorOrder) {
-        const orderResponse = await actions.createRazorOrder(cart.id);
+      const createOrderFn = actions?.createRazorOrder || actions?.createCartPayment;
+      if (createOrderFn) {
+        const orderResponse = await createOrderFn(cart.id);
+        if (orderResponse?.serverError) {
+          toast?.error?.(orderResponse.serverError);
+          return;
+        }
         const userId = auth?.userId ?? auth?.user?.id ?? user?.id ?? null;
         const currency = config?.currency ?? "INR";
         trackBeginCheckout({
@@ -4014,6 +4139,8 @@ var OrderInfo = ({ user, hasDeletedItems, onPaymentSuccess }) => {
         });
         trackMetaAddPaymentInfo(cart);
         onRazorPayHandler(orderResponse);
+      } else {
+        toast?.error?.("Payment action not configured");
       }
     } catch (err) {
       console.error("Failed to create order:", err);
@@ -4154,12 +4281,20 @@ var OrderInfo = ({ user, hasDeletedItems, onPaymentSuccess }) => {
           ] }),
           "."
         ] })
-      ] }) : /* @__PURE__ */ jsx(
+      ] }) : isPhonePeGateway ? /* @__PURE__ */ jsx(
+        AddressCard,
+        {
+          addressType: "Pay with PhonePe",
+          address: "Once you click Checkout, you'll be redirected to PhonePe's secure payment portal to complete your payment via UPI, Credit/Debit Card, or Net Banking.",
+          type: "phonepe",
+          paymentLabel: "PhonePe"
+        }
+      ) : /* @__PURE__ */ jsx(
         AddressCard,
         {
           addressType: `Pay with ${paymentGatewayLabel}`,
           address: `Once you click Checkout, you'll be redirected to a secure ${paymentGatewayLabel} payment window to complete your payment.`,
-          type: "stripe",
+          type: "razorpay",
           paymentLabel: paymentGatewayLabel
         }
       ) })
@@ -4171,7 +4306,7 @@ var OrderInfo = ({ user, hasDeletedItems, onPaymentSuccess }) => {
           onClick: onPlaceOrder,
           disabled: hasDeletedItems || isPlacingOrder || isAddressLoading,
           className: `px-5 py-3 w-full rounded-lg cursor-pointer font-[var(--font-medium)] text-[15px] transition-all duration-300 ${hasDeletedItems || isPlacingOrder || isAddressLoading ? "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none" : "bg-[var(--core-primary)] text-white hover:opacity-90 hover:shadow-lg transform active:scale-[0.98]"}`,
-          children: isPlacingOrder ? "Processing\u2026" : hasDeletedItems ? "Remove Deleted Items to Checkout" : isStripeGateway ? "Proceed to Card Payment" : "Checkout"
+          children: isPlacingOrder ? "Processing\u2026" : hasDeletedItems ? "Remove Deleted Items to Checkout" : isStripeGateway ? "Proceed to Card Payment" : isPhonePeGateway ? "Proceed to PhonePe" : "Checkout"
         }
       ),
       /* @__PURE__ */ jsxs("div", { className: "mt-4 text-center", children: [
@@ -4221,11 +4356,11 @@ var OrderInfo = ({ user, hasDeletedItems, onPaymentSuccess }) => {
       ] }),
       /* @__PURE__ */ jsxs("div", { className: "text-center space-y-4", children: [
         /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
-          /* @__PURE__ */ jsx("h2", { className: "font-serif italic text-3xl text-[var(--core-primary)] tracking-tight", children: isRedirectingOrder ? "Payment Successful!" : "Processing your payment" }),
+          /* @__PURE__ */ jsx("h2", { className: "font-serif italic text-3xl text-[var(--core-primary)] tracking-tight", children: isRedirectingOrder ? "Payment Successful!" : isPhonePeGateway ? "Redirecting to PhonePe\u2026" : "Processing your payment" }),
           /* @__PURE__ */ jsx("div", { className: "w-12 h-[1px] bg-[var(--core-secondary)] mx-auto opacity-50" })
         ] }),
         /* @__PURE__ */ jsxs("div", { className: "space-y-2", children: [
-          /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-[#2d2d2d] text-base", children: isRedirectingOrder ? "Redirecting to your order details..." : `We're finalizing your order with ${paymentGatewayLabel}.` }),
+          /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-[#2d2d2d] text-base", children: isRedirectingOrder ? "Redirecting to your order details..." : isPhonePeGateway ? "Redirecting you to PhonePe to complete your payment securely." : `We're finalizing your order with ${paymentGatewayLabel}.` }),
           /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-regular)] text-[#8c92a4] text-sm leading-relaxed", children: [
             "Please do not refresh the page or close this window. ",
             /* @__PURE__ */ jsx("br", {}),

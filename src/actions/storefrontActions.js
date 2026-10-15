@@ -311,6 +311,53 @@ export const updateRazorpayPaymentAction = async (
     "Failed to update Razorpay payment id",
   );
 
+// Generic cart payment creation action (POST /api/cart_payments)
+export const createCartPaymentAction = async (cartId, options = {}) =>
+  requestJson(
+    `${getApiBaseUrl(options)}/api/cart_payments`,
+    {
+      method: "POST",
+      headers: await buildHeaders({ ...options, requireAuth: true }),
+      body: JSON.stringify({ cart_id: cartId }),
+      cache: "no-store",
+    },
+    "Failed to create cart payment",
+  );
+
+// PhonePe alias for initiating payment via /api/cart_payments
+export const createPhonePeOrderAction = async (cartId, options = {}) =>
+  createCartPaymentAction(cartId, options);
+
+// Generic cart payment update action (PUT /api/cart_payments/:payment_id)
+export const updateCartPaymentAction = async (
+  paymentId,
+  data = {},
+  options = {},
+) =>
+  requestJson(
+    `${getApiBaseUrl(options)}/api/cart_payments/${paymentId}`,
+    {
+      method: "PUT",
+      headers: await buildHeaders({ ...options, requireAuth: true }),
+      body: JSON.stringify(data),
+      cache: "no-store",
+    },
+    "Failed to update cart payment",
+  );
+
+// PhonePe payment update action (PUT /api/cart_payments/:payment_id)
+export const updatePhonePePaymentAction = async (
+  paymentId,
+  phonepeData = {},
+  options = {},
+) => {
+  const body =
+    typeof phonepeData === "string"
+      ? { transaction_id: phonepeData, phonepe_payment_id: phonepeData }
+      : phonepeData;
+  return updateCartPaymentAction(paymentId, body, options);
+};
+
 // ─── Addresses ────────────────────────────────────────────────────────────────
 
 export const getAddressesAction = async (options = {}) => {

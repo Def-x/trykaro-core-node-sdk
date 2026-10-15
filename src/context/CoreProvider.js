@@ -39,6 +39,10 @@ const inbuiltActions = {
   // Payments
   createRazorOrder: storefrontActions.createRazorpayOrderAction,
   updateRazorPayment: storefrontActions.updateRazorpayPaymentAction,
+  createCartPayment: storefrontActions.createCartPaymentAction,
+  updateCartPayment: storefrontActions.updateCartPaymentAction,
+  createPhonePeOrder: storefrontActions.createPhonePeOrderAction,
+  updatePhonePePayment: storefrontActions.updatePhonePePaymentAction,
   // Addresses
   getUserAddress: storefrontActions.getAddressesAction,
   createAddress: storefrontActions.createAddressAction,
@@ -95,8 +99,10 @@ const normalizeAddresses = (payload) =>
  *      updateLineItem, createLineItem, deleteLineItem,
  *      // Auth actions (for authType: 'own')
  *      login, signup, verifyOtp,
- *      // Razorpay actions
+ *      // Razorpay & PhonePe actions
  *      createRazorOrder, updateRazorPayment,
+ *      createPhonePeOrder, updatePhonePePayment,
+ *      createCartPayment, updateCartPayment,
  *      // Stripe actions (only needed when payment mode is "stripe")
  *      createStripePaymentIntent,
  *      // Address actions

@@ -109,6 +109,12 @@ const OrderInfo = ({ user, hasDeletedItems, onPaymentSuccess }) => {
 
   const paymentGateway = String(rawPaymentGateway || "razorpay").toLowerCase();
   const isStripeGateway = paymentGateway === "stripe";
+  const isPhonePeGateway =
+    paymentGateway === "phonepe" ||
+    paymentGateway === "phone_pe" ||
+    paymentGateway === "phonepe_pg" ||
+    paymentGateway === "phone-pe";
+  const isRazorpayGateway = !isStripeGateway && !isPhonePeGateway;
 
   // Credentials from region's payment_config, fallback to org
   const stripePublishableKey =
@@ -117,10 +123,16 @@ const OrderInfo = ({ user, hasDeletedItems, onPaymentSuccess }) => {
     "";
   const razorpayKeyId =
     paymentConfig?.razor_pay_key_id ?? orgPaymentConfig?.razor_pay_key_id ?? "";
-  const paymentGatewayLabel = paymentGateway
-    ? paymentGateway.charAt(0).toUpperCase() +
-      paymentGateway.slice(1).replace(/_/g, " ")
-    : "Razorpay";
+  const paymentGatewayLabel = isPhonePeGateway
+    ? "PhonePe"
+    : isStripeGateway
+      ? "Stripe"
+      : isRazorpayGateway
+        ? "Razorpay"
+        : paymentGateway
+          ? paymentGateway.charAt(0).toUpperCase() +
+            paymentGateway.slice(1).replace(/_/g, " ")
+          : "Razorpay";
 
   // Load Stripe eagerly at mount so it's ready when the user clicks Checkout.
   // Must wrap in () => to prevent React treating the component fn as a state updater.
@@ -441,6 +453,85 @@ const OrderInfo = ({ user, hasDeletedItems, onPaymentSuccess }) => {
     razorpay.open();
   };
 
+  const onPhonePeHandler = (res) => {
+    try {
+      const redirectUrl =
+        res?.redirect_url ||
+        res?.url ||
+        res?.redirectUrl ||
+        res?.data?.instrumentResponse?.redirectInfo?.url ||
+        res?.data?.redirectUrl;
+
+      if (redirectUrl) {
+        if (typeof window !== "undefined") {
+          try {
+            sessionStorage.setItem(
+              "defx_phonepe_pending",
+              JSON.stringify({
+                cartId: cart?.id,
+                paymentId: res?.id || res?.cart_payment_id || null,
+                orderId: res?.order_id || null,
+                timestamp: Date.now(),
+              }),
+            );
+          } catch (e) {
+            console.warn("[Checkout] Failed to store pending PhonePe session:", e);
+          }
+        }
+
+        setIsProcessingPayment(true);
+        window.location.href = redirectUrl;
+        return;
+      }
+
+      // Fallback: if order is already completed without redirect (e.g. 0-total or instant webhook)
+      if (res?.order_id) {
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("cartid");
+        }
+        const userId = auth?.userId ?? auth?.user?.id ?? user?.id ?? null;
+        const currency = config?.currency ?? "INR";
+        trackPurchase({
+          userId,
+          transactionId: String(res.order_id),
+          cart,
+          currency,
+          metaOverrides: { source: "checkout" },
+        });
+        trackMetaPurchase(cart);
+
+        onPaymentSuccess?.();
+        setIsRedirectingOrder(true);
+        setIsProcessingPayment(true);
+        isRedirectingRef.current = true;
+
+        const orderTargetUrl = `/account/orders/${res.order_id}`;
+        router.prefetch?.(orderTargetUrl);
+        router.replace(orderTargetUrl);
+
+        setTimeout(() => {
+          if (
+            typeof window !== "undefined" &&
+            !window.location.pathname.includes(`/orders/${res.order_id}`)
+          ) {
+            window.location.replace(orderTargetUrl);
+          }
+        }, 3000);
+        return;
+      }
+
+      console.error("[Checkout] No redirect URL found in PhonePe response:", res);
+      const errorMsg =
+        res?.error ||
+        res?.message ||
+        "Could not initialize PhonePe payment. Please try again.";
+      toast?.error?.(errorMsg);
+    } catch (err) {
+      console.error("[Checkout] Error redirecting to PhonePe:", err);
+      toast?.error?.("Failed to redirect to PhonePe. Please try again.");
+    }
+  };
+
   const onPlaceOrder = async () => {
     if (hasDeletedItems || !cart?.id) return;
 
@@ -472,10 +563,86 @@ const OrderInfo = ({ user, hasDeletedItems, onPaymentSuccess }) => {
       return;
     }
 
+    if (isPhonePeGateway) {
+      try {
+        setIsPlacingOrder(true);
+        const createOrderFn =
+          actions?.createPhonePeOrder ||
+          actions?.createCartPayment ||
+          actions?.createRazorOrder;
+
+        if (createOrderFn) {
+          const orderResponse = await createOrderFn(cart.id);
+
+          if (orderResponse?.serverError) {
+            toast?.error?.(orderResponse.serverError);
+            return;
+          }
+
+          // ── GA4 checkout funnel steps ────────────────────────────────────
+          const userId = auth?.userId ?? auth?.user?.id ?? user?.id ?? null;
+          const currency = config?.currency ?? "INR";
+
+          // Step 1: begin_checkout
+          trackBeginCheckout({
+            userId,
+            cart,
+            currency,
+            transactionId: String(orderResponse?.id ?? ""),
+            metaOverrides: { source: "checkout" },
+          });
+          trackMetaInitiateCheckout(cart);
+
+          // Step 2: add_shipping_info
+          trackAddShippingInfo({
+            userId,
+            cart,
+            shippingTier: orderType === "pickup" ? "Pickup" : "Standard",
+            currency,
+            metaOverrides: { source: "checkout" },
+          });
+
+          // Step 3: add_payment_info (PhonePe selected)
+          trackAddPaymentInfo({
+            userId,
+            cart,
+            paymentType: paymentGatewayLabel,
+            currency,
+            metaOverrides: { source: "checkout" },
+          });
+          trackMetaAddPaymentInfo(cart);
+          // ─────────────────────────────────────────────────────────────────
+
+          onPhonePeHandler(orderResponse);
+        } else {
+          toast?.error?.("PhonePe payment action not configured");
+        }
+      } catch (err) {
+        console.error("Failed to create PhonePe order:", err);
+        const errorMsg = err?.data?.error || err?.message;
+        if (errorMsg && typeof errorMsg === "string") {
+          toast?.error?.(errorMsg);
+        } else {
+          toast?.error?.("Failed to process payment");
+        }
+      } finally {
+        setIsPlacingOrder(false);
+      }
+      return;
+    }
+
+    // Default: Razorpay
     try {
       setIsPlacingOrder(true);
-      if (actions?.createRazorOrder) {
-        const orderResponse = await actions.createRazorOrder(cart.id);
+      const createOrderFn =
+        actions?.createRazorOrder || actions?.createCartPayment;
+      if (createOrderFn) {
+        const orderResponse = await createOrderFn(cart.id);
+
+        if (orderResponse?.serverError) {
+          toast?.error?.(orderResponse.serverError);
+          return;
+        }
 
         // ── GA4 checkout funnel steps ────────────────────────────────────
         // auth.userId is always the decoded JWT sub set by Coreproviders.js
@@ -513,6 +680,8 @@ const OrderInfo = ({ user, hasDeletedItems, onPaymentSuccess }) => {
         // ─────────────────────────────────────────────────────────────────
 
         onRazorPayHandler(orderResponse);
+      } else {
+        toast?.error?.("Payment action not configured");
       }
     } catch (err) {
       console.error("Failed to create order:", err);
@@ -692,11 +861,18 @@ const OrderInfo = ({ user, hasDeletedItems, onPaymentSuccess }) => {
                 </p>
               )}
             </>
+          ) : isPhonePeGateway ? (
+            <AddressCard
+              addressType="Pay with PhonePe"
+              address="Once you click Checkout, you'll be redirected to PhonePe's secure payment portal to complete your payment via UPI, Credit/Debit Card, or Net Banking."
+              type="phonepe"
+              paymentLabel="PhonePe"
+            />
           ) : (
             <AddressCard
               addressType={`Pay with ${paymentGatewayLabel}`}
               address={`Once you click Checkout, you'll be redirected to a secure ${paymentGatewayLabel} payment window to complete your payment.`}
-              type="stripe"
+              type="razorpay"
               paymentLabel={paymentGatewayLabel}
             />
           )}
@@ -721,7 +897,9 @@ const OrderInfo = ({ user, hasDeletedItems, onPaymentSuccess }) => {
                 ? "Remove Deleted Items to Checkout"
                 : isStripeGateway
                   ? "Proceed to Card Payment"
-                  : "Checkout"}
+                  : isPhonePeGateway
+                    ? "Proceed to PhonePe"
+                    : "Checkout"}
           </button>
 
           {/* Policy Links */}
@@ -783,7 +961,9 @@ const OrderInfo = ({ user, hasDeletedItems, onPaymentSuccess }) => {
                 <h2 className="font-serif italic text-3xl text-[var(--core-primary)] tracking-tight">
                   {isRedirectingOrder
                     ? "Payment Successful!"
-                    : "Processing your payment"}
+                    : isPhonePeGateway
+                      ? "Redirecting to PhonePe…"
+                      : "Processing your payment"}
                 </h2>
                 <div className="w-12 h-[1px] bg-[var(--core-secondary)] mx-auto opacity-50"></div>
               </div>
@@ -792,7 +972,9 @@ const OrderInfo = ({ user, hasDeletedItems, onPaymentSuccess }) => {
                 <p className="font-[var(--font-medium)] text-[#2d2d2d] text-base">
                   {isRedirectingOrder
                     ? "Redirecting to your order details..."
-                    : `We're finalizing your order with ${paymentGatewayLabel}.`}
+                    : isPhonePeGateway
+                      ? "Redirecting you to PhonePe to complete your payment securely."
+                      : `We're finalizing your order with ${paymentGatewayLabel}.`}
                 </p>
                 <p className="font-[var(--font-regular)] text-[#8c92a4] text-sm leading-relaxed">
                   Please do not refresh the page or close this window. <br />
