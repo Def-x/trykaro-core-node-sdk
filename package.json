@@ -1,35 +1,67 @@
 {
   "name": "@defx/storefront-core",
-  "version": "1.2.3-beta.4",
-  "description": "Shared UI and logic for Defx multi-store ecommerce storefronts",
+  "version": "2.0.0",
+  "description": "Framework-agnostic React SDK for Defx multi-store ecommerce storefronts",
   "type": "module",
   "packageManager": "yarn@4.12.0",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
     "./stripe": {
+      "types": "./dist/stripe.d.ts",
       "import": "./dist/stripe.js",
       "default": "./dist/stripe.js"
     },
     "./phonepe": {
+      "types": "./dist/phonepe.d.ts",
       "import": "./dist/phonepe.js",
       "default": "./dist/phonepe.js"
     },
     "./actions": {
+      "types": "./dist/actions.d.ts",
       "import": "./dist/actions.js",
       "default": "./dist/actions.js"
-    }
+    },
+    "./analytics/gtm": {
+      "types": "./dist/analytics/gtm.d.ts",
+      "import": "./dist/analytics/gtm.js",
+      "default": "./dist/analytics/gtm.js"
+    },
+    "./analytics/meta": {
+      "types": "./dist/analytics/meta.d.ts",
+      "import": "./dist/analytics/meta.js",
+      "default": "./dist/analytics/meta.js"
+    },
+    "./analytics/posthog": {
+      "types": "./dist/analytics/posthog.d.ts",
+      "import": "./dist/analytics/posthog.js",
+      "default": "./dist/analytics/posthog.js"
+    },
+    "./styles.css": "./dist/styles.css"
   },
+  "sideEffects": [
+    "./dist/stripe.js",
+    "./dist/phonepe.js",
+    "./dist/styles.css"
+  ],
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "tsup",
-    "dev": "tsup --watch"
+    "build:css": "tailwindcss -i src/styles/tailwind.css -o dist/styles.css --minify",
+    "build": "tsup && yarn build:css",
+    "dev": "tsup --watch",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "changeset": "changeset",
+    "release": "changeset publish"
   },
   "peerDependencies": {
     "@clerk/nextjs": "^7.2.0",
@@ -40,7 +72,8 @@
     "lucide-react": ">=0.300.0",
     "posthog-js": ">=1.0.0",
     "react": "^18 || ^19",
-    "react-dom": "^18 || ^19"
+    "react-dom": "^18 || ^19",
+    "react-razorpay": ">=2 || >=3"
   },
   "peerDependenciesMeta": {
     "@clerk/nextjs": {
@@ -52,20 +85,42 @@
     "@stripe/stripe-js": {
       "optional": true
     },
+    "js-cookie": {
+      "optional": true
+    },
     "lucide-react": {
       "optional": true
     },
     "posthog-js": {
       "optional": true
+    },
+    "react-razorpay": {
+      "optional": true
     }
   },
   "devDependencies": {
+    "@changesets/cli": "^2.27.1",
+    "@stripe/react-stripe-js": "^7.0.1",
+    "@stripe/stripe-js": "^10.2.0",
+    "@tailwindcss/cli": "^4.3.3",
+    "@testing-library/react": "^16.0.0",
+    "@types/js-cookie": "^3.0.6",
+    "@types/lodash": "^4.17.0",
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "js-cookie": "^3.0.5",
+    "jsdom": "^24.0.0",
     "lodash": "^4.18.1",
+    "lucide-react": "^1.63.0",
+    "next": "^16.4.3",
     "posthog-js": "^1.360.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
+    "react-razorpay": "^3.0.1",
     "tailwindcss": "^4.2.2",
     "tsup": "^8.5.1",
-    "typescript": "^6.0.2"
+    "typescript": "^6.0.2",
+    "vitest": "^2.0.0"
   }
 }

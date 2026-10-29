@@ -1,19 +1,23 @@
-import { removeDiscountById } from './chunk-XOA6RI53.js';
-export { applyDiscount, removeDiscountById } from './chunk-XOA6RI53.js';
-import { trackDiscountEventAction, removeDiscountAction, applyDiscountAction, getAvailableDiscountsAction, getOrderInvoiceAction, getOrderByIdAction, getOrdersAction, updateUserAction, getUserAction, deleteAddressAction, updateAddressAction, createAddressAction, getAddressesAction, updatePhonePePaymentAction, createPhonePeOrderAction, updateCartPaymentAction, createCartPaymentAction, updateRazorpayPaymentAction, createRazorpayOrderAction, deleteLineItemAction, updateLineItemAction, createLineItemAction, updateCartIdLineItemsAction, updateCartAction, createCartAction, getCartByIdAction, getCartAction, getCurrentUserLikedProductsAction, verifyOtp, signUpUser, loginUser, validateCartTotal } from './chunk-UNYTWMOI.js';
-export { applyDiscountAction, createAddressAction, createCartAction, createCartPaymentAction, createLineItemAction, createPhonePeOrderAction, createRazorpayOrderAction, deleteAddressAction, deleteLineItemAction, getAddressesAction, getAllTaxonsAction, getAvailableDiscountsAction, getCartAction, getCartByIdAction, getCurrentUserLikedProductsAction, getLikedProductsAction, getOrderByIdAction, getOrderInvoiceAction, getOrdersAction, getOrgVideosAction, getOrganizationAction, getProductByIdAction, getProductsAction, getProductsByIdsAction, getProductsFilterAction, getRecentlyViewedProductsAction, getRelatedProductsAction, getTaxonByIdAction, getTaxonomiesAction, getTaxonomyByIdAction, getUserAction, likeProductAction, loginUser, removeDiscountAction, signUpUser, trackDiscountEventAction, unlikeProductAction, updateAddressAction, updateCartAction, updateCartIdLineItemsAction, updateCartPaymentAction, updateLineItemAction, updatePhonePePaymentAction, updateRazorpayPaymentAction, updateUserAction, validateCartTotal, verifyOtp } from './chunk-UNYTWMOI.js';
-import { getPaymentGateway } from './chunk-ZXSZ7SQJ.js';
-import React8, { createContext, useEffect, useMemo, useState, useCallback, useContext, useRef, Component } from 'react';
-import posthog from 'posthog-js';
+import { removeDiscountById } from './chunk-KO6CRAXA.js';
+export { applyDiscount, removeDiscountById } from './chunk-KO6CRAXA.js';
+import { configureStorefront, trackDiscountEventAction, removeDiscountAction, applyDiscountAction, getAvailableDiscountsAction, getOrderInvoiceAction, getOrderByIdAction, getOrdersAction, updateUserAction, getUserAction, deleteAddressAction, updateAddressAction, createAddressAction, getAddressesAction, createStripePaymentIntentAction, updatePhonePePaymentAction, createPhonePeOrderAction, updateCartPaymentAction, createCartPaymentAction, updateRazorpayPaymentAction, createRazorpayOrderAction, deleteLineItemAction, updateLineItemAction, createLineItemAction, updateCartIdLineItemsAction, updateCartAction, createCartAction, getCartByIdAction, getCartAction, getCurrentUserLikedProductsAction, verifyOtp, signUpUser, loginUser, validateCartTotal } from './chunk-RVSC4ACF.js';
+export { applyDiscountAction, buildHeaders, configureStorefront, createAddressAction, createCartAction, createCartPaymentAction, createLineItemAction, createPhonePeOrderAction, createRazorpayOrderAction, createStripePaymentIntentAction, deleteAddressAction, deleteLineItemAction, getAddressesAction, getAllTaxonsAction, getApiBaseUrl, getAvailableDiscountsAction, getCartAction, getCartByIdAction, getCurrentUserLikedProductsAction, getEnv, getLikedProductsAction, getOrderByIdAction, getOrderInvoiceAction, getOrdersAction, getOrgVideosAction, getOrganizationAction, getOrganizationId, getProductByIdAction, getProductsAction, getProductsByIdsAction, getProductsFilterAction, getRecentlyViewedProductsAction, getRelatedProductsAction, getServerToken, getStorefrontGlobalConfig, getTaxonByIdAction, getTaxonomiesAction, getTaxonomyByIdAction, getUserAction, likeProductAction, loginUser, removeDiscountAction, revalidateCacheTag, signUpUser, trackDiscountEventAction, unlikeProductAction, updateAddressAction, updateCartAction, updateCartIdLineItemsAction, updateCartPaymentAction, updateLineItemAction, updatePhonePePaymentAction, updateRazorpayPaymentAction, updateUserAction, validateCartTotal, verifyOtp } from './chunk-RVSC4ACF.js';
+import { getPaymentGateway } from './chunk-LVG5TPNI.js';
+import { trackAddToCart, trackCustomEvent, buildItem, trackBeginCheckout, trackAddShippingInfo, trackAddPaymentInfo, trackPurchase, trackPaymentFailed } from './chunk-BF5W2AVU.js';
+export { buildItem, buildMeta, clearEcommerce, initGtmConfig, pushToDataLayer, trackAddPaymentInfo, trackAddShippingInfo, trackAddToCart, trackApplyCoupon, trackBeginCheckout, trackCustomEvent, trackPageView, trackPaymentFailed, trackPurchase, trackSearch, trackViewItem } from './chunk-BF5W2AVU.js';
+import { trackMetaAddToCart, trackMetaInitiateCheckout, trackMetaAddPaymentInfo, trackMetaPurchase } from './chunk-43QFS5VV.js';
+export { initMetaPixelConfig, trackMetaAddPaymentInfo, trackMetaAddToCart, trackMetaCompleteRegistration, trackMetaInitiateCheckout, trackMetaLead, trackMetaPageView, trackMetaPurchase, trackMetaSearch, trackMetaViewContent } from './chunk-43QFS5VV.js';
+import { initDeveloperPostHog, setDeveloperSuperProperties, identifyDeveloperUser, captureDeveloperException, devLogger, getDeveloperPostHog } from './chunk-PTJGNUY5.js';
+export { POSTHOG_INSTANCES, captureDeveloperException, devLogger, getDeveloperPostHog, getMerchantPostHog, getPostHogInstance, identifyDeveloperUser, initDeveloperPostHog, initMerchantPostHog, initPostHog, logDeveloper, resetDeveloperPostHog, sanitizePostHogToken, setDeveloperSuperProperties } from './chunk-PTJGNUY5.js';
+import { __publicField } from './chunk-V6TY7KAL.js';
+import React4, { createContext, useEffect, useMemo, useState, useCallback, useContext, useRef, Component } from 'react';
 import { jsxs, jsx, Fragment } from 'react/jsx-runtime';
-import { useRouter, usePathname, useSearchParams, useParams } from 'next/navigation';
 import Cookies from 'js-cookie';
 import { flatten, map, compact, filter, uniqBy } from 'lodash';
-import Link from 'next/link';
 import { useRazorpay } from 'react-razorpay';
 import { createPortal } from 'react-dom';
 
-// src/lib/thirdPartyScripts.js
+// src/lib/thirdPartyScripts.ts
 function nameToSlug(name = "") {
   const n = String(name || "").toLowerCase().trim();
   if (n.includes("google analytics")) return "google-analytics";
@@ -116,7 +120,7 @@ function injectClarity(projectId) {
   });
 }
 
-// src/components/tracking/ThirdPartyScripts.js
+// src/components/tracking/ThirdPartyScripts.tsx
 function ThirdPartyScripts({
   apiBaseUrl,
   orgId,
@@ -190,215 +194,6 @@ function ThirdPartyScripts({
   }, [apiBaseUrl, orgId, prefetched, orgData]);
   return null;
 }
-var POSTHOG_INSTANCES = {
-  DEVELOPER: "developer",
-  MERCHANT: "merchant"
-};
-var instanceRegistry = {
-  developer: null,
-  merchant: null
-};
-var globalListenersAttached = false;
-function getPostHogModule() {
-  if (posthog && typeof posthog.init === "function") return posthog;
-  if (posthog?.default && typeof posthog.default.init === "function") {
-    return posthog.default;
-  }
-  return posthog;
-}
-function sanitizePostHogToken(token) {
-  if (!token || typeof token !== "string") return "";
-  return token.trim();
-}
-function attachGlobalErrorListeners() {
-  if (globalListenersAttached || typeof window === "undefined") return;
-  window.addEventListener("error", (event) => {
-    try {
-      const error = event.error || new Error(event.message || "Unhandled Window Error");
-      captureDeveloperException(error, {
-        source: "window.onerror",
-        filename: event.filename,
-        lineno: event.lineno,
-        colno: event.colno
-      });
-    } catch (_) {
-    }
-  });
-  window.addEventListener("unhandledrejection", (event) => {
-    try {
-      const reason = event.reason;
-      const error = reason instanceof Error ? reason : new Error(typeof reason === "string" ? reason : "Unhandled Promise Rejection");
-      captureDeveloperException(error, {
-        source: "window.onunhandledrejection",
-        reason: typeof reason === "object" ? JSON.stringify(reason) : String(reason)
-      });
-    } catch (_) {
-    }
-  });
-  globalListenersAttached = true;
-}
-function initPostHog(instanceName, config = {}) {
-  if (typeof window === "undefined") return null;
-  if (instanceRegistry[instanceName]) {
-    return instanceRegistry[instanceName];
-  }
-  const isProd = typeof process !== "undefined" && process.env?.NODE_ENV === "production";
-  const forceEnable = config.enabledInDev || config.forceEnable || typeof process !== "undefined" && process.env?.NEXT_PUBLIC_POSTHOG_DEVELOPER_ENABLE_IN_DEV === "true";
-  if (!isProd && !forceEnable) {
-    return null;
-  }
-  const rawToken = config.token;
-  const token = sanitizePostHogToken(rawToken);
-  if (!token) {
-    if (process.env.NODE_ENV === "development") {
-      console.warn(
-        `[PostHog] No token provided for "${instanceName}" instance. Telemetry will be disabled.`
-      );
-    }
-    return null;
-  }
-  const apiHost = config.apiHost || config.host || typeof process !== "undefined" && process.env.NEXT_PUBLIC_POSTHOG_HOST_DEVELOPER || "https://us.i.posthog.com";
-  try {
-    const isDeveloper = instanceName === POSTHOG_INSTANCES.DEVELOPER;
-    const options = {
-      api_host: apiHost,
-      // Use isolated storage key so developer instance never clashes with merchant session
-      persistence_name: isDeveloper ? "ph_developer" : "ph_merchant",
-      autocapture: config.autocapture ?? false,
-      capture_pageview: config.capturePageview ?? false,
-      capture_exceptions: config.captureExceptions ?? (isDeveloper ? {
-        capture_unhandled_errors: true,
-        capture_unhandled_rejections: true,
-        capture_console_errors: true
-      } : true),
-      disable_session_recording: config.disableSessionRecording ?? true,
-      loaded: (phInstance) => {
-        if (process.env.NODE_ENV === "development") {
-          phInstance.debug();
-        }
-        if (typeof config.onLoaded === "function") {
-          config.onLoaded(phInstance);
-        }
-      },
-      ...config.customOptions
-    };
-    const ph = getPostHogModule();
-    const client = ph.init(token, options, instanceName);
-    instanceRegistry[instanceName] = client || ph?.[instanceName] || null;
-    if (isDeveloper && instanceRegistry[instanceName]) {
-      attachGlobalErrorListeners();
-      if (typeof window !== "undefined") {
-        window.__posthog_developer = instanceRegistry[instanceName];
-        window.devLogger = devLogger;
-      }
-    }
-    return instanceRegistry[instanceName];
-  } catch (err) {
-    console.error(`[PostHog] Failed to initialize "${instanceName}" instance:`, err);
-    return null;
-  }
-}
-function initDeveloperPostHog(options = {}) {
-  const token = options.token || (typeof process !== "undefined" ? process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN_DEVELOPER : null);
-  const apiHost = options.apiHost || options.host || (typeof process !== "undefined" ? process.env.NEXT_PUBLIC_POSTHOG_HOST_DEVELOPER : null) || "https://us.i.posthog.com";
-  return initPostHog(POSTHOG_INSTANCES.DEVELOPER, {
-    ...options,
-    token,
-    apiHost
-  });
-}
-function initMerchantPostHog(options = {}) {
-  return initPostHog(POSTHOG_INSTANCES.MERCHANT, options);
-}
-function getPostHogInstance(instanceName) {
-  if (typeof window === "undefined") return null;
-  const ph = getPostHogModule();
-  return instanceRegistry[instanceName] || ph?.[instanceName] || null;
-}
-function getDeveloperPostHog() {
-  return getPostHogInstance(POSTHOG_INSTANCES.DEVELOPER);
-}
-function getMerchantPostHog() {
-  return getPostHogInstance(POSTHOG_INSTANCES.MERCHANT);
-}
-function setDeveloperSuperProperties(properties = {}) {
-  const client = getDeveloperPostHog();
-  if (client && typeof client.register === "function") {
-    client.register(properties);
-  }
-}
-function identifyDeveloperUser(userId, userProperties = {}) {
-  const client = getDeveloperPostHog();
-  if (client && userId && typeof client.identify === "function") {
-    client.identify(String(userId), userProperties);
-  }
-}
-function resetDeveloperPostHog() {
-  const client = getDeveloperPostHog();
-  if (client && typeof client.reset === "function") {
-    client.reset();
-  }
-}
-function captureDeveloperException(error, properties = {}) {
-  const client = getDeveloperPostHog();
-  const errObj = error instanceof Error ? error : new Error(typeof error === "string" ? error : "Unknown Developer Error");
-  const payload = {
-    $exception_message: errObj.message,
-    $exception_type: errObj.name || "Error",
-    $exception_stack_trace_raw: errObj.stack || null,
-    timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-    url: typeof window !== "undefined" ? window.location.href : null,
-    ...properties
-  };
-  if (client) {
-    if (typeof client.captureException === "function") {
-      client.captureException(errObj, payload);
-    } else {
-      client.capture("$exception", payload);
-    }
-  } else {
-    if (process.env.NODE_ENV === "development") {
-      console.error("[DeveloperError - Unreported]", errObj, properties);
-    }
-  }
-}
-function logDeveloper(message, level = "info", properties = {}) {
-  const client = getDeveloperPostHog();
-  const logPayload = {
-    level,
-    message: typeof message === "string" ? message : JSON.stringify(message),
-    timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-    url: typeof window !== "undefined" ? window.location.href : null,
-    ...properties
-  };
-  if (client) {
-    if (typeof client.log === "function") {
-      try {
-        client.log(logPayload.message, level === "debug" ? "log" : level);
-      } catch (_) {
-      }
-    }
-    client.capture("developer_log", logPayload);
-  }
-  if (level === "error" && properties?.error) {
-    captureDeveloperException(properties.error, {
-      logMessage: message,
-      ...properties
-    });
-  }
-}
-var devLogger = {
-  debug: (message, meta = {}) => logDeveloper(message, "debug", meta),
-  info: (message, meta = {}) => logDeveloper(message, "info", meta),
-  warn: (message, meta = {}) => logDeveloper(message, "warn", meta),
-  error: (message, errorOrMeta = null, extraMeta = {}) => {
-    if (errorOrMeta instanceof Error) {
-      logDeveloper(message, "error", { ...extraMeta, error: errorOrMeta });
-    } else {
-      logDeveloper(message, "error", { ...errorOrMeta, ...extraMeta });
-    }
-  }
-};
 var CoreContext = createContext(null);
 var inbuiltActions = {
   // Cart
@@ -418,14 +213,13 @@ var inbuiltActions = {
   updateCartPayment: updateCartPaymentAction,
   createPhonePeOrder: createPhonePeOrderAction,
   updatePhonePePayment: updatePhonePePaymentAction,
+  createStripePaymentIntent: createStripePaymentIntentAction,
   // Addresses
   getUserAddress: getAddressesAction,
   createAddress: createAddressAction,
   updateAddress: updateAddressAction,
   deleteAddress: deleteAddressAction,
-  // Auth — wrappers align the (phone, code, countryCode) call signature used by
-  // CustomOTPAuth with the payload shape expected by the Rails API.
-  // Mirrors exactly what sbs-store-frontend/context/Coreproviders.js does.
+  // Auth
   login: (phone, countryCode = "+91") => loginUser({ phone, country_code: countryCode }),
   signup: ({ firstName, lastName, phone, countryCode = "+91" }) => signUpUser({ firstName, lastName, phone, countryCode }),
   verifyOtp: (phone, code, countryCode = "+91") => verifyOtp({ phone, country_code: countryCode, code }),
@@ -450,7 +244,9 @@ var CoreProvider = ({
   actions = EMPTY_ACTIONS,
   toast = null,
   auth: injectedAuth = null,
-  orgData
+  orgData,
+  adapter,
+  linkComponent
 }) => {
   const isRegionBased = !!(config?.isRegion || config?.activeRegion || config?.region);
   const resolvedRegion = config?.activeRegion ?? config?.region ?? null;
@@ -478,6 +274,17 @@ var CoreProvider = ({
   );
   const primaryColor = resolvedConfig?.primaryColor ?? "#00214c";
   const secondaryColor = resolvedConfig?.secondaryColor ?? "#c8a95a";
+  useEffect(() => {
+    if (config?.apiBaseUrl || config?.storeId || adapter) {
+      configureStorefront({
+        apiBaseUrl: config?.apiBaseUrl,
+        storeId: config?.storeId,
+        countryCode: config?.countryCode,
+        currency: resolvedCurrency,
+        adapter
+      });
+    }
+  }, [config?.apiBaseUrl, config?.storeId, config?.countryCode, resolvedCurrency, adapter]);
   const [cart, setCart] = useState();
   const [isCartLoading, setIsCartLoading] = useState(true);
   const [region, setRegion] = useState(resolvedConfig?.region ?? null);
@@ -573,14 +380,14 @@ var CoreProvider = ({
     config?.posthogDeveloperHost
   ]);
   useEffect(() => {
-    const userId = auth?.user?.id || auth?.userId || null;
+    const userId = auth?.user?.id || auth?.user?.userId || null;
     if (userId) {
-      identifyDeveloperUser(userId, {
+      identifyDeveloperUser(String(userId), {
         phone: auth?.user?.phone || null,
         email: auth?.user?.email || null
       });
     }
-  }, [auth?.user?.id, auth?.userId, auth?.user?.phone, auth?.user?.email]);
+  }, [auth?.user?.id, auth?.user?.userId, auth?.user?.phone, auth?.user?.email]);
   useEffect(() => {
     if (!resolvedActions?.getCart) return;
     if (resolvedConfig?.isRegion && !resolvedConfig?.regionId) {
@@ -647,21 +454,20 @@ var CoreProvider = ({
       setCart,
       isCartLoading,
       region: resolvedRegion,
-      // use the resolved region, not the stale local state
       setRegion,
       activeRegion: resolvedRegion,
-      // top-level convenience field
       actions: resolvedActions,
       toast,
       auth,
       config: resolvedConfig,
-      // consumers call useCore().config — key must be "config"
       orgData,
       primaryColor,
       secondaryColor,
       devLogger,
       captureDeveloperException,
-      posthogDeveloper: getDeveloperPostHog()
+      posthogDeveloper: getDeveloperPostHog(),
+      adapter,
+      linkComponent
     }),
     [
       cart,
@@ -673,7 +479,9 @@ var CoreProvider = ({
       auth,
       orgData,
       primaryColor,
-      secondaryColor
+      secondaryColor,
+      adapter,
+      linkComponent
     ]
   );
   return /* @__PURE__ */ jsxs(CoreContext.Provider, { value, children: [
@@ -707,429 +515,11 @@ var useCore = () => {
   return context;
 };
 
-// src/hooks/useCart.js
+// src/hooks/useCart.ts
 var useCart = () => {
   const { cart, setCart, isCartLoading, config } = useCore();
   return { cart, setCart, isCartLoading, config };
 };
-
-// src/lib/gtm.js
-var gtmConfig = {
-  enabled: false,
-  gtmContainerId: null,
-  ga4MeasurementId: null
-};
-function initGtmConfig(config) {
-  if (config) {
-    gtmConfig = {
-      ...gtmConfig,
-      ...config
-    };
-  }
-}
-function pushToDataLayer(payload) {
-  if (!gtmConfig.enabled || typeof window === "undefined") return;
-  window.dataLayer = window.dataLayer || [];
-  window.dataLayer.push(payload);
-}
-function clearEcommerce() {
-  pushToDataLayer({ ecommerce: null });
-}
-function buildMeta(overrides = {}) {
-  const isMobile = typeof window !== "undefined" && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
-  return {
-    country: "IN",
-    device: isMobile ? "mobile" : "desktop",
-    platform: "web",
-    source: "direct",
-    ...overrides
-  };
-}
-function buildItem(product, qty = 1) {
-  return {
-    item_id: product?.id ?? product?.sku ?? "",
-    item_name: product?.name ?? product?.line_itemable?.name ?? "",
-    item_category: product?.taxons?.[0]?.display_name ?? product?.category ?? "",
-    price: Number(
-      product?.display_price ?? product?.price ?? product?.line_itemable?.price ?? 0
-    ),
-    quantity: Number(qty)
-  };
-}
-function trackPageView(userId, metaOverrides = {}) {
-  clearEcommerce();
-  pushToDataLayer({
-    event: "page_view",
-    user_id: userId ?? null,
-    ecommerce: null,
-    meta: buildMeta(metaOverrides)
-  });
-}
-function trackSearch(userId, searchTerm, metaOverrides = {}) {
-  clearEcommerce();
-  pushToDataLayer({
-    event: "search",
-    user_id: userId ?? null,
-    search_term: searchTerm,
-    ecommerce: null,
-    meta: buildMeta(metaOverrides)
-  });
-}
-function trackViewItem({
-  userId,
-  product,
-  currency = "INR",
-  metaOverrides = {}
-}) {
-  const price = Number(product?.display_price ?? product?.price ?? 0);
-  clearEcommerce();
-  pushToDataLayer({
-    event: "view_item",
-    user_id: userId ?? null,
-    ecommerce: {
-      currency,
-      value: price,
-      tax: 0,
-      shipping: 0,
-      discount: 0,
-      items: [buildItem(product)]
-    },
-    meta: buildMeta(metaOverrides)
-  });
-}
-function trackAddToCart({
-  userId,
-  product,
-  qty = 1,
-  currency = "INR",
-  metaOverrides = {}
-}) {
-  const price = Number(product?.display_price ?? product?.price ?? 0);
-  clearEcommerce();
-  pushToDataLayer({
-    event: "add_to_cart",
-    user_id: userId ?? null,
-    ecommerce: {
-      currency,
-      value: price * qty,
-      tax: 0,
-      shipping: 0,
-      discount: 0,
-      items: [buildItem(product, qty)]
-    },
-    meta: buildMeta(metaOverrides)
-  });
-}
-function trackBeginCheckout({
-  userId,
-  cart,
-  currency = "INR",
-  metaOverrides = {},
-  transactionId
-}) {
-  const value = Number(cart?.total ?? cart?.display_total ?? 0);
-  const tax = Number(cart?.tax_total ?? 0);
-  const shipping = Number(cart?.ship_total ?? 0);
-  const discount = Number(cart?.promo_total ?? 0);
-  const items = (cart?.line_items ?? []).map(
-    (li) => buildItem(li?.variant ?? li?.line_itemable ?? li, li?.quantity ?? 1)
-  );
-  clearEcommerce();
-  pushToDataLayer({
-    event: "begin_checkout",
-    user_id: userId ?? null,
-    ecommerce: {
-      transaction_id: transactionId ?? "",
-      // optional, but recommended for GA4 funnel reports
-      currency,
-      value,
-      tax,
-      shipping,
-      discount: Math.abs(discount),
-      items
-    },
-    meta: buildMeta(metaOverrides)
-  });
-}
-function trackPurchase({
-  userId,
-  transactionId,
-  cart,
-  currency = "INR",
-  metaOverrides = {}
-}) {
-  const value = Number(cart?.total ?? cart?.display_total ?? 0);
-  const tax = Number(cart?.tax_total ?? 0);
-  const shipping = Number(cart?.ship_total ?? 0);
-  const discount = Number(cart?.promo_total ?? 0);
-  const items = (cart?.line_items ?? []).map(
-    (li) => buildItem(li?.variant ?? li?.line_itemable ?? li, li?.quantity ?? 1)
-  );
-  clearEcommerce();
-  pushToDataLayer({
-    event: "purchase",
-    user_id: userId ?? null,
-    ecommerce: {
-      transaction_id: transactionId ?? "",
-      // ← required for GA4 funnel reports
-      currency,
-      value,
-      tax,
-      shipping,
-      discount: Math.abs(discount),
-      // promo_total is usually negative
-      items
-    },
-    meta: buildMeta(metaOverrides)
-  });
-}
-function trackAddShippingInfo({
-  userId,
-  cart,
-  shippingTier = "Standard",
-  currency = "INR",
-  metaOverrides = {}
-}) {
-  const value = Number(cart?.total ?? cart?.display_total ?? 0);
-  const tax = Number(cart?.tax_total ?? 0);
-  const shipping = Number(cart?.ship_total ?? 0);
-  const discount = Number(cart?.promo_total ?? 0);
-  const items = (cart?.line_items ?? []).map(
-    (li) => buildItem(li?.variant ?? li?.line_itemable ?? li, li?.quantity ?? 1)
-  );
-  clearEcommerce();
-  pushToDataLayer({
-    event: "add_shipping_info",
-    user_id: userId ?? null,
-    ecommerce: {
-      currency,
-      value,
-      tax,
-      shipping,
-      discount: Math.abs(discount),
-      shipping_tier: shippingTier,
-      items
-    },
-    meta: buildMeta(metaOverrides)
-  });
-}
-function trackAddPaymentInfo({
-  userId,
-  cart,
-  paymentType = "Razorpay",
-  currency = "INR",
-  metaOverrides = {}
-}) {
-  const value = Number(cart?.total ?? cart?.display_total ?? 0);
-  const tax = Number(cart?.tax_total ?? 0);
-  const shipping = Number(cart?.ship_total ?? 0);
-  const discount = Number(cart?.promo_total ?? 0);
-  const items = (cart?.line_items ?? []).map(
-    (li) => buildItem(li?.variant ?? li?.line_itemable ?? li, li?.quantity ?? 1)
-  );
-  clearEcommerce();
-  pushToDataLayer({
-    event: "add_payment_info",
-    user_id: userId ?? null,
-    ecommerce: {
-      currency,
-      value,
-      tax,
-      shipping,
-      discount: Math.abs(discount),
-      payment_type: paymentType,
-      items
-    },
-    meta: buildMeta(metaOverrides)
-  });
-}
-function trackApplyCoupon({
-  userId,
-  cart,
-  couponCode,
-  currency = "INR",
-  metaOverrides = {}
-}) {
-  const discount = Math.abs(Number(cart?.promo_total ?? 0));
-  const items = (cart?.line_items ?? []).map(
-    (li) => buildItem(li?.variant ?? li?.line_itemable ?? li, li?.quantity ?? 1)
-  );
-  clearEcommerce();
-  pushToDataLayer({
-    event: "apply_coupon",
-    user_id: userId ?? null,
-    ecommerce: {
-      currency,
-      value: Number(cart?.total ?? 0),
-      tax: Number(cart?.tax_total ?? 0),
-      shipping: Number(cart?.ship_total ?? 0),
-      discount,
-      coupon: couponCode,
-      items
-    },
-    meta: buildMeta(metaOverrides)
-  });
-}
-function trackPaymentFailed({
-  userId,
-  cart,
-  errorCode = "",
-  errorReason = "",
-  currency = "INR",
-  metaOverrides = {}
-}) {
-  const value = Number(cart?.total ?? cart?.display_total ?? 0);
-  const items = (cart?.line_items ?? []).map(
-    (li) => buildItem(li?.variant ?? li?.line_itemable ?? li, li?.quantity ?? 1)
-  );
-  clearEcommerce();
-  pushToDataLayer({
-    event: "payment_failed",
-    user_id: userId ?? null,
-    ecommerce: {
-      currency,
-      value,
-      tax: Number(cart?.tax_total ?? 0),
-      shipping: Number(cart?.ship_total ?? 0),
-      discount: Math.abs(Number(cart?.promo_total ?? 0)),
-      items,
-      error_code: errorCode,
-      error_reason: errorReason
-    },
-    meta: buildMeta(metaOverrides)
-  });
-}
-function trackCustomEvent(eventName, userId, ecommerce = {}, metaOverrides = {}) {
-  clearEcommerce();
-  pushToDataLayer({
-    event: eventName,
-    user_id: userId ?? null,
-    ecommerce: {
-      currency: "INR",
-      value: 0,
-      tax: 0,
-      shipping: 0,
-      discount: 0,
-      items: [],
-      ...ecommerce
-    },
-    meta: buildMeta(metaOverrides)
-  });
-}
-
-// src/lib/metaPixel.js
-var metaPixelConfig = {
-  enabled: false,
-  pixelId: null,
-  enabledEvents: []
-  // Array of enabled event IDs, e.g., ["PageView", "Purchase"]
-};
-function initMetaPixelConfig(config) {
-  if (config) {
-    metaPixelConfig = {
-      ...metaPixelConfig,
-      ...config
-    };
-  }
-}
-function isEventEnabled(eventName) {
-  return metaPixelConfig.enabled && metaPixelConfig.pixelId && metaPixelConfig.enabledEvents.includes(eventName);
-}
-function fbq(...args) {
-  if (typeof window !== "undefined" && typeof window.fbq === "function") {
-    window.fbq(...args);
-  }
-}
-function trackMetaPageView() {
-  if (!isEventEnabled("PageView")) return;
-  fbq("track", "PageView");
-}
-function trackMetaViewContent(product) {
-  if (!isEventEnabled("ViewContent")) return;
-  if (!product) return;
-  fbq("track", "ViewContent", {
-    content_ids: [product.id || product.sku || ""],
-    content_name: product.name || "",
-    content_type: "product",
-    value: Number(product.price ? product.price / 100 : 0),
-    currency: "INR"
-  });
-}
-function trackMetaSearch(searchQuery) {
-  if (!isEventEnabled("Search")) return;
-  if (!searchQuery) return;
-  fbq("track", "Search", {
-    search_string: searchQuery
-  });
-}
-function trackMetaAddToCart(product, qty = 1) {
-  if (!isEventEnabled("AddToCart")) return;
-  if (!product) return;
-  fbq("track", "AddToCart", {
-    content_ids: [product.id || product.sku || ""],
-    content_name: product.name || "",
-    content_type: "product",
-    value: Number(product.price ? product.price / 100 : 0) * Number(qty),
-    currency: "INR",
-    contents: [
-      {
-        id: product.id || product.sku || "",
-        quantity: Number(qty)
-      }
-    ]
-  });
-}
-function trackMetaInitiateCheckout(cart) {
-  if (!isEventEnabled("InitiateCheckout")) return;
-  if (!cart) return;
-  const contentIds = cart.line_items?.map((item) => item.variant_id || item.id) || [];
-  const contents = cart.line_items?.map((item) => ({
-    id: item.variant_id || item.id,
-    quantity: item.quantity
-  })) || [];
-  fbq("track", "InitiateCheckout", {
-    content_ids: contentIds,
-    contents,
-    value: Number(cart.total ? cart.total / 100 : 0),
-    currency: "INR",
-    num_items: cart.item_count || cart.line_items?.length || 0
-  });
-}
-function trackMetaAddPaymentInfo(cart) {
-  if (!isEventEnabled("AddPaymentInfo")) return;
-  fbq("track", "AddPaymentInfo", {
-    value: Number(cart?.total ? cart.total / 100 : 0),
-    currency: "INR"
-  });
-}
-function trackMetaPurchase(order) {
-  if (!isEventEnabled("Purchase")) return;
-  if (!order) return;
-  const contentIds = order.line_items?.map((item) => item.variant_id || item.id) || [];
-  const contents = order.line_items?.map((item) => ({
-    id: item.variant_id || item.id,
-    quantity: item.quantity
-  })) || [];
-  fbq("track", "Purchase", {
-    content_ids: contentIds,
-    contents,
-    value: Number(order.total ? order.total / 100 : 0),
-    currency: "INR",
-    num_items: order.item_count || order.line_items?.length || 0
-  });
-}
-function trackMetaCompleteRegistration() {
-  if (!isEventEnabled("CompleteRegistration")) return;
-  fbq("track", "CompleteRegistration", {
-    status: "completed"
-  });
-}
-function trackMetaLead() {
-  if (!isEventEnabled("Lead")) return;
-  fbq("track", "Lead");
-}
-
-// src/hooks/useAddToCart.js
 function useAddToCart() {
   const { cart, setCart, actions, toast, auth, config } = useCore();
   const [quantity, setQuantity] = useState(1);
@@ -1241,7 +631,8 @@ function useAddToCart() {
         }
       }
       await addItemToCart(product, resolvedCartId, customizations, overrideQty);
-      const userId = auth?.user?.id ?? auth?.user?.userId ?? null;
+      const rawUserId = auth?.user?.id ?? auth?.user?.userId ?? null;
+      const userId = rawUserId !== null ? String(rawUserId) : null;
       const currency = config?.currency ?? "INR";
       const qty = overrideQty !== null ? overrideQty : quantity ?? 1;
       trackAddToCart({ userId, product, qty, currency });
@@ -1306,7 +697,8 @@ function useAddToCart() {
       if (activeCartId) {
         await refreshCart(activeCartId);
       }
-      const userId = auth?.user?.id ?? auth?.user?.userId ?? null;
+      const rawUserId = auth?.user?.id ?? auth?.user?.userId ?? null;
+      const userId = rawUserId !== null ? String(rawUserId) : null;
       const currency = config?.currency ?? "INR";
       trackCustomEvent("remove_from_cart", userId, {
         currency,
@@ -1345,7 +737,7 @@ function useAddToCart() {
   };
 }
 
-// src/hooks/useCurrencyFormat.js
+// src/hooks/useCurrencyFormat.ts
 function useCurrencyFormat() {
   const { config, orgData } = useCore();
   const activeRegion = config?.isRegion ? config?.activeRegion ?? config?.region ?? null : null;
@@ -1370,14 +762,65 @@ function useCurrencyFormat() {
   return { formatCurrency };
 }
 
-// src/hooks/useAuth.js
+// src/hooks/useAuth.ts
 var useAuth = () => {
   const { auth } = useCore();
   return auth ?? {};
 };
+var useStorefrontRouter = (overrideRouter) => {
+  const core = useCore();
+  const routerAdapter = overrideRouter ?? core?.adapter?.router;
+  return useMemo(() => {
+    if (routerAdapter) {
+      return {
+        push: (url) => {
+          if (routerAdapter.push) return routerAdapter.push(url);
+          if (typeof window !== "undefined") window.location.href = url;
+        },
+        replace: (url) => {
+          if (routerAdapter.replace) return routerAdapter.replace(url);
+          if (typeof window !== "undefined") window.location.replace(url);
+        },
+        prefetch: (url) => {
+          routerAdapter.prefetch?.(url);
+        },
+        refresh: () => {
+          if (routerAdapter.refresh) return routerAdapter.refresh();
+          if (typeof window !== "undefined") window.location.reload();
+        },
+        back: () => {
+          if (routerAdapter.back) return routerAdapter.back();
+          if (typeof window !== "undefined") window.history.back();
+        },
+        pathname: routerAdapter.pathname ?? (typeof window !== "undefined" ? window.location.pathname : "/"),
+        searchParams: routerAdapter.searchParams ?? (typeof window !== "undefined" ? new URLSearchParams(window.location.search) : new URLSearchParams())
+      };
+    }
+    return {
+      push: (url) => {
+        if (typeof window !== "undefined") window.location.href = url;
+      },
+      replace: (url) => {
+        if (typeof window !== "undefined") window.location.replace(url);
+      },
+      prefetch: (_url) => {
+      },
+      refresh: () => {
+        if (typeof window !== "undefined") window.location.reload();
+      },
+      back: () => {
+        if (typeof window !== "undefined") window.history.back();
+      },
+      pathname: typeof window !== "undefined" ? window.location.pathname : "/",
+      searchParams: typeof window !== "undefined" ? new URLSearchParams(window.location.search) : new URLSearchParams()
+    };
+  }, [routerAdapter]);
+};
+
+// src/hooks/useLogout.ts
 var useLogout = () => {
-  const { auth } = useCore();
-  const router = useRouter();
+  const { auth, adapter } = useCore();
+  const router = useStorefrontRouter(adapter?.router);
   const logout = async () => {
     if (auth?.logout) {
       await auth.logout();
@@ -1385,21 +828,26 @@ var useLogout = () => {
       if (auth?.clearAuth) {
         auth.clearAuth();
       }
-      localStorage.removeItem("cartid");
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("user");
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("cartid");
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("user");
+      }
       try {
         Cookies.remove("access_token", { path: "/" });
       } catch (e) {
         console.error("Failed to remove cookies using js-cookie:", e);
       }
-      document.cookie = "access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/";
+      if (typeof document !== "undefined") {
+        document.cookie = "access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/";
+      }
       try {
         await fetch("/api/logout", { method: "POST" });
       } catch (e) {
-        console.error("Failed to call /api/logout:", e);
       }
       router.push("/");
+      router.refresh();
+      return;
     }
     router.refresh();
   };
@@ -1548,7 +996,7 @@ function useVariantSelection(rawProduct) {
   };
 }
 
-// src/hooks/useAddresses.js
+// src/hooks/useAddresses.ts
 function useAddresses() {
   const { addresses, isAddressLoading, refreshAddresses, actions, auth } = useCore();
   const token = auth?.token ?? auth?.access_token ?? null;
@@ -1565,7 +1013,7 @@ function useAddresses() {
   };
 }
 
-// src/hooks/userCartInfo.js
+// src/hooks/userCartInfo.ts
 var useCartInfo = () => {
   const initialCartInfo = {
     number: "",
@@ -1594,7 +1042,7 @@ var useCartInfo = () => {
 var userCartInfo_default = useCartInfo;
 var likedCache = /* @__PURE__ */ new Map();
 var CACHE_TTL_MS = 5 * 60 * 1e3;
-var isFresh = (entry) => entry && Date.now() - entry.fetchedAt < CACHE_TTL_MS;
+var isFresh = (entry) => !!entry && Date.now() - entry.fetchedAt < CACHE_TTL_MS;
 var likedSubscribers = /* @__PURE__ */ new Set();
 function useGetCurrentUserLikedProductsQuery(token = null, { page = 1, perPage = 11, skip = false } = {}) {
   const isSkip = skip || !token;
@@ -1694,7 +1142,10 @@ var normalizeMode = (value) => {
   return "signin";
 };
 var buildOtpArray = (length) => Array.from({ length }, () => "");
-var CustomOTPAuth = ({ mode = "sign-in", onLoginSuccess }) => {
+var CustomOTPAuth = ({
+  mode = "sign-in",
+  onLoginSuccess
+}) => {
   const { actions, auth, config, toast } = useCore();
   const [authMode, setAuthMode] = useState(() => normalizeMode(mode));
   const [step, setStep] = useState("phone");
@@ -1704,7 +1155,7 @@ var CustomOTPAuth = ({ mode = "sign-in", onLoginSuccess }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [timer, setTimer] = useState(0);
   const otpRefs = useRef([]);
-  const countryCode = config?.countryCode ?? "+91";
+  const countryCode = String(config?.countryCode ?? "+91");
   const otpLength = Number(config?.otpLength ?? 6);
   const [otp, setOtp] = useState(() => buildOtpArray(otpLength));
   useEffect(() => {
@@ -1970,7 +1421,10 @@ var CustomOTPAuth = ({ mode = "sign-in", onLoginSuccess }) => {
     ] })
   ] });
 };
-var AuthManager = ({ mode = "sign-in", onLoginSuccess }) => {
+var AuthManager = ({
+  mode = "sign-in",
+  onLoginSuccess
+}) => {
   const { config, auth } = useCore();
   const authType = config?.authType ?? "clerk";
   if (authType === "clerk") {
@@ -2349,10 +1803,10 @@ var CartPage = ({
     },
     items: {}
   };
-  const [isWide, setIsWide] = React8.useState(
+  const [isWide, setIsWide] = React4.useState(
     typeof window !== "undefined" ? window.innerWidth >= 768 : true
   );
-  React8.useEffect(() => {
+  React4.useEffect(() => {
     const handleResize = () => setIsWide(window.innerWidth >= 768);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
@@ -2380,7 +1834,7 @@ var CartPage = ({
     header ?? /* @__PURE__ */ jsx("h1", { style: s.heading, children: "Your Cart" }),
     /* @__PURE__ */ jsxs("div", { style: isWide ? s.layoutDesktop : s.layout, children: [
       /* @__PURE__ */ jsx("div", { style: s.items, children: lineItems.map(
-        (item) => renderItem ? /* @__PURE__ */ jsx(React8.Fragment, { children: renderItem(item) }, item.id) : /* @__PURE__ */ jsx(CartItem, { item }, item.id)
+        (item) => renderItem ? /* @__PURE__ */ jsx(React4.Fragment, { children: renderItem(item) }, item.id) : /* @__PURE__ */ jsx(CartItem, { item }, item.id)
       ) }),
       renderSummary ? renderSummary() : /* @__PURE__ */ jsx(
         CartSummary,
@@ -2396,7 +1850,7 @@ var CustomizationModal = ({
   isOpen,
   onClose,
   product,
-  customizationsList,
+  customizationsList = [],
   onConfirm,
   initialValues = {},
   initialQuantity = 1,
@@ -2519,7 +1973,7 @@ var ViewCustomizationModal = ({
           /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-600 mt-1", children: customization.value })
         ]
       },
-      `${customization.product_customization_id}-${index}`
+      `${customization.product_customization_id || index}-${index}`
     )) : /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-500 text-center py-4", children: "No customizations added" }) }),
     /* @__PURE__ */ jsx(
       "button",
@@ -2576,14 +2030,18 @@ var noProductImage = `data:image/svg+xml;utf8,${encodeURIComponent(
     <path d="M152.5 313.5L190.369 275.63C192.526 273.475 195.451 272.263 198.5 272.263C201.549 272.263 204.474 273.475 206.631 275.63L213.37 282.37C215.526 284.525 218.451 285.737 221.5 285.737C224.549 285.737 227.474 284.525 229.63 282.37L262.739 249.261C267.052 244.949 272.901 242.527 279 242.527C285.099 242.527 290.948 244.949 295.261 249.261L359.5 313.5M152.5 175.5V336.5C152.5 339.55 153.712 342.475 155.868 344.632C158.025 346.788 160.95 348 164 348H348C351.05 348 353.975 346.788 356.132 344.632C358.288 342.475 359.5 339.55 359.5 336.5V175.5C359.5 172.45 358.288 169.525 356.132 167.368C353.975 165.212 351.05 164 348 164H164C160.95 164 158.025 165.212 155.868 167.368C153.712 169.525 152.5 172.45 152.5 175.5ZM210 210C210 213.05 211.212 215.975 213.368 218.132C215.525 220.288 218.45 221.5 221.5 221.5C224.55 221.5 227.475 220.288 229.632 218.132C231.788 215.975 233 213.05 233 210C233 206.95 231.788 204.025 229.632 201.868C227.475 199.712 224.55 198.5 221.5 198.5C218.45 198.5 215.525 199.712 213.368 201.868C211.212 204.025 210 206.95 210 210Z" stroke="#7B7B7B" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>`
 )}`;
-var ProductlistCard = ({ product, component, orderType }) => {
+var ProductlistCard = ({
+  product,
+  component = null,
+  orderType
+}) => {
+  const router = useStorefrontRouter();
   const { name, price, shipping_charge } = product?.line_itemable ?? {};
   const productImage = product?.image;
   const quantity = product?.quantity;
   const displayPrice = (price ?? 0) / 100;
   const sq = product?.line_itemable?.selling_quantity;
-  const hasSellingQuantity = sq && typeof sq === "object" ? Array.isArray(sq.values) ? sq.values.length > 0 : Object.keys(sq).length > 0 : Boolean(sq);
-  const isSellingQty = hasSellingQuantity;
+  sq && typeof sq === "object" ? Array.isArray(sq.values) ? sq.values.length > 0 : Object.keys(sq).length > 0 : Boolean(sq);
   const variantOptions = product?.line_itemable?.variant_options ?? [];
   const { formatCurrency } = useCurrencyFormat();
   const {
@@ -2607,7 +2065,7 @@ var ProductlistCard = ({ product, component, orderType }) => {
     let url = `/product/${productId}?taxonid=${taxonId}`;
     if (variantId) url += `&variantId=${variantId}`;
     if (quantity && quantity > 1) url += `&qty=${quantity}`;
-    window.location.href = url;
+    router.push(url);
   };
   const handleImageError = (event) => {
     event.currentTarget.onerror = null;
@@ -2632,207 +2090,113 @@ var ProductlistCard = ({ product, component, orderType }) => {
       console.error(err);
     }
   };
-  const initialCustomizationObj = (product?.line_items_customizations || []).reduce((acc, c) => {
-    acc[c.product_customization_id] = c;
-    return acc;
-  }, {});
-  const customizationsList = product?.line_itemable?.product_customizations || [];
-  const hasCustomizations = product?.line_items_customizations?.length > 0 || customizationsList.length > 0;
-  const isDeleted = !product?.line_itemable || product?.line_itemable_deleted;
-  if (isDeleted) {
-    return /* @__PURE__ */ jsxs(
-      "div",
-      {
-        className: `flex justify-between gap-4 transition-all duration-200 ${isItemDeleting ? "opacity-40 pointer-events-none scale-[0.99]" : ""}`,
-        children: [
-          /* @__PURE__ */ jsxs("div", { className: "flex gap-[10px] flex-1 min-w-0 opacity-50", children: [
-            /* @__PURE__ */ jsxs("div", { className: "w-[112px] h-[124px] flex-shrink-0 overflow-hidden relative", children: [
-              /* @__PURE__ */ jsx(
-                "img",
-                {
-                  src: productImage || noProductImage,
-                  alt: name || "Product",
-                  className: "w-[112px] h-[124px] object-cover rounded-lg",
-                  onError: handleImageError
-                }
-              ),
-              /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-lg", children: /* @__PURE__ */ jsx("span", { className: "text-white text-xs font-[var(--font-bold)] text-center", children: "UNAVAILABLE" }) })
-            ] }),
-            /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between h-[124px] flex-1 min-w-0", children: [
-              /* @__PURE__ */ jsx("div", { className: "min-w-0", children: /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
-                /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)] line-clamp-1", children: name }),
-                /* @__PURE__ */ jsx("span", { className: "text-xs bg-red-100 text-red-700 px-2 py-1 rounded font-[var(--font-medium)] flex-shrink-0", children: "Deleted" })
-              ] }) }),
-              /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)]", children: [
-                quantity,
-                " x ",
-                formatCurrency(displayPrice)
-              ] }) })
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between items-end h-[124px] flex-shrink-0", children: [
-            /* @__PURE__ */ jsx("div", { className: "flex flex-col items-end text-right opacity-50", children: /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)] line-clamp-2", children: formatCurrency(displayPrice * quantity) }) }),
-            component !== "order" && /* @__PURE__ */ jsx(
-              DeleteIcon,
-              {
-                onClick: handleDeleteItem,
-                disabled: isActionDisabled,
-                loading: isItemDeleting,
-                className: "cursor-pointer opacity-100 hover:opacity-80 transition-opacity",
-                title: "Delete item"
-              }
-            )
-          ] })
-        ]
-      }
-    );
-  }
-  return /* @__PURE__ */ jsxs(
-    "div",
-    {
-      className: `flex justify-between gap-4 transition-all duration-200 ${isItemDeleting ? "opacity-40 pointer-events-none scale-[0.99]" : ""}`,
-      children: [
-        /* @__PURE__ */ jsxs(
-          "div",
-          {
-            className: "flex gap-[10px] flex-1 min-w-0 cursor-pointer",
-            onClick: handleNavigateToProduct,
-            title: "View product",
-            children: [
-              /* @__PURE__ */ jsx("div", { className: "w-[112px] h-[124px] flex-shrink-0 overflow-hidden", children: /* @__PURE__ */ jsx(
-                "img",
-                {
-                  src: productImage || noProductImage,
-                  alt: name || "Product",
-                  className: "w-[112px] h-[124px] object-cover rounded-lg hover:opacity-90 transition-opacity",
-                  onError: handleImageError
-                }
-              ) }),
-              /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between h-[124px] flex-1 min-w-0", children: [
-                /* @__PURE__ */ jsxs("div", { className: "min-w-0", children: [
-                  /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
-                    /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)] line-clamp-1 hover:underline", children: name }),
-                    product?.bogo_benefit?.benefit_type === "free" && /* @__PURE__ */ jsx("span", { className: "text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-[var(--font-medium)] flex-shrink-0 whitespace-nowrap", children: "FREE" })
-                  ] }),
-                  variantOptions.length > 0 && /* @__PURE__ */ jsx("div", { className: "mt-1 flex flex-wrap gap-1", children: variantOptions.map((vo, i) => /* @__PURE__ */ jsxs(
-                    "span",
-                    {
-                      className: "text-[11px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-[var(--font-medium)]",
-                      children: [
-                        vo?.option_type?.presentation ?? vo?.option_type?.name,
-                        ":",
-                        " ",
-                        vo?.option_value?.presentation ?? vo?.option_value?.name
-                      ]
-                    },
-                    i
-                  )) }),
-                  product?.line_items_customizations?.length > 0 && /* @__PURE__ */ jsx("div", { className: "mt-1 flex flex-col gap-0.5", children: product.line_items_customizations.length > 3 ? /* @__PURE__ */ jsx(
-                    "button",
-                    {
-                      onClick: (e) => {
-                        e.stopPropagation();
-                        setIsViewModalOpen(true);
-                      },
-                      className: "text-xs text-[var(--core-primary)] underline hover:text-[var(--core-primary)] transition-colors text-left font-medium",
-                      children: "customizations: view"
-                    }
-                  ) : product.line_items_customizations.map((c) => /* @__PURE__ */ jsxs(
-                    "p",
-                    {
-                      className: "text-xs text-gray-500 line-clamp-1",
-                      children: [
-                        /* @__PURE__ */ jsxs("span", { className: "font-medium", children: [
-                          c.name || "Custom",
-                          ":"
-                        ] }),
-                        " ",
-                        c.value
-                      ]
-                    },
-                    c.product_customization_id
-                  )) })
-                ] }),
-                /* @__PURE__ */ jsx("div", { children: /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)]", children: [
-                  quantity,
-                  " x ",
-                  formatCurrency(displayPrice)
-                ] }) })
-              ] })
-            ]
-          }
-        ),
-        /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between items-end h-[124px] flex-shrink-0", children: [
-          /* @__PURE__ */ jsx("div", { className: "flex flex-col items-end text-right", children: component !== "order" ? /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)] line-clamp-1", children: formatCurrency(displayPrice * quantity) }) : /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-base text-[var(--main)] line-clamp-2", children: formatCurrency(displayPrice * quantity) }) }),
-          component !== "order" && /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3", children: [
-            !isSellingQty ? /* @__PURE__ */ jsxs("div", { className: "flex items-center border border-[#e8e5df] rounded-md h-[28px] bg-[#f9f9f9]", children: [
-              /* @__PURE__ */ jsx(
-                "button",
-                {
-                  onClick: () => handleDecreaseQty(
-                    product?.line_itemable,
-                    product?.line_items_customizations
-                  ),
-                  disabled: isActionDisabled,
-                  className: "w-7 h-full flex items-center justify-center text-lg text-gray-500 hover:text-[var(--core-primary)] transition-colors disabled:opacity-50 pb-0.5",
-                  children: "-"
-                }
-              ),
-              /* @__PURE__ */ jsx("span", { className: "w-6 text-center text-sm font-semibold text-[var(--core-primary)] bg-white h-full flex items-center justify-center border-x border-[#e8e5df]", children: quantity }),
-              /* @__PURE__ */ jsx(
-                "button",
-                {
-                  onClick: () => handleAddToCart(
-                    product?.line_itemable,
-                    product?.line_items_customizations,
-                    1
-                  ),
-                  disabled: isActionDisabled,
-                  className: "w-7 h-full flex items-center justify-center text-base text-gray-500 hover:text-[var(--core-primary)] transition-colors disabled:opacity-50 pb-0.5",
-                  children: "+"
-                }
-              )
-            ] }) : /* @__PURE__ */ jsx("div", { className: "flex items-center border border-[#e8e5df] rounded-md h-[28px] bg-[#f9f9f9] px-3", children: /* @__PURE__ */ jsx("span", { className: "text-sm font-semibold text-[var(--core-primary)]", children: quantity }) }),
-            /* @__PURE__ */ jsx(
-              DeleteIcon,
-              {
-                onClick: handleDeleteItem,
-                disabled: isActionDisabled,
-                loading: isItemDeleting,
-                className: "cursor-pointer opacity-100 hover:opacity-80 transition-opacity disabled:opacity-50",
-                title: "Delete item"
-              }
-            )
-          ] })
+  return /* @__PURE__ */ jsxs("div", { className: "w-full flex justify-between gap-x-[16px] py-[12px]", children: [
+    /* @__PURE__ */ jsxs("div", { className: "flex gap-x-[12px] min-w-0", children: [
+      /* @__PURE__ */ jsx(
+        "div",
+        {
+          className: "w-[80px] h-[80px] rounded-[8px] overflow-hidden bg-gray-100 flex-shrink-0 cursor-pointer",
+          onClick: handleNavigateToProduct,
+          children: /* @__PURE__ */ jsx(
+            "img",
+            {
+              src: productImage || noProductImage,
+              alt: name || "Product",
+              onError: handleImageError,
+              className: "w-full h-full object-cover"
+            }
+          )
+        }
+      ),
+      /* @__PURE__ */ jsxs("div", { className: "flex flex-col justify-between min-w-0", children: [
+        /* @__PURE__ */ jsxs("div", { children: [
+          /* @__PURE__ */ jsx(
+            "h3",
+            {
+              className: "text-[14px] font-[var(--font-medium)] text-[var(--main)] truncate cursor-pointer hover:underline",
+              onClick: handleNavigateToProduct,
+              children: name
+            }
+          ),
+          variantOptions.length > 0 && /* @__PURE__ */ jsx("div", { className: "flex flex-wrap gap-x-2 text-[12px] text-[var(--secondary)] mt-0.5", children: variantOptions.map((opt, idx) => /* @__PURE__ */ jsxs("span", { children: [
+            opt.option_type_name || opt.name,
+            ": ",
+            opt.presentation || opt.value
+          ] }, idx)) }),
+          product?.customizations && product.customizations.length > 0 && /* @__PURE__ */ jsx("div", { className: "mt-1 flex items-center gap-2", children: /* @__PURE__ */ jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => setIsViewModalOpen(true),
+              className: "text-[11px] text-[var(--core-primary)] font-[var(--font-medium)] underline",
+              children: "View customizations"
+            }
+          ) })
         ] }),
-        hasCustomizations && /* @__PURE__ */ jsx(
-          CustomizationModal_default,
-          {
-            isOpen: isEditModalOpen,
-            onClose: () => setIsEditModalOpen(false),
-            product: product?.line_itemable,
-            customizationsList,
-            onConfirm: handleEditConfirm,
-            initialValues: initialCustomizationObj,
-            initialQuantity: quantity,
-            isEditMode: true,
-            isAddToCartLoading
-          }
-        ),
+        /* @__PURE__ */ jsxs("p", { className: "text-[14px] font-[var(--font-regular)] text-[var(--secondary)]", children: [
+          quantity,
+          " \xD7 ",
+          formatCurrency(displayPrice)
+        ] })
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-end justify-between shrink-0", children: [
+      /* @__PURE__ */ jsx("p", { className: "text-[14px] font-[var(--font-medium)] text-[var(--main)]", children: formatCurrency(displayPrice * (quantity ?? 1)) }),
+      component ? component : /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
+        /* @__PURE__ */ jsx("span", { className: "text-[13px] font-[var(--font-medium)] text-[var(--core-primary)] border border-gray-200 rounded px-2 py-0.5 bg-gray-50", children: quantity }),
         /* @__PURE__ */ jsx(
-          ViewCustomizationModal_default,
+          DeleteIcon,
           {
-            isOpen: isViewModalOpen,
-            onClose: () => setIsViewModalOpen(false),
-            customizations: product?.line_items_customizations || [],
-            productName: name
+            onClick: handleDeleteItem,
+            disabled: isActionDisabled,
+            loading: isItemDeleting
           }
         )
-      ]
-    }
-  );
+      ] })
+    ] }),
+    isViewModalOpen && /* @__PURE__ */ jsx(
+      ViewCustomizationModal_default,
+      {
+        isOpen: isViewModalOpen,
+        onClose: () => setIsViewModalOpen(false),
+        customizations: product?.customizations,
+        productName: name
+      }
+    ),
+    isEditModalOpen && /* @__PURE__ */ jsx(
+      CustomizationModal_default,
+      {
+        isOpen: isEditModalOpen,
+        onClose: () => setIsEditModalOpen(false),
+        product: product?.line_itemable,
+        customizationsList: product?.line_itemable?.customizations || [],
+        onConfirm: handleEditConfirm,
+        initialValues: product?.customizations?.reduce((acc, c) => {
+          acc[c.product_customization_id] = { value: c.value };
+          return acc;
+        }, {}),
+        initialQuantity: quantity,
+        isEditMode: true,
+        isAddToCartLoading
+      }
+    )
+  ] });
 };
 var ProductlistCard_default = ProductlistCard;
+var StorefrontLink = ({
+  href,
+  children,
+  prefetch,
+  replace,
+  ...props
+}) => {
+  const core = useCore();
+  const LinkComponent = core?.linkComponent;
+  if (LinkComponent) {
+    return /* @__PURE__ */ jsx(LinkComponent, { href, prefetch, replace, ...props, children });
+  }
+  return /* @__PURE__ */ jsx("a", { href, ...props, children });
+};
 var Popup = ({
   isOpen,
   onClose,
@@ -2869,7 +2233,7 @@ var Popup = ({
           style,
           children: [
             (title || onClose) && /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center p-6 border-b border-gray-100 bg-white sticky top-0 z-10", children: [
-              title && /* @__PURE__ */ jsx("h2", { className: "text-[20px] font-[var(--font-bold)] text-[var(--core-primary)] uppercase tracking-wide", children: title }),
+              title && /* @__PURE__ */ jsx("h2", { className: "text-[20px] font-[var(--font-bold,sans-serif)] text-[var(--core-primary,#00214c)] uppercase tracking-wide", children: title }),
               onClose && /* @__PURE__ */ jsx(
                 "button",
                 {
@@ -2957,7 +2321,7 @@ var AddressForm = ({
       onSuccess?.();
     } catch (err) {
       console.error("Failed to save address:", err);
-      toast?.error?.(err.message || "Failed to save address. Please try again.");
+      toast?.error?.(err?.message || "Failed to save address. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -3271,7 +2635,11 @@ var AddressFormInline = ({ refetch }) => {
     )
   ] });
 };
-var AddAddressForm = ({ isOpen, onClose, refetch }) => {
+var AddAddressForm = ({
+  isOpen,
+  onClose,
+  refetch
+}) => {
   return /* @__PURE__ */ jsx(Popup, { isOpen, onClose, title: "Add New Address", children: /* @__PURE__ */ jsx(
     AddressForm,
     {
@@ -3287,15 +2655,12 @@ var AddAddressForm = ({ isOpen, onClose, refetch }) => {
 var AddressSelection = ({
   cart,
   setCart,
-  address,
+  address = [],
   sameAsShipping,
-  user,
   setSameAsShipping,
   shippingAddressId,
   billingAddressId,
   setSelectedAddress,
-  isCartHaveBillingAddress,
-  isCarthaveShippingAddress,
   refetch
 }) => {
   const { actions } = useCore();
@@ -3305,7 +2670,7 @@ var AddressSelection = ({
       try {
         if (actions?.updateCart) {
           const res = await actions.updateCart(apiData?.id, apiData);
-          setCart((prev) => res);
+          setCart(res);
         }
       } catch (err) {
         console.error("Failed to update cart address:", err);
@@ -3530,25 +2895,27 @@ var AddressCard = ({
     }
   );
 };
-function CartMismatchBanner({
+var CartMismatchBanner = ({
   serverTotal,
   clientTotal,
   freshCart,
   onDismiss,
   currency = "INR",
   locale = "en-IN"
-}) {
+}) => {
   const { setCart } = useCart();
   const fmt = (amount) => {
     if (amount == null) return "\u2014";
+    const num = Number(amount);
+    if (isNaN(num)) return `${currency} ${amount}`;
     try {
       return new Intl.NumberFormat(locale, {
         style: "currency",
         currency,
         maximumFractionDigits: 2
-      }).format(amount);
+      }).format(num);
     } catch {
-      return `${currency} ${amount}`;
+      return `${currency} ${num}`;
     }
   };
   const handleRefresh = () => {
@@ -3671,19 +3038,26 @@ function CartMismatchBanner({
       ]
     }
   );
-}
+};
+var CartMismatchBanner_default = CartMismatchBanner;
 var normalizeAddresses = (payload) => payload?.data ?? payload?.addresses ?? (Array.isArray(payload) ? payload : []);
-var Checkout = ({ hasDeletedItems, onPaymentSuccess }) => {
-  const { auth, config } = useCore();
+var Checkout = ({
+  hasDeletedItems,
+  onPaymentSuccess,
+  router: overrideRouter
+}) => {
+  const { auth } = useCore();
   const { isSignedIn, isLoading } = auth || {};
-  if (isLoading)
+  if (isLoading) {
     return /* @__PURE__ */ jsx("div", { className: "w-full h-[400px] flex items-center justify-center", children: /* @__PURE__ */ jsx("div", { className: "w-8 h-8 border-4 border-[var(--core-primary)] border-t-transparent rounded-full animate-spin" }) });
+  }
   return !isSignedIn ? /* @__PURE__ */ jsx(LoginPage, {}) : /* @__PURE__ */ jsx(
     OrderInfo,
     {
-      user: auth.user,
+      user: auth?.user,
       hasDeletedItems,
-      onPaymentSuccess
+      onPaymentSuccess,
+      overrideRouter
     }
   );
 };
@@ -3710,16 +3084,20 @@ var LoginPage = () => {
     /* @__PURE__ */ jsx("div", { className: "w-full", children: /* @__PURE__ */ jsx(AuthManager, {}) })
   ] });
 };
-var OrderInfo = ({ user, hasDeletedItems, onPaymentSuccess }) => {
-  const router = useRouter();
+var OrderInfo = ({
+  user,
+  hasDeletedItems,
+  onPaymentSuccess,
+  overrideRouter
+}) => {
+  const router = useStorefrontRouter(overrideRouter);
   const { Razorpay } = useRazorpay();
   const { cart, setCart, actions, config, auth, orgData, primaryColor, toast } = useCore();
   const activeRegion = config?.activeRegion ?? config?.region ?? null;
   const orgPaymentConfig = orgData?.organization_setting?.payment ?? {};
   const regionPaymentConfig = activeRegion?.payment_config ?? null;
   const paymentConfig = regionPaymentConfig ?? orgPaymentConfig;
-  const rawPaymentGateway = activeRegion?.payment_gateway || // ← primary: region.payment_gateway
-  orgPaymentConfig?.mode || orgPaymentConfig?.gateway || "";
+  const rawPaymentGateway = activeRegion?.payment_gateway || orgPaymentConfig?.mode || orgPaymentConfig?.gateway || "";
   const paymentGateway = String(rawPaymentGateway || "razorpay").toLowerCase();
   const isStripeGateway = paymentGateway === "stripe";
   const isPhonePeGateway = paymentGateway === "phonepe" || paymentGateway === "phone_pe" || paymentGateway === "phonepe_pg" || paymentGateway === "phone-pe";
@@ -3796,7 +3174,7 @@ var OrderInfo = ({ user, hasDeletedItems, onPaymentSuccess }) => {
         setIsAddressLoading(false);
       }
     },
-    [actions?.getUserAddress, auth?.isSignedIn, auth?.token, auth?.access_token]
+    [actions, auth?.isSignedIn, auth?.token, auth?.access_token]
   );
   useEffect(() => {
     fetchAddresses();
@@ -3824,9 +3202,13 @@ var OrderInfo = ({ user, hasDeletedItems, onPaymentSuccess }) => {
       );
     }
   }, [
+    cart?.id,
+    cart?.order_type,
     cart?.shipping_address?.id,
     cart?.billing_address?.id,
-    addresses?.length
+    addresses,
+    actions,
+    setCart
   ]);
   const onUpdateOrderType = async (type) => {
     try {
@@ -4033,7 +3415,7 @@ var OrderInfo = ({ user, hasDeletedItems, onPaymentSuccess }) => {
   const onPlaceOrder = async () => {
     if (hasDeletedItems || !cart?.id) return;
     const clientTotal = Number(cart?.total ?? cart?.display_total ?? 0);
-    const validation = await validateCartTotal(cart.id, clientTotal, {
+    const validation = await validateCartTotal(String(cart.id), clientTotal, {
       apiBaseUrl: config?.apiBaseUrl,
       orgId: config?.storeId
     });
@@ -4046,6 +3428,10 @@ var OrderInfo = ({ user, hasDeletedItems, onPaymentSuccess }) => {
       toast?.error?.(
         "Your cart total has changed \u2014 a coupon or offer has expired. Please refresh and try again."
       );
+      return;
+    }
+    if (orderType === "delivery" && (!addresses || addresses.length === 0 || !shippingAddressId)) {
+      toast?.error?.("Please add or select a delivery address to proceed.");
       return;
     }
     if (isStripeGateway) {
@@ -4156,7 +3542,7 @@ var OrderInfo = ({ user, hasDeletedItems, onPaymentSuccess }) => {
   };
   return /* @__PURE__ */ jsxs("div", { children: [
     cartMismatch && /* @__PURE__ */ jsx(
-      CartMismatchBanner,
+      CartMismatchBanner_default,
       {
         serverTotal: cartMismatch.serverTotal,
         clientTotal: cartMismatch.clientTotal,
@@ -4219,7 +3605,7 @@ var OrderInfo = ({ user, hasDeletedItems, onPaymentSuccess }) => {
                 cart?.total ?? cart?.display_total ?? 0
               );
               const validation = await validateCartTotal(
-                cartId,
+                String(cartId),
                 clientTotal,
                 {
                   apiBaseUrl: config?.apiBaseUrl,
@@ -4241,6 +3627,7 @@ var OrderInfo = ({ user, hasDeletedItems, onPaymentSuccess }) => {
             } : void 0,
             amount: cart?.display_total ?? "",
             currency: config?.currency ?? "INR",
+            onCancel: () => setShowStripeForm(false),
             onSuccess: async () => {
               if (typeof window !== "undefined") {
                 localStorage.removeItem("cartid");
@@ -4272,15 +3659,7 @@ var OrderInfo = ({ user, hasDeletedItems, onPaymentSuccess }) => {
             }
           }
         ) }),
-        showStripeForm && !StripeCheckout && /* @__PURE__ */ jsxs("p", { className: "mt-4 text-sm text-red-500 p-3 bg-red-50 rounded-lg", children: [
-          "StripeCheckout component is not configured. Pass it via",
-          " ",
-          /* @__PURE__ */ jsxs("code", { className: "font-mono", children: [
-            "CoreProvider components=",
-            { StripeCheckout }
-          ] }),
-          "."
-        ] })
+        showStripeForm && !StripeCheckout && /* @__PURE__ */ jsx("p", { className: "mt-4 text-sm text-red-500 p-3 bg-red-50 rounded-lg", children: "StripeCheckout component is not configured." })
       ] }) : isPhonePeGateway ? /* @__PURE__ */ jsx(
         AddressCard,
         {
@@ -4304,9 +3683,9 @@ var OrderInfo = ({ user, hasDeletedItems, onPaymentSuccess }) => {
         "button",
         {
           onClick: onPlaceOrder,
-          disabled: hasDeletedItems || isPlacingOrder || isAddressLoading,
-          className: `px-5 py-3 w-full rounded-lg cursor-pointer font-[var(--font-medium)] text-[15px] transition-all duration-300 ${hasDeletedItems || isPlacingOrder || isAddressLoading ? "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none" : "bg-[var(--core-primary)] text-white hover:opacity-90 hover:shadow-lg transform active:scale-[0.98]"}`,
-          children: isPlacingOrder ? "Processing\u2026" : hasDeletedItems ? "Remove Deleted Items to Checkout" : isStripeGateway ? "Proceed to Card Payment" : isPhonePeGateway ? "Proceed to PhonePe" : "Checkout"
+          disabled: hasDeletedItems || isPlacingOrder || isAddressLoading || orderType === "delivery" && addresses.length === 0,
+          className: `px-5 py-3 w-full rounded-lg cursor-pointer font-[var(--font-medium)] text-[15px] transition-all duration-300 ${hasDeletedItems || isPlacingOrder || isAddressLoading || orderType === "delivery" && addresses.length === 0 ? "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none" : "bg-[var(--core-primary)] text-white hover:opacity-90 hover:shadow-lg transform active:scale-[0.98]"}`,
+          children: isPlacingOrder ? "Processing\u2026" : isAddressLoading ? "Loading addresses\u2026" : orderType === "delivery" && addresses.length === 0 ? "Please Add Delivery Address to Checkout" : hasDeletedItems ? "Remove Deleted Items to Checkout" : isStripeGateway ? "Proceed to Card Payment" : isPhonePeGateway ? "Proceed to PhonePe" : "Checkout"
         }
       ),
       /* @__PURE__ */ jsxs("div", { className: "mt-4 text-center", children: [
@@ -4314,7 +3693,7 @@ var OrderInfo = ({ user, hasDeletedItems, onPaymentSuccess }) => {
           "By placing your order, you agree to our",
           " ",
           /* @__PURE__ */ jsx(
-            Link,
+            StorefrontLink,
             {
               href: config?.termsUrl || "/term-conditions",
               prefetch: false,
@@ -4326,7 +3705,7 @@ var OrderInfo = ({ user, hasDeletedItems, onPaymentSuccess }) => {
           "and",
           " ",
           /* @__PURE__ */ jsx(
-            Link,
+            StorefrontLink,
             {
               href: config?.privacyUrl || "/privacy-policy",
               prefetch: false,
@@ -4337,7 +3716,7 @@ var OrderInfo = ({ user, hasDeletedItems, onPaymentSuccess }) => {
           "."
         ] }),
         /* @__PURE__ */ jsx("div", { className: "mt-2 flex justify-center gap-3", children: /* @__PURE__ */ jsx(
-          Link,
+          StorefrontLink,
           {
             href: config?.refundUrl || config?.returnUrl || "/return-policy",
             prefetch: false,
@@ -4429,18 +3808,12 @@ var CouponSection = () => {
     return () => {
       isMounted = false;
     };
-  }, [actions, cart?.id, token, config?.regionId]);
+  }, [actions, cart?.id, token, config?.regionId, config?.apiBaseUrl, config?.storeId]);
   const availableDiscountsWithCode = availableDiscounts || [];
   const rawDiscounts = cart?.cart_discounts || [];
   const appliedDiscounts = rawDiscounts.filter(
     (coupon) => coupon.code || coupon.id
   );
-  if (cart && rawDiscounts.length === 0) {
-    console.warn(
-      "[CouponSection] No discounts found on cart. Cart keys:",
-      Object.keys(cart)
-    );
-  }
   const firstAppliedDiscount = appliedDiscounts?.[0];
   const showInput = !firstAppliedDiscount || firstAppliedDiscount.stackable;
   const handleApply = async () => {
@@ -4469,8 +3842,6 @@ var CouponSection = () => {
       }
       const updatedCart = result?.cart ?? result;
       setCart(updatedCart);
-      const userId = auth?.userId ?? auth?.user?.id ?? auth?.user?.userId ?? null;
-      const currency = config?.currency ?? "INR";
       setIsOpen(false);
       setInputValue("");
       setErrorMessage(null);
@@ -4518,8 +3889,6 @@ var CouponSection = () => {
       }
       const updatedCart = result?.cart ?? result;
       setCart(updatedCart);
-      const userId = auth?.userId ?? auth?.user?.id ?? auth?.user?.userId ?? null;
-      const currency = config?.currency ?? "INR";
       setIsOpen(false);
       setInputValue("");
       setErrorMessage(null);
@@ -4541,7 +3910,10 @@ var CouponSection = () => {
       setIsApplying(false);
     }
   };
-  const handleRemove = async ({ code, discount_id }) => {
+  const handleRemove = async ({
+    code,
+    discount_id
+  }) => {
     setRemovingId(discount_id);
     try {
       if (!actions?.removeDiscountById && !actions?.removeDiscount) {
@@ -4606,7 +3978,7 @@ var CouponSection = () => {
               "You save",
               " ",
               formatCurrency(
-                coupon.display_discount_amount || coupon.discount_amount / 100
+                coupon.display_discount_amount || (coupon.discount_amount ? coupon.discount_amount / 100 : 0)
               )
             ] })
           ] }),
@@ -4848,11 +4220,11 @@ var ViewCart = () => {
               /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[14px] text-[var(--main)]", children: "Item total" }),
               /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[14px] text-[var(--main)]", children: display_item_total ? formatCurrency(display_item_total) : "\u2014" })
             ] }),
-            (appliedDiscounts?.length > 0 || cart?.promo_total > 0 || parseFloat(cart?.display_promo_total) > 0) && (() => {
+            (appliedDiscounts?.length > 0 || (cart?.promo_total ?? 0) > 0 || parseFloat(cart?.display_promo_total || "0") > 0) && (() => {
               const totalDiscount = appliedDiscounts?.length > 0 ? appliedDiscounts.reduce((sum, c) => {
                 const amt = c.display_discount_amount ?? (c.discount_amount != null ? c.discount_amount / 100 : 0);
-                return sum + parseFloat(amt || 0);
-              }, 0) : parseFloat(cart?.display_promo_total || 0);
+                return sum + parseFloat(amt || "0");
+              }, 0) : parseFloat(cart?.display_promo_total || "0");
               return /* @__PURE__ */ jsxs("div", { children: [
                 /* @__PURE__ */ jsxs(
                   "button",
@@ -4991,7 +4363,7 @@ var ViewCart = () => {
                 /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-[16px] text-[var(--main)]", children: "Total payment" }),
                 /* @__PURE__ */ jsx("p", { className: "font-[var(--font-bold)] text-[16px] text-[var(--main)]", children: display_total ? formatCurrency(display_total) : "\u2014" })
               ] }),
-              (cart?.promo_total > 0 || parseFloat(cart?.display_promo_total) > 0) && /* @__PURE__ */ jsxs("p", { className: "text-[13px] font-[var(--font-bold)] text-[#00b300] mt-[6px] text-right", children: [
+              ((cart?.promo_total ?? 0) > 0 || parseFloat(cart?.display_promo_total || "0") > 0) && /* @__PURE__ */ jsxs("p", { className: "text-[13px] font-[var(--font-bold)] text-[#00b300] mt-[6px] text-right", children: [
                 "You save ",
                 formatCurrency(cart?.display_promo_total),
                 " on this order \u{1F389}"
@@ -5003,7 +4375,11 @@ var ViewCart = () => {
     ] })
   ] }) });
 };
-var AddressCard2 = ({ address, onEdit, onDelete }) => {
+var AddressCard2 = ({
+  address,
+  onEdit,
+  onDelete
+}) => {
   const { actions, toast } = useCore();
   const [isDeleting, setIsDeleting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -5085,7 +4461,8 @@ var AddressCard2 = ({ address, onEdit, onDelete }) => {
         style: { maxWidth: "400px" },
         children: /* @__PURE__ */ jsxs("div", { className: "text-center py-4", children: [
           /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-regular)] text-[15px] text-gray-600 mb-8", children: [
-            "Are you sure you want to delete ",
+            "Are you sure you want to delete",
+            " ",
             /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-bold)] text-[var(--core-primary)]", children: [
               '"',
               label || "this address",
@@ -5118,7 +4495,11 @@ var AddressCard2 = ({ address, onEdit, onDelete }) => {
     )
   ] });
 };
-var ProfileForm = ({ user, onSuccess, onCancel }) => {
+var ProfileForm = ({
+  user,
+  onSuccess,
+  onCancel
+}) => {
   const { actions, toast, config } = useCore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const userData = user?.attributes || user?.data?.attributes || user || {};
@@ -5148,7 +4529,7 @@ var ProfileForm = ({ user, onSuccess, onCancel }) => {
       }
     } catch (err) {
       console.error("Error updating profile:", err);
-      toast?.error?.(err.message || "Failed to update profile. Please try again.");
+      toast?.error?.(err?.message || "Failed to update profile. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -5251,7 +4632,7 @@ var UserInfo = ({ user, isLoading, refetch }) => {
         setIsAddrLoading(false);
       }
     },
-    [actions?.getUserAddress, auth?.isSignedIn, auth?.token, auth?.access_token]
+    [actions, auth?.isSignedIn, auth?.token, auth?.access_token]
   );
   useEffect(() => {
     fetchAddresses();
@@ -5360,7 +4741,11 @@ var UserInfo = ({ user, isLoading, refetch }) => {
     )
   ] });
 };
-var OrdersList = ({ initialOrders }) => {
+var OrdersList = ({
+  initialOrders,
+  router: overrideRouter
+}) => {
+  const router = useStorefrontRouter(overrideRouter);
   const { actions, config } = useCore();
   const { formatCurrency } = useCurrencyFormat();
   const [orders, setOrders] = useState(initialOrders || []);
@@ -5387,33 +4772,38 @@ var OrdersList = ({ initialOrders }) => {
   }
   return /* @__PURE__ */ jsxs("div", { className: "animate-in fade-in slide-in-from-bottom-4 duration-500", children: [
     /* @__PURE__ */ jsx("h1", { className: "font-[var(--font-regular)] text-[32px] text-[var(--core-primary)] mb-10 tracking-tight uppercase", children: "MY ORDERS" }),
-    orders.length > 0 ? /* @__PURE__ */ jsx("div", { className: "space-y-6", children: orders.map((order) => /* @__PURE__ */ jsx(OrderCard, { order, formatCurrency }, order.id)) }) : /* @__PURE__ */ jsx(
+    orders.length > 0 ? /* @__PURE__ */ jsx("div", { className: "space-y-6", children: orders.map((order) => /* @__PURE__ */ jsx(
+      OrderCard,
+      {
+        order,
+        formatCurrency,
+        router
+      },
+      order.id
+    )) }) : /* @__PURE__ */ jsx(
       EmptyState,
       {
         icon: "\u{1F4E6}",
         title: "No Orders Found",
         description: "It looks like you haven't placed any orders yet. Once you do, they will appear here.",
-        action: /* @__PURE__ */ jsx("button", { className: "mt-4 px-8 py-3 bg-[var(--core-primary)] text-white font-[var(--font-bold)] text-[13px] uppercase tracking-widest hover:opacity-90 transition-colors rounded-none", children: "Start Shopping" }),
+        action: /* @__PURE__ */ jsx(
+          "button",
+          {
+            onClick: () => router.push("/"),
+            className: "mt-4 px-8 py-3 bg-[var(--core-primary)] text-white font-[var(--font-bold)] text-[13px] uppercase tracking-widest hover:opacity-90 transition-colors rounded-none",
+            children: "Start Shopping"
+          }
+        ),
         className: "border border-dashed border-gray-200 bg-gray-50/30"
       }
     )
   ] });
 };
-var OrderCard = ({ order, formatCurrency }) => {
-  const router = useRouter();
+var OrderCard = ({ order, formatCurrency, router }) => {
   const o = order.order || order || {};
   const cart = o.cart || order.cart || {};
-  const {
-    id,
-    order_number,
-    order_status,
-    payment_status
-  } = o;
-  const {
-    number: cartNumber,
-    display_total,
-    line_items = []
-  } = cart;
+  const { id, order_number, order_status, payment_status } = o;
+  const { number: cartNumber, display_total, line_items = [] } = cart;
   const dateStr = order?.created_at ? new Date(order?.created_at).toLocaleDateString("en-US", {
     month: "long",
     day: "numeric",
@@ -5453,7 +4843,13 @@ var OrderCard = ({ order, formatCurrency }) => {
             /* @__PURE__ */ jsx("span", { className: "font-[var(--font-bold)] text-[18px] text-[var(--core-primary)]", children: display_total ? formatCurrency(display_total) : "\u2014" }),
             /* @__PURE__ */ jsxs("p", { className: "text-[12px] font-[var(--font-medium)] flex items-center gap-1.5", children: [
               /* @__PURE__ */ jsx("span", { className: "text-gray-400 uppercase tracking-wider text-[10px] font-[var(--font-bold)]", children: "Payment:" }),
-              /* @__PURE__ */ jsx("span", { className: `uppercase font-[var(--font-bold)] tracking-tight ${payment_status === "received" || payment_status === "paid" ? "text-green-600" : "text-orange-500"}`, children: payment_status || "Pending" })
+              /* @__PURE__ */ jsx(
+                "span",
+                {
+                  className: `uppercase font-[var(--font-bold)] tracking-tight ${payment_status === "received" || payment_status === "paid" ? "text-green-600" : "text-orange-500"}`,
+                  children: payment_status || "Pending"
+                }
+              )
             ] })
           ] })
         ] }),
@@ -5484,7 +4880,9 @@ var OrderCard = ({ order, formatCurrency }) => {
     }
   );
 };
-var AccountPage = ({ initialTab = "profile" }) => {
+var AccountPage = ({
+  initialTab = "profile"
+}) => {
   const { auth, actions } = useCore();
   const logout = useLogout();
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -5544,7 +4942,27 @@ var AccountPage = ({ initialTab = "profile" }) => {
     ) : /* @__PURE__ */ jsx(OrdersList, {}) })
   ] }) });
 };
-var IconBase = ({ children, className = "h-5 w-5", strokeWidth = 1.75, fill = "none", ...props }) => /* @__PURE__ */ jsx("svg", { viewBox: "0 0 24 24", fill, stroke: "currentColor", strokeWidth, strokeLinecap: "round", strokeLinejoin: "round", className, "aria-hidden": "true", ...props, children });
+var IconBase = ({
+  children,
+  className = "h-5 w-5",
+  strokeWidth = 1.75,
+  fill = "none",
+  ...props
+}) => /* @__PURE__ */ jsx(
+  "svg",
+  {
+    viewBox: "0 0 24 24",
+    fill,
+    stroke: "currentColor",
+    strokeWidth,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    className,
+    "aria-hidden": "true",
+    ...props,
+    children
+  }
+);
 var AccountMapPinIcon = (props) => /* @__PURE__ */ jsxs(IconBase, { ...props, children: [
   /* @__PURE__ */ jsx("path", { d: "M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" }),
   /* @__PURE__ */ jsx("circle", { cx: "12", cy: "10", r: "3" })
@@ -5612,10 +5030,12 @@ var AccountSidebar = ({
   onLogout,
   className = "",
   showLogout = true,
-  logoutLabel = "Logout"
+  logoutLabel = "Logout",
+  pathname: overridePathname,
+  router: overrideRouter
 }) => {
-  const pathname = usePathname();
-  const router = useRouter();
+  const router = useStorefrontRouter(overrideRouter);
+  const pathname = overridePathname ?? router.pathname;
   const coreLogout = useLogout();
   const { auth } = useCore();
   const resolvedContactInfo = contactInfo ?? getContactInfo(user ?? auth?.user);
@@ -5633,42 +5053,59 @@ var AccountSidebar = ({
     }
     coreLogout();
   };
-  return /* @__PURE__ */ jsxs("aside", { className: `w-[220px] flex-shrink-0 border-r border-gray-100 bg-white max-md:w-full max-md:border-b max-md:border-r-0 ${className}`, children: [
-    /* @__PURE__ */ jsx("div", { className: "border-b border-gray-100 px-5 py-5 text-center", children: /* @__PURE__ */ jsx("p", { className: "truncate px-2 text-[13px] font-[var(--font-medium)] tracking-wide text-[#555555]", children: resolvedContactInfo }) }),
-    /* @__PURE__ */ jsxs("nav", { className: "flex flex-col py-2 max-md:flex-row max-md:overflow-x-auto max-md:py-0", children: [
-      navItems.map(({ label, href, icon: Icon = AccountMapPinIcon }) => {
-        const isActive = href === "/account" ? pathname === href : pathname.startsWith(href);
-        return /* @__PURE__ */ jsxs(
-          "button",
-          {
-            type: "button",
-            onClick: () => handleNavigate(href),
-            className: `flex items-center gap-3 border-l-[3px] px-5 py-[13px] text-left transition-colors max-md:min-w-max max-md:border-b-[3px] max-md:border-l-0 ${isActive ? "border-l-[var(--core-primary)] bg-[#EBF0FC] text-[#1C1C1C] max-md:border-b-[var(--core-primary)]" : "border-l-transparent text-[#555555] hover:bg-[#FAFAFA] max-md:border-b-transparent"}`,
-            children: [
-              /* @__PURE__ */ jsx(Icon, { className: `h-[18px] w-[18px] flex-shrink-0 ${isActive ? "text-[var(--core-primary)]" : "text-[#888888]"}` }),
-              /* @__PURE__ */ jsx("span", { className: `text-[14px] ${isActive ? "font-[var(--font-semibold)] text-[#1C1C1C]" : "font-[var(--font-medium)] text-[#555555]"}`, children: label })
-            ]
-          },
-          href
-        );
-      }),
-      showLogout && /* @__PURE__ */ jsxs(Fragment, { children: [
-        /* @__PURE__ */ jsx("div", { className: "mx-5 my-2 border-t border-gray-100 max-md:hidden" }),
-        /* @__PURE__ */ jsxs(
-          "button",
-          {
-            type: "button",
-            onClick: handleLogout,
-            className: "flex items-center gap-3 border-l-[3px] border-l-transparent px-5 py-[13px] text-left text-[#555555] transition-colors hover:bg-[#FAFAFA] max-md:ml-auto max-md:min-w-max max-md:border-l-0",
-            children: [
-              /* @__PURE__ */ jsx(AccountLogOutIcon, { className: "h-[18px] w-[18px] flex-shrink-0 text-[#888888]" }),
-              /* @__PURE__ */ jsx("span", { className: "text-[14px] font-[var(--font-medium)]", children: logoutLabel })
-            ]
-          }
-        )
-      ] })
-    ] })
-  ] });
+  return /* @__PURE__ */ jsxs(
+    "aside",
+    {
+      className: `w-[220px] flex-shrink-0 border-r border-gray-100 bg-white max-md:w-full max-md:border-b max-md:border-r-0 ${className}`,
+      children: [
+        /* @__PURE__ */ jsx("div", { className: "border-b border-gray-100 px-5 py-5 text-center", children: /* @__PURE__ */ jsx("p", { className: "truncate px-2 text-[13px] font-[var(--font-medium)] tracking-wide text-[#555555]", children: resolvedContactInfo }) }),
+        /* @__PURE__ */ jsxs("nav", { className: "flex flex-col py-2 max-md:flex-row max-md:overflow-x-auto max-md:py-0", children: [
+          navItems.map(({ label, href, icon: Icon = AccountMapPinIcon }) => {
+            const isActive = href === "/account" ? pathname === href : pathname.startsWith(href);
+            return /* @__PURE__ */ jsxs(
+              "button",
+              {
+                type: "button",
+                onClick: () => handleNavigate(href),
+                className: `flex items-center gap-3 border-l-[3px] px-5 py-[13px] text-left transition-colors max-md:min-w-max max-md:border-b-[3px] max-md:border-l-0 ${isActive ? "border-l-[var(--core-primary)] bg-[#EBF0FC] text-[#1C1C1C] max-md:border-b-[var(--core-primary)]" : "border-l-transparent text-[#555555] hover:bg-[#FAFAFA] max-md:border-b-transparent"}`,
+                children: [
+                  /* @__PURE__ */ jsx(
+                    Icon,
+                    {
+                      className: `h-[18px] w-[18px] flex-shrink-0 ${isActive ? "text-[var(--core-primary)]" : "text-[#888888]"}`
+                    }
+                  ),
+                  /* @__PURE__ */ jsx(
+                    "span",
+                    {
+                      className: `text-[14px] ${isActive ? "font-[var(--font-semibold)] text-[#1C1C1C]" : "font-[var(--font-medium)] text-[#555555]"}`,
+                      children: label
+                    }
+                  )
+                ]
+              },
+              href
+            );
+          }),
+          showLogout && /* @__PURE__ */ jsxs(Fragment, { children: [
+            /* @__PURE__ */ jsx("div", { className: "mx-5 my-2 border-t border-gray-100 max-md:hidden" }),
+            /* @__PURE__ */ jsxs(
+              "button",
+              {
+                type: "button",
+                onClick: handleLogout,
+                className: "flex items-center gap-3 border-l-[3px] border-l-transparent px-5 py-[13px] text-left text-[#555555] transition-colors hover:bg-[#FAFAFA] max-md:ml-auto max-md:min-w-max max-md:border-l-0",
+                children: [
+                  /* @__PURE__ */ jsx(AccountLogOutIcon, { className: "h-[18px] w-[18px] flex-shrink-0 text-[#888888]" }),
+                  /* @__PURE__ */ jsx("span", { className: "text-[14px] font-[var(--font-medium)]", children: logoutLabel })
+                ]
+              }
+            )
+          ] })
+        ] })
+      ]
+    }
+  );
 };
 var AccountLayout = ({
   children,
@@ -5678,10 +5115,16 @@ var AccountLayout = ({
   panelClassName = "",
   mainClassName = ""
 }) => {
-  return /* @__PURE__ */ jsx("div", { className: `min-h-screen bg-[#F0F0F0] ${className}`, children: /* @__PURE__ */ jsx("div", { className: `mx-auto max-w-[900px] px-4 py-8 ${containerClassName}`, children: /* @__PURE__ */ jsxs("div", { className: `flex min-h-[520px] overflow-hidden rounded-lg bg-white shadow-sm max-md:flex-col ${panelClassName}`, children: [
-    /* @__PURE__ */ jsx(AccountSidebar, { ...sidebarProps }),
-    /* @__PURE__ */ jsx("main", { className: `flex-1 p-8 max-md:p-5 ${mainClassName}`, children })
-  ] }) }) });
+  return /* @__PURE__ */ jsx("div", { className: `min-h-screen bg-[#F0F0F0] ${className}`, children: /* @__PURE__ */ jsx("div", { className: `mx-auto max-w-[900px] px-4 py-8 ${containerClassName}`, children: /* @__PURE__ */ jsxs(
+    "div",
+    {
+      className: `flex min-h-[520px] overflow-hidden rounded-lg bg-white shadow-sm max-md:flex-col ${panelClassName}`,
+      children: [
+        /* @__PURE__ */ jsx(AccountSidebar, { ...sidebarProps }),
+        /* @__PURE__ */ jsx("main", { className: `flex-1 p-8 max-md:p-5 ${mainClassName}`, children })
+      ]
+    }
+  ) }) });
 };
 var normalizeAddresses3 = (payload) => payload?.data ?? payload?.addresses ?? (Array.isArray(payload) ? payload : []);
 var AccountAddressesPage = () => {
@@ -5741,33 +5184,64 @@ var AccountAddressesPage = () => {
   };
   return /* @__PURE__ */ jsxs("div", { children: [
     /* @__PURE__ */ jsx("h1", { className: "mb-4 text-[20px] font-[var(--font-bold)] text-[#1C1C1C]", children: "My addresses" }),
-    /* @__PURE__ */ jsxs("button", { onClick: openAddModal, className: "mb-5 flex items-center gap-1.5 text-[14px] font-[var(--font-semibold)] text-[var(--core-primary)] transition-opacity hover:opacity-80", children: [
-      /* @__PURE__ */ jsx(AccountPlusIcon, { className: "h-4 w-4", strokeWidth: 2.5 }),
-      "Add new address"
-    ] }),
-    /* @__PURE__ */ jsx("div", { className: "flex flex-col gap-3", children: isLoading ? /* @__PURE__ */ jsx("div", { className: "py-4 text-[14px] text-gray-500 animate-pulse", children: "Loading addresses..." }) : addresses.length === 0 ? /* @__PURE__ */ jsx("div", { className: "py-4 text-[14px] text-gray-500", children: "You have no saved addresses." }) : addresses.map((address) => /* @__PURE__ */ jsxs("div", { className: "flex items-start justify-between border-b border-gray-100 py-4 last:border-0", children: [
-      /* @__PURE__ */ jsxs("div", { className: "flex items-start gap-3", children: [
-        /* @__PURE__ */ jsx("div", { className: "mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-blue-50 text-[var(--core-primary)]", children: /* @__PURE__ */ jsx(AccountMapPinIcon, { className: "h-4 w-4" }) }),
-        /* @__PURE__ */ jsxs("div", { children: [
-          /* @__PURE__ */ jsx("p", { className: "text-[15px] font-[var(--font-bold)] leading-snug text-[#1C1C1C]", children: address.label || address.address_type || "Home" }),
-          /* @__PURE__ */ jsxs("p", { className: "mt-0.5 max-w-[480px] text-[13px] font-[var(--font-regular)] leading-relaxed text-[#888888]", children: [
-            address.firstname,
-            " ",
-            address.lastname,
-            /* @__PURE__ */ jsx("br", {}),
-            address.address1,
-            address.address2 ? `, ${address.address2}` : "",
-            /* @__PURE__ */ jsx("br", {}),
-            [address.city, address.state_name].filter(Boolean).join(", "),
-            address.zipcode ? ` - ${address.zipcode}` : ""
+    /* @__PURE__ */ jsxs(
+      "button",
+      {
+        onClick: openAddModal,
+        className: "mb-5 flex items-center gap-1.5 text-[14px] font-[var(--font-semibold)] text-[var(--core-primary)] transition-opacity hover:opacity-80",
+        children: [
+          /* @__PURE__ */ jsx(AccountPlusIcon, { className: "h-4 w-4", strokeWidth: 2.5 }),
+          "Add new address"
+        ]
+      }
+    ),
+    /* @__PURE__ */ jsx("div", { className: "flex flex-col gap-3", children: isLoading ? /* @__PURE__ */ jsx("div", { className: "py-4 text-[14px] text-gray-500 animate-pulse", children: "Loading addresses..." }) : addresses.length === 0 ? /* @__PURE__ */ jsx("div", { className: "py-4 text-[14px] text-gray-500", children: "You have no saved addresses." }) : addresses.map((address) => /* @__PURE__ */ jsxs(
+      "div",
+      {
+        className: "flex items-start justify-between border-b border-gray-100 py-4 last:border-0",
+        children: [
+          /* @__PURE__ */ jsxs("div", { className: "flex items-start gap-3", children: [
+            /* @__PURE__ */ jsx("div", { className: "mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-blue-50 text-[var(--core-primary)]", children: /* @__PURE__ */ jsx(AccountMapPinIcon, { className: "h-4 w-4" }) }),
+            /* @__PURE__ */ jsxs("div", { children: [
+              /* @__PURE__ */ jsx("p", { className: "text-[15px] font-[var(--font-bold)] leading-snug text-[#1C1C1C]", children: address.label || address.address_type || "Home" }),
+              /* @__PURE__ */ jsxs("p", { className: "mt-0.5 max-w-[480px] text-[13px] font-[var(--font-regular)] leading-relaxed text-[#888888]", children: [
+                address.firstname,
+                " ",
+                address.lastname,
+                /* @__PURE__ */ jsx("br", {}),
+                address.address1,
+                address.address2 ? `, ${address.address2}` : "",
+                /* @__PURE__ */ jsx("br", {}),
+                [address.city, address.state_name].filter(Boolean).join(", "),
+                address.zipcode ? ` - ${address.zipcode}` : ""
+              ] })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxs("div", { className: "mt-1 flex flex-shrink-0 items-center gap-2", children: [
+            /* @__PURE__ */ jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => openEditModal(address),
+                className: "flex items-center justify-center rounded-full p-1.5 text-[#888888] transition-colors hover:bg-gray-100 hover:text-[var(--core-primary)]",
+                children: /* @__PURE__ */ jsx(AccountPencilIcon, { className: "h-4 w-4" })
+              }
+            ),
+            /* @__PURE__ */ jsx(
+              "button",
+              {
+                type: "button",
+                disabled: deletingId === address.id,
+                onClick: () => setDeleteConfirmAddress(address),
+                className: "flex items-center justify-center rounded-full p-1.5 text-[#888888] transition-colors hover:bg-gray-100 hover:text-red-500 disabled:opacity-50",
+                children: deletingId === address.id ? /* @__PURE__ */ jsx("div", { className: "h-4 w-4 animate-spin rounded-full border-2 border-red-500 border-t-transparent" }) : /* @__PURE__ */ jsx(AccountTrashIcon, { className: "h-4 w-4" })
+              }
+            )
           ] })
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxs("div", { className: "mt-1 flex flex-shrink-0 items-center gap-2", children: [
-        /* @__PURE__ */ jsx("button", { type: "button", onClick: () => openEditModal(address), className: "flex items-center justify-center rounded-full p-1.5 text-[#888888] transition-colors hover:bg-gray-100 hover:text-[var(--core-primary)]", children: /* @__PURE__ */ jsx(AccountPencilIcon, { className: "h-4 w-4" }) }),
-        /* @__PURE__ */ jsx("button", { type: "button", disabled: deletingId === address.id, onClick: () => setDeleteConfirmAddress(address), className: "flex items-center justify-center rounded-full p-1.5 text-[#888888] transition-colors hover:bg-gray-100 hover:text-red-500 disabled:opacity-50", children: deletingId === address.id ? /* @__PURE__ */ jsx("div", { className: "h-4 w-4 animate-spin rounded-full border-2 border-red-500 border-t-transparent" }) : /* @__PURE__ */ jsx(AccountTrashIcon, { className: "h-4 w-4" }) })
-      ] })
-    ] }, address.id)) }),
+        ]
+      },
+      address.id
+    )) }),
     /* @__PURE__ */ jsx(Popup, { isOpen: isModalOpen, onClose: () => setIsModalOpen(false), children: /* @__PURE__ */ jsx(
       AddressForm,
       {
@@ -5831,21 +5305,39 @@ var AccountAddressesPage = () => {
     )
   ] });
 };
-var AccountOrdersPage = ({ initialOrders = [], pagination }) => {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
+var AccountOrdersPage = ({
+  initialOrders = [],
+  pagination,
+  router: overrideRouter,
+  searchParams: overrideSearchParams,
+  pathname: overridePathname
+}) => {
+  const sdkRouter = useStorefrontRouter(overrideRouter);
+  const router = overrideRouter ?? sdkRouter;
+  const searchParams = overrideSearchParams ?? sdkRouter.searchParams;
+  const pathname = overridePathname ?? sdkRouter.pathname;
   const { formatCurrency } = useCurrencyFormat();
   const itemsPerPage = 10;
   const isServerPaginated = pagination && pagination.total_pages !== void 0;
-  const currentPage = isServerPaginated ? pagination.current_page : parseInt(searchParams.get("page") || "1", 10);
+  const getPageParam = () => {
+    if (isServerPaginated) return pagination.current_page;
+    if (searchParams?.get) {
+      return parseInt(searchParams.get("page") || "1", 10);
+    }
+    if (typeof window !== "undefined") {
+      return parseInt(new URLSearchParams(window.location.search).get("page") || "1", 10);
+    }
+    return 1;
+  };
+  const currentPage = getPageParam();
   const totalPages = isServerPaginated ? pagination.total_pages : Math.ceil(initialOrders.length / itemsPerPage) || 1;
   const currentOrders = isServerPaginated ? initialOrders : initialOrders.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
   const handlePageChange = (page) => {
-    const params = new URLSearchParams(searchParams.toString());
+    const rawSearch = searchParams?.toString?.() ?? (typeof window !== "undefined" ? window.location.search : "");
+    const params = new URLSearchParams(rawSearch);
     params.set("page", page.toString());
     router.push(`${pathname}?${params.toString()}`);
   };
@@ -6003,9 +5495,11 @@ var AccountOrdersPage = ({ initialOrders = [], pagination }) => {
     ] })
   ] });
 };
-var AccountOrderDetailContent = ({ order, id }) => {
+var AccountOrderDetailContent = ({
+  order,
+  id
+}) => {
   const { formatCurrency } = useCurrencyFormat();
-  const { config } = useCore();
   const [copied, setCopied] = useState(false);
   if (!order) return null;
   const o = order.cart || order;
@@ -6041,9 +5535,11 @@ var AccountOrderDetailContent = ({ order, id }) => {
   }, 0);
   const totalSavings = totalCalculatedDiscount > 0 ? totalCalculatedDiscount : promoTotal;
   const handleCopy = () => {
-    navigator.clipboard?.writeText(orderNumber);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2e3);
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(String(orderNumber));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2e3);
+    }
   };
   const getProductUrl = (item) => {
     const lineItemable = item?.line_itemable || item?.variant || {};
@@ -6071,7 +5567,7 @@ var AccountOrderDetailContent = ({ order, id }) => {
   return /* @__PURE__ */ jsxs("div", { className: "animate-in fade-in w-full pb-6 duration-300", children: [
     /* @__PURE__ */ jsxs("div", { className: "sticky top-0 z-10 mb-2 flex items-center gap-3 border-b border-gray-50/50 bg-white/95 py-2.5 backdrop-blur-md", children: [
       /* @__PURE__ */ jsx(
-        Link,
+        StorefrontLink,
         {
           href: "/account/orders",
           className: "ml-[-4px] rounded-full p-1.5 transition hover:bg-gray-100",
@@ -6123,7 +5619,7 @@ var AccountOrderDetailContent = ({ order, id }) => {
         const amount = item.display_price ?? item.line_itemable?.display_price ?? (item.line_itemable?.price || 0) / 100;
         const variantOptions = item.line_itemable?.variant_options || item.variant_options || [];
         const productUrl = getProductUrl(item);
-        const ItemWrapper = productUrl ? Link : "div";
+        const ItemWrapper = productUrl ? StorefrontLink : "div";
         const wrapperProps = productUrl ? {
           href: productUrl,
           className: "flex gap-3 border-b border-gray-50 p-3 transition last:border-0 hover:bg-gray-50 group cursor-pointer"
@@ -6297,18 +5793,39 @@ var AccountWishlistPage = ({
   products = [],
   pagination,
   isLoading = false,
-  renderProduct
+  renderProduct,
+  router: overrideRouter,
+  searchParams: overrideSearchParams,
+  pathname: overridePathname
 }) => {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
+  const sdkRouter = useStorefrontRouter(overrideRouter);
+  const router = overrideRouter ?? sdkRouter;
+  const searchParams = overrideSearchParams ?? sdkRouter.searchParams;
+  const pathname = overridePathname ?? sdkRouter.pathname;
   const itemsPerPage = 12;
   const isServerPaginated = pagination && pagination.total_pages !== void 0;
-  const currentPage = isServerPaginated ? pagination.current_page : parseInt(searchParams?.get("page") || "1", 10);
+  const getPageParam = () => {
+    if (isServerPaginated) return pagination.current_page;
+    if (searchParams?.get) {
+      return parseInt(searchParams.get("page") || "1", 10);
+    }
+    if (typeof window !== "undefined") {
+      return parseInt(
+        new URLSearchParams(window.location.search).get("page") || "1",
+        10
+      );
+    }
+    return 1;
+  };
+  const currentPage = getPageParam();
   const totalPages = isServerPaginated ? pagination.total_pages : Math.ceil(products.length / itemsPerPage) || 1;
-  const currentProducts = isServerPaginated ? products : products.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const currentProducts = isServerPaginated ? products : products.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
   const handlePageChange = (page) => {
-    const params = new URLSearchParams(searchParams?.toString() || "");
+    const rawSearch = searchParams?.toString?.() ?? (typeof window !== "undefined" ? window.location.search : "");
+    const params = new URLSearchParams(rawSearch);
     params.set("page", page.toString());
     router.push(`${pathname}?${params.toString()}`);
   };
@@ -6452,15 +5969,12 @@ var fallbackToast = {
   success: (msg) => console.log(msg)
 };
 var Order = (props) => {
-  const params = useParams();
-  const id = params?.orderid;
-  const searchParams = useSearchParams();
-  const router = useRouter();
+  const router = useStorefrontRouter(props?.router);
+  const id = props?.orderId ?? props?.id ?? props?.params?.orderid ?? (typeof window !== "undefined" ? window.location.pathname.split("/").filter(Boolean).pop() : null);
+  const show = props?.show !== void 0 ? Boolean(props.show) : typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("show") === "true" : false;
   const { formatCurrency } = useCurrencyFormat();
-  const show = searchParams.get("show") === "true";
   const { actions, config, orgData, toast = fallbackToast } = useCore();
   const orgDetail = orgData;
-  const orgRaffles = [];
   const [data, setData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
@@ -6519,7 +6033,6 @@ var Order = (props) => {
     }
     return null;
   };
-  const hasPromoTotal = display_promo_total !== void 0 && display_promo_total !== null && Number(display_promo_total) > 0 && display_promo_total !== "0.00" && display_promo_total !== "0" || promo_total !== void 0 && promo_total !== null && Number(promo_total) > 0;
   const promoTotalAmount = Number(display_promo_total) || (promo_total ? Number(promo_total) / 100 : 0);
   const totalCalculatedDiscount = appliedDiscounts.reduce((sum, coupon) => {
     const amt = getDiscountAmount(coupon);
@@ -6601,174 +6114,77 @@ var Order = (props) => {
           ]
         }
       ),
-      /* @__PURE__ */ jsxs("div", { children: [
-        /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center mb-4", children: [
-          /* @__PURE__ */ jsx("h3", { className: "font-[var(--font-bold)] text-[18px] text-[var(--core-primary)] uppercase tracking-wider", children: "Order Details" }),
-          /* @__PURE__ */ jsx(
-            "button",
-            {
-              className: "flex items-center gap-1.5 px-3 py-2 rounded font-[var(--font-bold)] text-[13px] text-white transition-opacity hover:opacity-85 disabled:opacity-60 cursor-pointer",
-              style: { background: "var(--core-primary)" },
-              onClick: onDownloadReceipt,
-              disabled: isFetchingInvoice,
-              children: isFetchingInvoice ? /* @__PURE__ */ jsx(Spinner, {}) : /* @__PURE__ */ jsxs(Fragment, { children: [
-                "Receipt ",
-                /* @__PURE__ */ jsx(DownloadIcon, {})
-              ] })
-            }
-          )
+      /* @__PURE__ */ jsxs("div", { className: "border border-[#e8e5df] rounded-lg p-6 bg-white flex flex-col gap-6", children: [
+        /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-start", children: [
+          /* @__PURE__ */ jsxs("div", { children: [
+            /* @__PURE__ */ jsx("span", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest block mb-1", children: "Order Reference" }),
+            /* @__PURE__ */ jsxs("h2", { className: "font-[var(--font-bold)] text-[22px] text-[var(--core-primary)]", children: [
+              "#",
+              order_number || id
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-end gap-1.5", children: [
+            /* @__PURE__ */ jsx(
+              "span",
+              {
+                className: "inline-flex items-center px-3 py-1 rounded-full text-[12px] font-[var(--font-bold)] uppercase tracking-wider",
+                style: {
+                  background: "color-mix(in srgb, var(--core-primary) 10%, white)",
+                  color: "var(--core-primary)"
+                },
+                children: order_status || state || "Placed"
+              }
+            ),
+            /* @__PURE__ */ jsxs(
+              "span",
+              {
+                className: `inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-[var(--font-medium)] uppercase tracking-wider ${payment_state === "paid" || payment_status === "paid" ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"}`,
+                children: [
+                  "Payment: ",
+                  payment_state || payment_status || "Pending"
+                ]
+              }
+            )
+          ] })
         ] }),
-        /* @__PURE__ */ jsxs(
-          "div",
+        /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-2 gap-4 border-t border-[#e8e5df] pt-4", children: [
+          /* @__PURE__ */ jsxs("div", { children: [
+            /* @__PURE__ */ jsx("span", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest block", children: "Placed On" }),
+            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-medium)] text-[14px] text-[var(--core-primary)]", children: orderDate })
+          ] }),
+          /* @__PURE__ */ jsxs("div", { children: [
+            /* @__PURE__ */ jsx("span", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest block", children: "Fulfillment" }),
+            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-medium)] text-[14px] text-[var(--core-primary)] capitalize", children: order_type || "Delivery" })
+          ] })
+        ] }),
+        actions?.getOrderInvoice && /* @__PURE__ */ jsxs(
+          "button",
           {
-            className: "border rounded-lg overflow-hidden",
-            style: {
-              borderColor: "color-mix(in srgb, var(--core-primary) 20%, #e8e5df)"
-            },
+            onClick: onDownloadReceipt,
+            disabled: isFetchingInvoice,
+            className: "w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded border border-[#e8e5df] hover:border-[var(--core-primary)] text-[var(--core-primary)] font-[var(--font-bold)] text-[13px] uppercase tracking-wider transition-all disabled:opacity-50",
             children: [
-              /* @__PURE__ */ jsxs(
-                "div",
-                {
-                  className: "grid grid-cols-2 divide-x",
-                  style: {
-                    divideColor: "color-mix(in srgb, var(--core-primary) 15%, #e8e5df)"
-                  },
-                  children: [
-                    /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-1", children: [
-                      /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Order Number" }),
-                      /* @__PURE__ */ jsx("p", { className: "font-[var(--font-bold)] text-[14px] text-[var(--core-primary)]", children: order_number || "\u2014" })
-                    ] }),
-                    /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-1", children: [
-                      /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Order Status" }),
-                      /* @__PURE__ */ jsx(
-                        "span",
-                        {
-                          className: "inline-flex self-start font-[var(--font-bold)] text-[12px] px-2.5 py-0.5 rounded-full uppercase tracking-wide",
-                          style: {
-                            background: "color-mix(in srgb, var(--core-secondary) 15%, white)",
-                            color: "var(--core-primary)",
-                            border: "1px solid color-mix(in srgb, var(--core-secondary) 40%, white)"
-                          },
-                          children: order_status || "Processing"
-                        }
-                      )
-                    ] })
-                  ]
-                }
-              ),
-              /* @__PURE__ */ jsx(
-                "div",
-                {
-                  className: "border-t",
-                  style: {
-                    borderColor: "color-mix(in srgb, var(--core-primary) 12%, #e8e5df)"
-                  }
-                }
-              ),
-              /* @__PURE__ */ jsxs(
-                "div",
-                {
-                  className: "grid grid-cols-2 divide-x",
-                  style: {
-                    divideColor: "color-mix(in srgb, var(--core-primary) 15%, #e8e5df)"
-                  },
-                  children: [
-                    /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-1", children: [
-                      /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Order Date" }),
-                      /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-[14px] text-[var(--core-primary)]", children: orderDate || "\u2014" })
-                    ] }),
-                    /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-1", children: [
-                      /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Payment Status" }),
-                      /* @__PURE__ */ jsx(
-                        "p",
-                        {
-                          className: "font-[var(--font-bold)] text-[13px] uppercase",
-                          style: {
-                            color: payment_status === "paid" || payment_status === "received" ? "#16a34a" : "var(--core-secondary)"
-                          },
-                          children: payment_status || "Pending"
-                        }
-                      )
-                    ] })
-                  ]
-                }
-              ),
-              /* @__PURE__ */ jsx(
-                "div",
-                {
-                  className: "border-t",
-                  style: {
-                    borderColor: "color-mix(in srgb, var(--core-primary) 12%, #e8e5df)"
-                  }
-                }
-              ),
-              order_type === "pickup" ? /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-1", children: [
-                /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Pickup Address" }),
-                /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-[14px] text-[var(--core-primary)]", children: storePickUpAddress || "\u2014" })
-              ] }) : /* @__PURE__ */ jsxs(
-                "div",
-                {
-                  className: "grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x",
-                  style: {
-                    borderColor: "color-mix(in srgb, var(--core-primary) 12%, #e8e5df)"
-                  },
-                  children: [
-                    /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-2", children: [
-                      /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Delivery Address" }),
-                      shipping_address?.label && /* @__PURE__ */ jsx(
-                        "span",
-                        {
-                          className: "self-start text-[10px] font-[var(--font-bold)] px-2 py-0.5 rounded-full uppercase tracking-widest",
-                          style: {
-                            background: "color-mix(in srgb, var(--core-primary) 10%, white)",
-                            color: "var(--core-primary)"
-                          },
-                          children: shipping_address.label
-                        }
-                      ),
-                      /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-0.5", children: [
-                        /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-bold)] text-[13px] text-[var(--core-primary)]", children: [
-                          `${shipping_address?.firstname ?? ""} ${shipping_address?.lastname ?? ""}`.trim(),
-                          shipping_address?.phone && /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-regular)] text-gray-500", children: [
-                            " ",
-                            "\xB7 ",
-                            shipping_address.phone
-                          ] })
-                        ] }),
-                        /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[13px] text-gray-500 leading-relaxed", children: fullShippingAddress })
-                      ] })
-                    ] }),
-                    /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-2", children: [
-                      /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest", children: "Billing Address" }),
-                      billing_address?.label && /* @__PURE__ */ jsx(
-                        "span",
-                        {
-                          className: "self-start text-[10px] font-[var(--font-bold)] px-2 py-0.5 rounded-full uppercase tracking-widest",
-                          style: {
-                            background: "color-mix(in srgb, var(--core-primary) 10%, white)",
-                            color: "var(--core-primary)"
-                          },
-                          children: billing_address.label
-                        }
-                      ),
-                      /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-0.5", children: [
-                        /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-bold)] text-[13px] text-[var(--core-primary)]", children: [
-                          `${billing_address?.firstname ?? ""} ${billing_address?.lastname ?? ""}`.trim(),
-                          billing_address?.phone && /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-regular)] text-gray-500", children: [
-                            " ",
-                            "\xB7 ",
-                            billing_address.phone
-                          ] })
-                        ] }),
-                        /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[13px] text-gray-500 leading-relaxed", children: fullBillingAddress })
-                      ] })
-                    ] })
-                  ]
-                }
-              )
+              /* @__PURE__ */ jsx(DownloadIcon, {}),
+              isFetchingInvoice ? "Downloading..." : "Download Invoice"
             ]
           }
         )
+      ] }),
+      /* @__PURE__ */ jsxs("div", { className: "border border-[#e8e5df] rounded-lg p-6 bg-white", children: [
+        /* @__PURE__ */ jsx("h3", { className: "font-[var(--font-bold)] text-[16px] text-[var(--core-primary)] uppercase tracking-wider mb-4", children: order_type === "pickup" ? "Pickup Location" : "Address Details" }),
+        /* @__PURE__ */ jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-6", children: order_type === "pickup" ? /* @__PURE__ */ jsxs("div", { children: [
+          /* @__PURE__ */ jsx("span", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest block mb-1", children: "Store Pickup Address" }),
+          /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[14px] text-gray-700 leading-relaxed", children: storePickUpAddress || "Contact store for pickup details." })
+        ] }) : /* @__PURE__ */ jsxs(Fragment, { children: [
+          /* @__PURE__ */ jsxs("div", { children: [
+            /* @__PURE__ */ jsx("span", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest block mb-1", children: "Shipping Address" }),
+            /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[14px] text-gray-700 leading-relaxed", children: fullShippingAddress || "No shipping address provided." })
+          ] }),
+          /* @__PURE__ */ jsxs("div", { children: [
+            /* @__PURE__ */ jsx("span", { className: "text-[11px] font-[var(--font-bold)] text-gray-400 uppercase tracking-widest block mb-1", children: "Billing Address" }),
+            /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[14px] text-gray-700 leading-relaxed", children: fullBillingAddress || fullShippingAddress || "Same as shipping." })
+          ] })
+        ] }) })
       ] }),
       /* @__PURE__ */ jsx(
         "button",
@@ -6788,114 +6204,61 @@ var Order = (props) => {
           line_items?.length || 0,
           ")"
         ] }),
-        /* @__PURE__ */ jsx("div", { className: "flex flex-col gap-4", children: line_items?.map((item, idx) => {
-          const orgRaffleId = item?.line_itemable?.organization_raffle_id;
-          const associateRaffle = orgRaffles?.find(
-            (data2) => data2?.id === orgRaffleId
-          );
-          return /* @__PURE__ */ jsx(
-            ProductlistCard_default,
-            {
-              product: item,
-              component: "order",
-              raffleName: associateRaffle?.raffle_name,
-              orderType: order_type
-            },
-            idx
-          );
-        }) })
-      ] }),
-      /* @__PURE__ */ jsxs(
-        "div",
-        {
-          className: "border rounded-lg overflow-hidden",
-          style: {
-            borderColor: "color-mix(in srgb, var(--core-primary) 20%, #e8e5df)"
+        /* @__PURE__ */ jsx("div", { className: "flex flex-col gap-4", children: line_items?.map((item, idx) => /* @__PURE__ */ jsx(
+          ProductlistCard_default,
+          {
+            product: item,
+            orderType: order_type,
+            component: /* @__PURE__ */ jsx("div", { className: "flex items-center gap-2", children: /* @__PURE__ */ jsxs("span", { className: "text-[13px] font-[var(--font-medium)] text-[var(--core-primary)] border border-gray-200 rounded px-2 py-0.5 bg-gray-50", children: [
+              "Qty: ",
+              item.quantity
+            ] }) })
           },
-          children: [
-            /* @__PURE__ */ jsx(
-              "div",
-              {
-                className: "px-4 py-3",
-                style: {
-                  background: "color-mix(in srgb, var(--core-primary) 6%, white)"
-                },
-                children: /* @__PURE__ */ jsx("h3", { className: "font-[var(--font-bold)] text-[15px] text-[var(--core-primary)] uppercase tracking-wider", children: "Bill Summary" })
-              }
-            ),
-            /* @__PURE__ */ jsxs("div", { className: "p-4 flex flex-col gap-3", children: [
-              /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
-                /* @__PURE__ */ jsx("span", { className: "font-[var(--font-regular)] text-[14px] text-gray-500", children: "Item Total" }),
-                /* @__PURE__ */ jsx("span", { className: "font-[var(--font-medium)] text-[14px] text-[var(--core-primary)]", children: formatCurrency(display_item_total) })
-              ] }),
-              appliedDiscounts?.length > 0 ? appliedDiscounts.map((coupon, idx) => {
-                const amt = getDiscountAmount(coupon) ?? (appliedDiscounts.length === 1 ? totalSavings : 0);
-                return /* @__PURE__ */ jsxs(
-                  "div",
-                  {
-                    className: "flex justify-between items-center text-[14px]",
-                    children: [
-                      /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-medium)] text-[#FF6500] flex items-center gap-1.5 flex-wrap", children: [
-                        /* @__PURE__ */ jsx("span", { children: "Discount" }),
-                        coupon?.code && /* @__PURE__ */ jsx("span", { className: "font-mono text-xs font-semibold px-2 py-0.5 rounded bg-orange-50 text-[#FF6500] border border-orange-200", children: coupon.code }),
-                        coupon?.display_action_value && /* @__PURE__ */ jsxs("span", { className: "text-xs text-[#FF6500]/90", children: [
-                          "(",
-                          coupon.display_action_value,
-                          ")"
-                        ] })
-                      ] }),
-                      /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-medium)] text-[#FF6500]", children: [
-                        "-",
-                        formatCurrency(amt)
-                      ] })
-                    ]
-                  },
-                  coupon?.id || coupon?.discount_id || coupon?.code || idx
-                );
-              }) : hasPromoTotal ? /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center text-[14px]", children: [
-                /* @__PURE__ */ jsx("span", { className: "font-[var(--font-medium)] text-[#FF6500]", children: "Discount" }),
-                /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-medium)] text-[#FF6500]", children: [
-                  "-",
-                  formatCurrency(promoTotalAmount)
-                ] })
-              ] }) : null,
-              /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
-                /* @__PURE__ */ jsx("span", { className: "font-[var(--font-regular)] text-[14px] text-gray-500", children: "Tax" }),
-                /* @__PURE__ */ jsx("span", { className: "font-[var(--font-medium)] text-[14px] text-[var(--core-primary)]", children: formatCurrency(display_tax_total) })
-              ] }),
-              order_type !== "pickup" && /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
-                /* @__PURE__ */ jsx("span", { className: "font-[var(--font-regular)] text-[14px] text-gray-500", children: "Shipping" }),
-                /* @__PURE__ */ jsx("span", { className: "font-[var(--font-medium)] text-[14px] text-[var(--core-primary)]", children: display_ship_total === "0.00" || display_ship_total === 0 || display_ship_total === "0" ? /* @__PURE__ */ jsx(
-                  "span",
-                  {
-                    style: { color: "#16a34a" },
-                    className: "font-[var(--font-bold)]",
-                    children: "Free"
-                  }
-                ) : formatCurrency(display_ship_total) })
-              ] }),
-              /* @__PURE__ */ jsx(
-                "div",
-                {
-                  className: "h-px my-1",
-                  style: {
-                    background: "color-mix(in srgb, var(--core-secondary) 35%, #e8e5df)"
-                  }
-                }
-              ),
-              /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
-                /* @__PURE__ */ jsx("span", { className: "font-[var(--font-bold)] text-[15px] text-[var(--core-primary)]", children: "Total" }),
-                /* @__PURE__ */ jsx("span", { className: "font-[var(--font-bold)] text-[17px] text-[var(--core-primary)]", children: formatCurrency(display_total) })
-              ] }),
-              totalSavings > 0 && /* @__PURE__ */ jsxs("p", { className: "text-[13px] font-[var(--font-bold)] text-[#16a34a] mt-[6px] text-right", children: [
-                "You save ",
-                formatCurrency(totalSavings),
-                " on this order \u{1F389}"
-              ] })
+          item.id || idx
+        )) })
+      ] }),
+      /* @__PURE__ */ jsxs("div", { className: "border border-[#e8e5df] rounded-lg p-6 bg-white", children: [
+        /* @__PURE__ */ jsx("h3", { className: "font-[var(--font-bold)] text-[16px] text-[var(--core-primary)] uppercase tracking-wider mb-4", children: "Bill Summary" }),
+        /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-3", children: [
+          /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center text-[14px]", children: [
+            /* @__PURE__ */ jsx("span", { className: "text-gray-500 font-[var(--font-regular)]", children: "Item Total" }),
+            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-medium)] text-[var(--core-primary)]", children: formatCurrency(display_item_total) })
+          ] }),
+          totalSavings > 0 && /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center text-[14px] text-[#16a34a]", children: [
+            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-regular)]", children: "Discount" }),
+            /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-medium)]", children: [
+              "-",
+              formatCurrency(totalSavings)
             ] })
-          ]
-        }
-      )
+          ] }),
+          /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center text-[14px]", children: [
+            /* @__PURE__ */ jsx("span", { className: "text-gray-500 font-[var(--font-regular)]", children: "Delivery / Shipping" }),
+            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-medium)] text-[var(--core-primary)]", children: display_ship_total || "Free" })
+          ] }),
+          display_tax_total && /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center text-[14px]", children: [
+            /* @__PURE__ */ jsx("span", { className: "text-gray-500 font-[var(--font-regular)]", children: "Taxes" }),
+            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-medium)] text-[var(--core-primary)]", children: formatCurrency(display_tax_total) })
+          ] }),
+          /* @__PURE__ */ jsx(
+            "div",
+            {
+              className: "border-t my-1",
+              style: {
+                background: "color-mix(in srgb, var(--core-secondary) 35%, #e8e5df)"
+              }
+            }
+          ),
+          /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center", children: [
+            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-bold)] text-[15px] text-[var(--core-primary)]", children: "Total" }),
+            /* @__PURE__ */ jsx("span", { className: "font-[var(--font-bold)] text-[17px] text-[var(--core-primary)]", children: formatCurrency(display_total) })
+          ] }),
+          totalSavings > 0 && /* @__PURE__ */ jsxs("p", { className: "text-[13px] font-[var(--font-bold)] text-[#16a34a] mt-[6px] text-right", children: [
+            "You save ",
+            formatCurrency(totalSavings),
+            " on this order \u{1F389}"
+          ] })
+        ] })
+      ] })
     ] }),
     /* @__PURE__ */ jsx(
       "button",
@@ -6907,10 +6270,6 @@ var Order = (props) => {
       }
     )
   ] }) }) });
-};
-var Hello = () => {
-  const { cart, isCartLoading } = useCore();
-  return /* @__PURE__ */ jsx("div", { children: isCartLoading ? "Loading..." : "Core Working \u2705" });
 };
 var DeveloperErrorBoundary = class extends Component {
   constructor(props) {
@@ -6962,6 +6321,35 @@ var DeveloperErrorBoundary = class extends Component {
   }
 };
 
-export { AccountAddressesPage, AccountLayout, AccountOrderDetailContent, AccountOrdersPage, AccountPage, AccountSidebar, AccountWishlistPage, AddressCard2 as AddressCard, AddressForm, AuthManager, CartItem, CartMismatchBanner, CartPage, CartSummary, CoreProvider, CouponSection_default as CouponSection, CustomOTPAuth, DEFAULT_NAV_ITEMS as DEFAULT_ACCOUNT_NAV_ITEMS, DeveloperErrorBoundary, EmptyState, Hello, Order, OrdersList, POSTHOG_INSTANCES, Popup, ProfileForm, Spinner, ThirdPartyScripts, UserInfo, ViewCart, buildItem, buildMeta, captureDeveloperException, clearEcommerce, devLogger, getDeveloperPostHog, getMerchantPostHog, getPostHogInstance, identifyDeveloperUser, initDeveloperPostHog, initGtmConfig, initMerchantPostHog, initMetaPixelConfig, initPostHog, injectContentSquare, injectHotjar, invalidateLikedProductsCache, logDeveloper, nameToSlug, pushToDataLayer, resetDeveloperPostHog, sanitizePostHogToken, setDeveloperSuperProperties, trackAddPaymentInfo, trackAddShippingInfo, trackAddToCart, trackApplyCoupon, trackBeginCheckout, trackCustomEvent, trackMetaAddPaymentInfo, trackMetaAddToCart, trackMetaCompleteRegistration, trackMetaInitiateCheckout, trackMetaLead, trackMetaPageView, trackMetaPurchase, trackMetaSearch, trackMetaViewContent, trackPageView, trackPaymentFailed, trackPurchase, trackSearch, trackViewItem, useAddToCart, useAddresses, useAuth, useCart, userCartInfo_default as useCartInfo, useCore, useCurrencyFormat, useGetCurrentUserLikedProductsQuery, useLogout, useVariantSelection };
+// src/types/errors.ts
+var StorefrontError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "StorefrontError";
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+};
+var StorefrontApiError = class extends StorefrontError {
+  constructor(message, status, endpoint, data) {
+    super(message);
+    __publicField(this, "status");
+    __publicField(this, "endpoint");
+    __publicField(this, "data");
+    this.name = "StorefrontApiError";
+    this.status = status;
+    this.endpoint = endpoint;
+    this.data = data;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+};
+var StorefrontAuthError = class extends StorefrontError {
+  constructor(message = "Unauthorized: A valid auth token is required for this operation.") {
+    super(message);
+    this.name = "StorefrontAuthError";
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+};
+
+export { AccountAddressesPage, AccountLayout, AccountOrderDetailContent, AccountOrdersPage, AccountPage, AccountSidebar, AccountWishlistPage, AddressCard2 as AddressCard, AddressForm, AuthManager, CartItem, CartMismatchBanner_default as CartMismatchBanner, CartPage, CartSummary, CoreProvider, CouponSection_default as CouponSection, CustomOTPAuth, DEFAULT_NAV_ITEMS as DEFAULT_ACCOUNT_NAV_ITEMS, DeveloperErrorBoundary, EmptyState, Order, OrdersList, Popup, ProfileForm, Spinner, StorefrontApiError, StorefrontAuthError, StorefrontError, ThirdPartyScripts, UserInfo, ViewCart, injectContentSquare, injectHotjar, invalidateLikedProductsCache, nameToSlug, useAddToCart, useAddresses, useAuth, useCart, userCartInfo_default as useCartInfo, useCore, useCurrencyFormat, useGetCurrentUserLikedProductsQuery, useLogout, useVariantSelection };
 //# sourceMappingURL=index.js.map
 //# sourceMappingURL=index.js.map
