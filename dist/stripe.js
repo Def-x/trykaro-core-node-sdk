@@ -1,4 +1,4 @@
-import { registerPaymentGateway } from './chunk-LVG5TPNI.js';
+import { registerPaymentGateway } from './chunk-UG7KTLQ5.js';
 import './chunk-V6TY7KAL.js';
 import { useState, useRef, useEffect } from 'react';
 import { loadStripe } from '@stripe/stripe-js';

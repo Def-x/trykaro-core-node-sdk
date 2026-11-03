@@ -363,6 +363,23 @@ declare const useCartInfo: () => {
     initialCartInfo: CartInfo;
 };
 
+interface PaymentGatewayInfo {
+    gateway: string;
+    label: string;
+    isPhonePe: boolean;
+    isRazorpay: boolean;
+    isStripe: boolean;
+    stripePublishableKey: string;
+    razorpayKeyId: string;
+    paymentConfig: Record<string, any>;
+    rawGateway: string;
+}
+/**
+ * Hook to automatically detect the merchant's configured payment gateway
+ * from organization settings or active region config.
+ */
+declare function usePaymentGateway(): PaymentGatewayInfo;
+
 /**
  * useGetCurrentUserLikedProductsQuery
  *
@@ -966,4 +983,4 @@ declare class StorefrontAuthError extends StorefrontError {
     constructor(message?: string);
 }
 
-export { AccountAddressesPage, AccountLayout, AccountOrderDetailContent, AccountOrdersPage, AccountPage, AccountSidebar, AccountWishlistPage, type Address, AddressCard, AddressForm, AuthManager, type AuthState, type AuthUser, type Cart, CartItem, CartMismatchBanner, CartPage, CartSummary, CoreProvider, CouponSection, CustomOTPAuth, type Customization, DEFAULT_NAV_ITEMS as DEFAULT_ACCOUNT_NAV_ITEMS, DeveloperErrorBoundary, EmptyState, type FrameworkAdapter, type GtmConfig, type GtmItem, type GtmMeta, type LineItem, type LineItemPayload, type MetaPixelConfig, type OptionType, type OptionValue, Order, type OrderPayment, type Order$1 as OrderType, OrdersList, Popup, type Product, type ProductImage, type ProductVariant, ProfileForm, Region, type RouterAdapter, type SellingQuantity, Spinner, StorefrontActions, StorefrontApiError, StorefrontAuthError, StorefrontConfig, StorefrontError, type Taxon, ThirdPartyScripts, UserInfo, type VariantOption, ViewCart, captureDeveloperException, devLogger, injectContentSquare, injectHotjar, invalidateLikedProductsCache, nameToSlug, useAddToCart, useAddresses, useAuth, useCart, useCartInfo, useCore, useCurrencyFormat, useGetCurrentUserLikedProductsQuery, useLogout, useVariantSelection };
+export { AccountAddressesPage, AccountLayout, AccountOrderDetailContent, AccountOrdersPage, AccountPage, AccountSidebar, AccountWishlistPage, type Address, AddressCard, AddressForm, AuthManager, type AuthState, type AuthUser, type Cart, CartItem, CartMismatchBanner, CartPage, CartSummary, CoreProvider, CouponSection, CustomOTPAuth, type Customization, DEFAULT_NAV_ITEMS as DEFAULT_ACCOUNT_NAV_ITEMS, DeveloperErrorBoundary, EmptyState, type FrameworkAdapter, type GtmConfig, type GtmItem, type GtmMeta, type LineItem, type LineItemPayload, type MetaPixelConfig, type OptionType, type OptionValue, Order, type OrderPayment, type Order$1 as OrderType, OrdersList, type PaymentGatewayInfo, Popup, type Product, type ProductImage, type ProductVariant, ProfileForm, Region, type RouterAdapter, type SellingQuantity, Spinner, StorefrontActions, StorefrontApiError, StorefrontAuthError, StorefrontConfig, StorefrontError, type Taxon, ThirdPartyScripts, UserInfo, type VariantOption, ViewCart, captureDeveloperException, devLogger, injectContentSquare, injectHotjar, invalidateLikedProductsCache, nameToSlug, useAddToCart, useAddresses, useAuth, useCart, useCartInfo, useCore, useCurrencyFormat, useGetCurrentUserLikedProductsQuery, useLogout, usePaymentGateway, useVariantSelection };

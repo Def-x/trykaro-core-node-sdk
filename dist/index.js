@@ -1,14 +1,14 @@
-import { removeDiscountById } from './chunk-KO6CRAXA.js';
-export { applyDiscount, removeDiscountById } from './chunk-KO6CRAXA.js';
-import { configureStorefront, trackDiscountEventAction, removeDiscountAction, applyDiscountAction, getAvailableDiscountsAction, getOrderInvoiceAction, getOrderByIdAction, getOrdersAction, updateUserAction, getUserAction, deleteAddressAction, updateAddressAction, createAddressAction, getAddressesAction, createStripePaymentIntentAction, updatePhonePePaymentAction, createPhonePeOrderAction, updateCartPaymentAction, createCartPaymentAction, updateRazorpayPaymentAction, createRazorpayOrderAction, deleteLineItemAction, updateLineItemAction, createLineItemAction, updateCartIdLineItemsAction, updateCartAction, createCartAction, getCartByIdAction, getCartAction, getCurrentUserLikedProductsAction, verifyOtp, signUpUser, loginUser, validateCartTotal } from './chunk-RVSC4ACF.js';
-export { applyDiscountAction, buildHeaders, configureStorefront, createAddressAction, createCartAction, createCartPaymentAction, createLineItemAction, createPhonePeOrderAction, createRazorpayOrderAction, createStripePaymentIntentAction, deleteAddressAction, deleteLineItemAction, getAddressesAction, getAllTaxonsAction, getApiBaseUrl, getAvailableDiscountsAction, getCartAction, getCartByIdAction, getCurrentUserLikedProductsAction, getEnv, getLikedProductsAction, getOrderByIdAction, getOrderInvoiceAction, getOrdersAction, getOrgVideosAction, getOrganizationAction, getOrganizationId, getProductByIdAction, getProductsAction, getProductsByIdsAction, getProductsFilterAction, getRecentlyViewedProductsAction, getRelatedProductsAction, getServerToken, getStorefrontGlobalConfig, getTaxonByIdAction, getTaxonomiesAction, getTaxonomyByIdAction, getUserAction, likeProductAction, loginUser, removeDiscountAction, revalidateCacheTag, signUpUser, trackDiscountEventAction, unlikeProductAction, updateAddressAction, updateCartAction, updateCartIdLineItemsAction, updateCartPaymentAction, updateLineItemAction, updatePhonePePaymentAction, updateRazorpayPaymentAction, updateUserAction, validateCartTotal, verifyOtp } from './chunk-RVSC4ACF.js';
-import { getPaymentGateway } from './chunk-LVG5TPNI.js';
-import { trackAddToCart, trackCustomEvent, buildItem, trackBeginCheckout, trackAddShippingInfo, trackAddPaymentInfo, trackPurchase, trackPaymentFailed } from './chunk-BF5W2AVU.js';
-export { buildItem, buildMeta, clearEcommerce, initGtmConfig, pushToDataLayer, trackAddPaymentInfo, trackAddShippingInfo, trackAddToCart, trackApplyCoupon, trackBeginCheckout, trackCustomEvent, trackPageView, trackPaymentFailed, trackPurchase, trackSearch, trackViewItem } from './chunk-BF5W2AVU.js';
-import { trackMetaAddToCart, trackMetaInitiateCheckout, trackMetaAddPaymentInfo, trackMetaPurchase } from './chunk-43QFS5VV.js';
-export { initMetaPixelConfig, trackMetaAddPaymentInfo, trackMetaAddToCart, trackMetaCompleteRegistration, trackMetaInitiateCheckout, trackMetaLead, trackMetaPageView, trackMetaPurchase, trackMetaSearch, trackMetaViewContent } from './chunk-43QFS5VV.js';
-import { initDeveloperPostHog, setDeveloperSuperProperties, identifyDeveloperUser, captureDeveloperException, devLogger, getDeveloperPostHog } from './chunk-PTJGNUY5.js';
-export { POSTHOG_INSTANCES, captureDeveloperException, devLogger, getDeveloperPostHog, getMerchantPostHog, getPostHogInstance, identifyDeveloperUser, initDeveloperPostHog, initMerchantPostHog, initPostHog, logDeveloper, resetDeveloperPostHog, sanitizePostHogToken, setDeveloperSuperProperties } from './chunk-PTJGNUY5.js';
+import { removeDiscountById } from './chunk-UO4637RA.js';
+export { applyDiscount, removeDiscountById } from './chunk-UO4637RA.js';
+import { configureStorefront, trackDiscountEventAction, removeDiscountAction, applyDiscountAction, getAvailableDiscountsAction, getOrderInvoiceAction, getOrderByIdAction, getOrdersAction, updateUserAction, getUserAction, deleteAddressAction, updateAddressAction, createAddressAction, getAddressesAction, createStripePaymentIntentAction, updatePhonePePaymentAction, createPhonePeOrderAction, updateCartPaymentAction, createCartPaymentAction, updateRazorpayPaymentAction, createRazorpayOrderAction, deleteLineItemAction, updateLineItemAction, createLineItemAction, updateCartIdLineItemsAction, updateCartAction, createCartAction, getCartByIdAction, getCartAction, getCurrentUserLikedProductsAction, verifyOtp, signUpUser, loginUser, validateCartTotal } from './chunk-LDADU2LN.js';
+export { applyDiscountAction, buildHeaders, configureStorefront, createAddressAction, createCartAction, createCartPaymentAction, createLineItemAction, createPhonePeOrderAction, createRazorpayOrderAction, createStripePaymentIntentAction, deleteAddressAction, deleteLineItemAction, getAddressesAction, getAllTaxonsAction, getApiBaseUrl, getAvailableDiscountsAction, getCartAction, getCartByIdAction, getCurrentUserLikedProductsAction, getEnv, getLikedProductsAction, getOrderByIdAction, getOrderInvoiceAction, getOrdersAction, getOrgVideosAction, getOrganizationAction, getOrganizationId, getProductByIdAction, getProductsAction, getProductsByIdsAction, getProductsFilterAction, getRecentlyViewedProductsAction, getRelatedProductsAction, getServerToken, getStorefrontGlobalConfig, getTaxonByIdAction, getTaxonomiesAction, getTaxonomyByIdAction, getUserAction, likeProductAction, loginUser, removeDiscountAction, revalidateCacheTag, signUpUser, trackDiscountEventAction, unlikeProductAction, updateAddressAction, updateCartAction, updateCartIdLineItemsAction, updateCartPaymentAction, updateLineItemAction, updatePhonePePaymentAction, updateRazorpayPaymentAction, updateUserAction, validateCartTotal, verifyOtp } from './chunk-LDADU2LN.js';
+import { getPaymentGateway } from './chunk-UG7KTLQ5.js';
+import { trackAddToCart, trackCustomEvent, buildItem, trackBeginCheckout, trackAddShippingInfo, trackAddPaymentInfo, trackPurchase, trackPaymentFailed } from './chunk-O76ELHLQ.js';
+export { buildItem, buildMeta, clearEcommerce, initGtmConfig, pushToDataLayer, trackAddPaymentInfo, trackAddShippingInfo, trackAddToCart, trackApplyCoupon, trackBeginCheckout, trackCustomEvent, trackPageView, trackPaymentFailed, trackPurchase, trackSearch, trackViewItem } from './chunk-O76ELHLQ.js';
+import { trackMetaAddToCart, trackMetaInitiateCheckout, trackMetaAddPaymentInfo, trackMetaPurchase } from './chunk-RHCZFTL4.js';
+export { initMetaPixelConfig, trackMetaAddPaymentInfo, trackMetaAddToCart, trackMetaCompleteRegistration, trackMetaInitiateCheckout, trackMetaLead, trackMetaPageView, trackMetaPurchase, trackMetaSearch, trackMetaViewContent } from './chunk-RHCZFTL4.js';
+import { initDeveloperPostHog, setDeveloperSuperProperties, identifyDeveloperUser, captureDeveloperException, devLogger, getDeveloperPostHog } from './chunk-W6GQUMET.js';
+export { POSTHOG_INSTANCES, captureDeveloperException, devLogger, getDeveloperPostHog, getMerchantPostHog, getPostHogInstance, identifyDeveloperUser, initDeveloperPostHog, initMerchantPostHog, initPostHog, logDeveloper, resetDeveloperPostHog, sanitizePostHogToken, setDeveloperSuperProperties } from './chunk-W6GQUMET.js';
 import { __publicField } from './chunk-V6TY7KAL.js';
 import React4, { createContext, useEffect, useMemo, useState, useCallback, useContext, useRef, Component } from 'react';
 import { jsxs, jsx, Fragment } from 'react/jsx-runtime';
@@ -1040,6 +1040,34 @@ var useCartInfo = () => {
   return { initialCartInfo };
 };
 var userCartInfo_default = useCartInfo;
+
+// src/hooks/usePaymentGateway.ts
+function usePaymentGateway() {
+  const { config, orgData } = useCore();
+  const activeRegion = config?.activeRegion ?? config?.region ?? null;
+  const orgPaymentConfig = orgData?.organization_setting?.payment ?? {};
+  const regionPaymentConfig = activeRegion?.payment_config ?? null;
+  const paymentConfig = regionPaymentConfig ?? orgPaymentConfig;
+  const rawPaymentGateway = activeRegion?.payment_gateway || orgPaymentConfig?.mode || orgPaymentConfig?.gateway || "";
+  const paymentGateway = String(rawPaymentGateway || "razorpay").toLowerCase();
+  const isStripeGateway = paymentGateway === "stripe";
+  const isPhonePeGateway = paymentGateway === "phonepe" || paymentGateway === "phone_pe" || paymentGateway === "phonepe_pg" || paymentGateway === "phone-pe";
+  const isRazorpayGateway = !isStripeGateway && !isPhonePeGateway;
+  const stripePublishableKey = paymentConfig?.stripe_publishable_key ?? orgPaymentConfig?.stripe_publishable_key ?? "";
+  const razorpayKeyId = paymentConfig?.razor_pay_key_id ?? orgPaymentConfig?.razor_pay_key_id ?? "";
+  const paymentGatewayLabel = isPhonePeGateway ? "PhonePe" : isStripeGateway ? "Stripe" : isRazorpayGateway ? "Razorpay" : paymentGateway ? paymentGateway.charAt(0).toUpperCase() + paymentGateway.slice(1).replace(/_/g, " ") : "Razorpay";
+  return {
+    gateway: paymentGateway,
+    label: paymentGatewayLabel,
+    isPhonePe: isPhonePeGateway,
+    isRazorpay: isRazorpayGateway,
+    isStripe: isStripeGateway,
+    stripePublishableKey,
+    razorpayKeyId,
+    paymentConfig,
+    rawGateway: rawPaymentGateway
+  };
+}
 var likedCache = /* @__PURE__ */ new Map();
 var CACHE_TTL_MS = 5 * 60 * 1e3;
 var isFresh = (entry) => !!entry && Date.now() - entry.fetchedAt < CACHE_TTL_MS;
@@ -3093,18 +3121,16 @@ var OrderInfo = ({
   const router = useStorefrontRouter(overrideRouter);
   const { Razorpay } = useRazorpay();
   const { cart, setCart, actions, config, auth, orgData, primaryColor, toast } = useCore();
-  const activeRegion = config?.activeRegion ?? config?.region ?? null;
-  const orgPaymentConfig = orgData?.organization_setting?.payment ?? {};
-  const regionPaymentConfig = activeRegion?.payment_config ?? null;
-  const paymentConfig = regionPaymentConfig ?? orgPaymentConfig;
-  const rawPaymentGateway = activeRegion?.payment_gateway || orgPaymentConfig?.mode || orgPaymentConfig?.gateway || "";
-  const paymentGateway = String(rawPaymentGateway || "razorpay").toLowerCase();
-  const isStripeGateway = paymentGateway === "stripe";
-  const isPhonePeGateway = paymentGateway === "phonepe" || paymentGateway === "phone_pe" || paymentGateway === "phonepe_pg" || paymentGateway === "phone-pe";
-  const isRazorpayGateway = !isStripeGateway && !isPhonePeGateway;
-  const stripePublishableKey = paymentConfig?.stripe_publishable_key ?? orgPaymentConfig?.stripe_publishable_key ?? "";
-  const razorpayKeyId = paymentConfig?.razor_pay_key_id ?? orgPaymentConfig?.razor_pay_key_id ?? "";
-  const paymentGatewayLabel = isPhonePeGateway ? "PhonePe" : isStripeGateway ? "Stripe" : isRazorpayGateway ? "Razorpay" : paymentGateway ? paymentGateway.charAt(0).toUpperCase() + paymentGateway.slice(1).replace(/_/g, " ") : "Razorpay";
+  const {
+    gateway: paymentGateway,
+    label: paymentGatewayLabel,
+    isPhonePe: isPhonePeGateway,
+    isRazorpay: isRazorpayGateway,
+    isStripe: isStripeGateway,
+    stripePublishableKey,
+    razorpayKeyId,
+    paymentConfig
+  } = usePaymentGateway();
   const [StripeCheckout, setStripeCheckout] = useState(
     () => getPaymentGateway("stripe")
   );
@@ -6350,6 +6376,6 @@ var StorefrontAuthError = class extends StorefrontError {
   }
 };
 
-export { AccountAddressesPage, AccountLayout, AccountOrderDetailContent, AccountOrdersPage, AccountPage, AccountSidebar, AccountWishlistPage, AddressCard2 as AddressCard, AddressForm, AuthManager, CartItem, CartMismatchBanner_default as CartMismatchBanner, CartPage, CartSummary, CoreProvider, CouponSection_default as CouponSection, CustomOTPAuth, DEFAULT_NAV_ITEMS as DEFAULT_ACCOUNT_NAV_ITEMS, DeveloperErrorBoundary, EmptyState, Order, OrdersList, Popup, ProfileForm, Spinner, StorefrontApiError, StorefrontAuthError, StorefrontError, ThirdPartyScripts, UserInfo, ViewCart, injectContentSquare, injectHotjar, invalidateLikedProductsCache, nameToSlug, useAddToCart, useAddresses, useAuth, useCart, userCartInfo_default as useCartInfo, useCore, useCurrencyFormat, useGetCurrentUserLikedProductsQuery, useLogout, useVariantSelection };
+export { AccountAddressesPage, AccountLayout, AccountOrderDetailContent, AccountOrdersPage, AccountPage, AccountSidebar, AccountWishlistPage, AddressCard2 as AddressCard, AddressForm, AuthManager, CartItem, CartMismatchBanner_default as CartMismatchBanner, CartPage, CartSummary, CoreProvider, CouponSection_default as CouponSection, CustomOTPAuth, DEFAULT_NAV_ITEMS as DEFAULT_ACCOUNT_NAV_ITEMS, DeveloperErrorBoundary, EmptyState, Order, OrdersList, Popup, ProfileForm, Spinner, StorefrontApiError, StorefrontAuthError, StorefrontError, ThirdPartyScripts, UserInfo, ViewCart, injectContentSquare, injectHotjar, invalidateLikedProductsCache, nameToSlug, useAddToCart, useAddresses, useAuth, useCart, userCartInfo_default as useCartInfo, useCore, useCurrencyFormat, useGetCurrentUserLikedProductsQuery, useLogout, usePaymentGateway, useVariantSelection };
 //# sourceMappingURL=index.js.map
 //# sourceMappingURL=index.js.map

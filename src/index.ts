@@ -12,6 +12,10 @@ export { useVariantSelection } from "./hooks/useVariantSelection";
 export { useAddresses } from "./hooks/useAddresses";
 export { default as useCartInfo } from "./hooks/userCartInfo";
 export {
+  usePaymentGateway,
+  type PaymentGatewayInfo,
+} from "./hooks/usePaymentGateway";
+export {
   useGetCurrentUserLikedProductsQuery,
   invalidateLikedProductsCache,
 } from "./hooks/useLikedProducts";

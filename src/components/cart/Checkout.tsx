@@ -26,6 +26,7 @@ import {
 } from "../../lib/metaPixel";
 import { validateCartTotal } from "../../actions/storefrontActions";
 import CartMismatchBanner from "./CartMismatchBanner";
+import { usePaymentGateway } from "../../hooks/usePaymentGateway";
 
 const normalizeAddresses = (payload: any) =>
   payload?.data ??
@@ -113,42 +114,16 @@ const OrderInfo: React.FC<OrderInfoProps> = ({
   const { cart, setCart, actions, config, auth, orgData, primaryColor, toast } =
     useCore();
 
-  const activeRegion = config?.activeRegion ?? config?.region ?? null;
-  const orgPaymentConfig = orgData?.organization_setting?.payment ?? {};
-  const regionPaymentConfig = activeRegion?.payment_config ?? null;
-  const paymentConfig = regionPaymentConfig ?? orgPaymentConfig;
-
-  const rawPaymentGateway =
-    activeRegion?.payment_gateway ||
-    orgPaymentConfig?.mode ||
-    orgPaymentConfig?.gateway ||
-    "";
-
-  const paymentGateway = String(rawPaymentGateway || "razorpay").toLowerCase();
-  const isStripeGateway = paymentGateway === "stripe";
-  const isPhonePeGateway =
-    paymentGateway === "phonepe" ||
-    paymentGateway === "phone_pe" ||
-    paymentGateway === "phonepe_pg" ||
-    paymentGateway === "phone-pe";
-  const isRazorpayGateway = !isStripeGateway && !isPhonePeGateway;
-
-  const stripePublishableKey =
-    paymentConfig?.stripe_publishable_key ??
-    orgPaymentConfig?.stripe_publishable_key ??
-    "";
-  const razorpayKeyId =
-    paymentConfig?.razor_pay_key_id ?? orgPaymentConfig?.razor_pay_key_id ?? "";
-  const paymentGatewayLabel = isPhonePeGateway
-    ? "PhonePe"
-    : isStripeGateway
-      ? "Stripe"
-      : isRazorpayGateway
-        ? "Razorpay"
-        : paymentGateway
-          ? paymentGateway.charAt(0).toUpperCase() +
-            paymentGateway.slice(1).replace(/_/g, " ")
-          : "Razorpay";
+  const {
+    gateway: paymentGateway,
+    label: paymentGatewayLabel,
+    isPhonePe: isPhonePeGateway,
+    isRazorpay: isRazorpayGateway,
+    isStripe: isStripeGateway,
+    stripePublishableKey,
+    razorpayKeyId,
+    paymentConfig,
+  } = usePaymentGateway();
 
   const [StripeCheckout, setStripeCheckout] = useState<any>(() =>
     getPaymentGateway("stripe"),
