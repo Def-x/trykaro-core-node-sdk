@@ -2,7 +2,7 @@
 
 The official TypeScript SDK and shared core logic for Defx multi-store ecommerce storefronts.
 
-[![npm version](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://www.npmjs.com/package/@defx/storefront-core)
+[![npm version](https://img.shields.io/badge/version-2.1.0-blue.svg)](https://www.npmjs.com/package/@defx/storefront-core)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
 
 ---
@@ -11,7 +11,10 @@ The official TypeScript SDK and shared core logic for Defx multi-store ecommerce
 
 - 🛒 **Headless Ecommerce State**: Reactive hooks for carts, line items, user addresses, currencies, and variant options (`useCart`, `useAddToCart`, `useVariantSelection`).
 - ⚡ **Server-Ready API Helpers**: Framework-agnostic async actions for products, carts, orders, and taxes (`@defx/storefront-core/actions`).
-- 💳 **Plug-and-Play Payment Gateways**: Modular payment gateway registry supporting **Stripe** (`@defx/storefront-core/stripe`), **PhonePe** (`@defx/storefront-core/phonepe`), and **Razorpay**.
+- 🔐 **Dual Authentication System**:
+  - **Own Phone OTP Auth (`useOtpStoreAuth`)**: Direct Defx `/api/login` and `/api/verify` flow with JWT cookie management and auto profile hydration.
+  - **Clerk Auth (`useClerkStoreAuth`, `<ClerkStoreProvider>`)**: Full session exchange against Defx backend with zero boilerplate per storefront project.
+- 💳 **Plug-and-Play Payment Gateways**: Modular payment gateway registry supporting **Stripe** (`@defx/storefront-core/stripe`), **PhonePe** (`@defx/storefront-core/phonepe`), and **Razorpay**, plus **`usePaymentGateway()`** for automatic detection.
 - 📊 **Tree-shakeable Telemetry & Analytics**: Isolated sub-bundles for **GA4 / Google Tag Manager**, **Meta Pixel**, and **PostHog**.
 - 🛡️ **Full Type Safety**: Complete `.d.ts` definitions for every public method, domain entity, and prop contract.
 
@@ -28,49 +31,54 @@ Install the required and optional peer dependencies based on the features you us
 
 ```bash
 yarn add react react-dom lodash
-# Optional / gateway-specific:
-yarn add @stripe/stripe-js @stripe/react-stripe-js posthog-js js-cookie lucide-react
+# Optional based on feature usage:
+yarn add @clerk/nextjs @stripe/stripe-js @stripe/react-stripe-js posthog-js js-cookie lucide-react
 ```
 
 ---
 
-## Quickstart
+## Authentication Setup
 
-### 1. Setup `<CoreProvider>`
-Wrap your application root or client provider tree with `CoreProvider`:
+### Strategy A: Own Phone OTP Authentication (Recommended for Indian Storefronts)
+Connects directly with your Defx backend OTP service:
 
 ```tsx
-import React from "react";
-import { CoreProvider } from "@defx/storefront-core";
-import type { FrameworkAdapter } from "@defx/storefront-core";
-import { cookies } from "next/headers";
-import { revalidateTag } from "next/cache";
+import { CoreProvider, useOtpStoreAuth } from "@defx/storefront-core";
 
-// Optional adapter for Next.js server cookie reading & ISR revalidation
-const nextjsAdapter: FrameworkAdapter = {
-  getServerToken: async () => {
-    const cookieStore = await cookies();
-    return cookieStore.get("access_token")?.value ?? null;
-  },
-  revalidateTag: async (tag: string) => {
-    revalidateTag(tag);
-  },
-};
+export function Providers({ children }) {
+  const auth = useOtpStoreAuth();
 
-export function AppProviders({ children, orgData }) {
   return (
     <CoreProvider
-      adapter={nextjsAdapter}
       config={{
         storeId: process.env.NEXT_PUBLIC_ORGANIZATION_ID,
         apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL,
-        currency: "INR",
-        locale: "en-IN",
+        authType: "own",
       }}
-      orgData={orgData}
+      auth={auth}
     >
       {children}
     </CoreProvider>
+  );
+}
+```
+
+### Strategy B: Clerk Authentication
+Pre-wired session exchange with zero duplicate glue code:
+
+```tsx
+import { ClerkStoreProvider } from "@defx/storefront-core";
+
+export function Providers({ children }) {
+  return (
+    <ClerkStoreProvider
+      config={{
+        storeId: process.env.NEXT_PUBLIC_ORGANIZATION_ID,
+        apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL,
+      }}
+    >
+      {children}
+    </ClerkStoreProvider>
   );
 }
 ```
@@ -86,8 +94,13 @@ Provides the core context provider, custom hooks, and pre-built storefront compo
 ```tsx
 import { 
   CoreProvider, 
+  ClerkStoreProvider,
   useCart, 
   useAddToCart, 
+  useAuth,
+  useOtpStoreAuth,
+  useClerkStoreAuth,
+  usePaymentGateway,
   useCurrencyFormat, 
   useVariantSelection,
   ViewCart,
@@ -101,7 +114,9 @@ Contains pure async fetch helpers. Completely safe to run in Server Components, 
 import { 
   getProductsAction, 
   getProductByIdAction, 
-  getCartAction 
+  getCartAction,
+  loginUser,
+  verifyOtp
 } from "@defx/storefront-core/actions";
 
 export default async function ProductPage({ params }) {
@@ -110,27 +125,16 @@ export default async function ProductPage({ params }) {
 }
 ```
 
-### 3. Payment Gateway Plugins
-Import payment modules in your app layout or providers to register gateways via side-effects:
+### 3. Payment Gateway Plugins & Detection
+Import payment modules to register gateways via side-effects or use automatic detection:
 
-#### Stripe:
 ```tsx
-// Enables Stripe payment element in checkout
-import "@defx/storefront-core/stripe";
-```
+import { usePaymentGateway } from "@defx/storefront-core";
 
-#### PhonePe:
-```tsx
-// Enables PhonePe checkout redirect flow
-import { registerPhonePeGateway } from "@defx/storefront-core/phonepe";
-```
-
-### 4. Tree-Shakeable Analytics Sub-bundles
-Import analytics utilities without pulling the entire UI bundle:
-```tsx
-import { trackAddToCart, trackPurchase } from "@defx/storefront-core/analytics/gtm";
-import { trackMetaAddToCart } from "@defx/storefront-core/analytics/meta";
-import { devLogger, initDeveloperPostHog } from "@defx/storefront-core/analytics/posthog";
+export function CheckoutButton() {
+  const { gatewayLabel, isPhonePe, isRazorpay, isStripe } = usePaymentGateway();
+  return <button>Pay via {gatewayLabel}</button>;
+}
 ```
 
 ---
@@ -142,10 +146,13 @@ import { devLogger, initDeveloperPostHog } from "@defx/storefront-core/analytics
 | `useCore()` | Access global context state (`cart`, `config`, `auth`, `region`, `adapter`). |
 | `useCart()` | Read and mutate the active cart state. |
 | `useAddToCart()` | Complete cart mutation lifecycle (`handleAddToCart`, `handleDecreaseQty`, `handleDeleteLineItem`, selling units). |
-| `useCurrencyFormat()` | Region and locale-aware money formatting. |
+| `useAuth()` | Read authentication state, current user, tokens, and modal triggers. |
+| `useOtpStoreAuth()` | Built-in Defx backend Phone OTP authentication lifecycle. |
+| `useClerkStoreAuth()` | Clerk session synchronization with Defx backend token exchange. |
+| `usePaymentGateway()` | Automatically resolves the active payment gateway from organization metadata. |
+| `useCurrencyFormat()` | Region and locale-aware money formatting (`₹`). |
 | `useVariantSelection(product)` | Derive selected variants, inventory availability, swatches, and images. |
 | `useAddresses()` | Access user addresses and address mutations. |
-| `useAuth()` | Read authentication state, current user, and tokens. |
 | `useLogout()` | Safe multi-platform logout handler. |
 
 ---

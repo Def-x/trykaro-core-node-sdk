@@ -6,6 +6,23 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ---
 
+## [2.1.0] — 2026-11-03
+
+### ✨ New Features
+
+- **Dual-Strategy Authentication System**:
+  - **`useOtpStoreAuth()`**: Native phone OTP authentication hook supporting sign-in, sign-up, OTP verification, JWT expiration validation, automatic user profile hydration via `getUserAction`, and cookie session syncing.
+  - **`useClerkStoreAuth()`**: Universal Clerk session adapter hook that listens to Clerk auth state and automatically exchanges tokens with Defx `/api/login`, writing `access_token` cookies and `localStorage`.
+  - **`<ClerkStoreProvider>`**: Pre-wired provider wrapping `CoreProvider` with `useClerkStoreAuth` for zero-boilerplate Clerk setup in new storefronts.
+- **Dynamic Payment Gateway Detection**:
+  - **`usePaymentGateway()`**: Hook that introspects `orgData` and `config` to resolve the active payment provider (`PhonePe`, `Razorpay`, `Stripe`) and provides active status flags (`isPhonePe`, `isRazorpay`, `isStripe`) and human-readable gateway labels (`gatewayLabel`).
+- **Universal `loginUser` Payload Handling**:
+  - Updated `loginUser` in `storefrontActions.ts` to dynamically accept either Clerk user credentials (`clerk_id`, `first_name`, `last_name`, `email`) or phone OTP data (`phone`, `country_code`).
+- **Zero-Dependency JWT Expiration Utility**:
+  - Exported `isTokenExpired()` helper for robust browser-safe token expiry verification.
+
+---
+
 ## [2.0.0] — 2026-10-28
 
 ### 🚀 Breaking Changes

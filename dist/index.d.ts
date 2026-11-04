@@ -178,6 +178,50 @@ interface CoreProviderProps {
 declare const CoreProvider: React__default.FC<CoreProviderProps>;
 declare const useCore: () => CoreContextValue;
 
+interface UseClerkStoreAuthOptions {
+    /**
+     * Custom server action to authenticate with backend.
+     * Defaults to SDK's `loginUser`.
+     */
+    loginAction?: (payload: any) => Promise<any>;
+    /**
+     * Callback fired when token is successfully received and persisted.
+     */
+    onLoginSuccess?: (res: any) => void;
+    /**
+     * Post-logout redirect path. Defaults to "/".
+     */
+    redirectOnLogout?: string;
+    /**
+     * Custom navigation function (e.g. Next.js router.push).
+     */
+    navigate?: (path: string) => void;
+}
+/**
+ * useClerkStoreAuth()
+ *
+ * Universal Clerk-to-Defx synchronization hook for storefronts.
+ *
+ * - Listens to Clerk authentication state.
+ * - Automatically exchanges Clerk session with Defx `/api/login` backend.
+ * - Stores JWT token in cookie (`access_token`) and `localStorage` with expiry tracking.
+ * - Cleans up session and cart data on logout.
+ * - Compatible with <CoreProvider auth={auth}>.
+ */
+declare function useClerkStoreAuth(options?: UseClerkStoreAuthOptions): AuthState;
+
+interface ClerkStoreProviderProps extends Omit<CoreProviderProps, "auth"> {
+    authOptions?: UseClerkStoreAuthOptions;
+}
+/**
+ * ClerkStoreProvider
+ *
+ * Pre-wired CoreProvider that automatically hooks into Clerk authentication,
+ * synchronizes session tokens with the Defx backend, and supplies auth context
+ * to all downstream storefront hooks and components.
+ */
+declare const ClerkStoreProvider: React__default.FC<ClerkStoreProviderProps>;
+
 /**
  * useCart()
  *
@@ -286,6 +330,39 @@ declare const useAuth: () => any | Record<string, never>;
  *  <button onClick={logout}>Sign out</button>
  */
 declare const useLogout: () => (() => Promise<void>);
+
+declare function isTokenExpired(token?: string | null): boolean;
+interface UseOtpStoreAuthOptions {
+    onLoginSuccess?: (res: any) => void;
+    redirectOnLogout?: string;
+    navigate?: (path: string) => void;
+    countryCode?: string;
+}
+/**
+ * useOtpStoreAuth()
+ *
+ * Built-in Defx Phone OTP authentication hook for storefronts.
+ *
+ * - Manages session tokens (persisted in cookies and localStorage).
+ * - Automatic token expiration validation.
+ * - Auto-hydrates user profile via `/api/users`.
+ * - Exposes phone login, signup, and verifyOtp actions.
+ * - Controls AuthModal visibility and mode ("signin" | "signup").
+ * - Formatted for <CoreProvider auth={auth}>.
+ */
+declare function useOtpStoreAuth(options?: UseOtpStoreAuthOptions): AuthState & {
+    isAuthOpen: boolean;
+    authMode: "signin" | "signup";
+    closeAuth: () => void;
+    sendLoginOtp: (phone: string, countryCode?: string) => Promise<any>;
+    sendSignUpOtp: (payload: {
+        firstName: string;
+        lastName: string;
+        phone: string;
+        countryCode?: string;
+    }) => Promise<any>;
+    verifyPhoneOtp: (phone: string, code: string, countryCode?: string) => Promise<any>;
+};
 
 declare function useVariantSelection(rawProduct: any): {
     /** Array of { types, values } for whatever the user has selected */
@@ -983,4 +1060,4 @@ declare class StorefrontAuthError extends StorefrontError {
     constructor(message?: string);
 }
 
-export { AccountAddressesPage, AccountLayout, AccountOrderDetailContent, AccountOrdersPage, AccountPage, AccountSidebar, AccountWishlistPage, type Address, AddressCard, AddressForm, AuthManager, type AuthState, type AuthUser, type Cart, CartItem, CartMismatchBanner, CartPage, CartSummary, CoreProvider, CouponSection, CustomOTPAuth, type Customization, DEFAULT_NAV_ITEMS as DEFAULT_ACCOUNT_NAV_ITEMS, DeveloperErrorBoundary, EmptyState, type FrameworkAdapter, type GtmConfig, type GtmItem, type GtmMeta, type LineItem, type LineItemPayload, type MetaPixelConfig, type OptionType, type OptionValue, Order, type OrderPayment, type Order$1 as OrderType, OrdersList, type PaymentGatewayInfo, Popup, type Product, type ProductImage, type ProductVariant, ProfileForm, Region, type RouterAdapter, type SellingQuantity, Spinner, StorefrontActions, StorefrontApiError, StorefrontAuthError, StorefrontConfig, StorefrontError, type Taxon, ThirdPartyScripts, UserInfo, type VariantOption, ViewCart, captureDeveloperException, devLogger, injectContentSquare, injectHotjar, invalidateLikedProductsCache, nameToSlug, useAddToCart, useAddresses, useAuth, useCart, useCartInfo, useCore, useCurrencyFormat, useGetCurrentUserLikedProductsQuery, useLogout, usePaymentGateway, useVariantSelection };
+export { AccountAddressesPage, AccountLayout, AccountOrderDetailContent, AccountOrdersPage, AccountPage, AccountSidebar, AccountWishlistPage, type Address, AddressCard, AddressForm, AuthManager, type AuthState, type AuthUser, type Cart, CartItem, CartMismatchBanner, CartPage, CartSummary, ClerkStoreProvider, type ClerkStoreProviderProps, CoreProvider, CouponSection, CustomOTPAuth, type Customization, DEFAULT_NAV_ITEMS as DEFAULT_ACCOUNT_NAV_ITEMS, DeveloperErrorBoundary, EmptyState, type FrameworkAdapter, type GtmConfig, type GtmItem, type GtmMeta, type LineItem, type LineItemPayload, type MetaPixelConfig, type OptionType, type OptionValue, Order, type OrderPayment, type Order$1 as OrderType, OrdersList, type PaymentGatewayInfo, Popup, type Product, type ProductImage, type ProductVariant, ProfileForm, Region, type RouterAdapter, type SellingQuantity, Spinner, StorefrontActions, StorefrontApiError, StorefrontAuthError, StorefrontConfig, StorefrontError, type Taxon, ThirdPartyScripts, type UseClerkStoreAuthOptions, type UseOtpStoreAuthOptions, UserInfo, type VariantOption, ViewCart, captureDeveloperException, devLogger, injectContentSquare, injectHotjar, invalidateLikedProductsCache, isTokenExpired, nameToSlug, useAddToCart, useAddresses, useAuth, useCart, useCartInfo, useClerkStoreAuth, useCore, useCurrencyFormat, useGetCurrentUserLikedProductsQuery, useLogout, useOtpStoreAuth, usePaymentGateway, useVariantSelection };

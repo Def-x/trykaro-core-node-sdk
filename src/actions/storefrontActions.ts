@@ -362,11 +362,20 @@ export const deleteAddressAction = async (addressId: string | number, options: R
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
 export const loginUser = async (data: Record<string, unknown> = {}, options: RequestOptions = {}): Promise<any> => {
-  const payload = {
-    phone: data?.phone ?? data,
-    country_code: data?.country_code ?? data?.countryCode ?? "+91",
-    organization_id: getOrganizationId(options),
-  };
+  const isClerk = Boolean(data?.clerk_id);
+  const payload = isClerk
+    ? {
+        clerk_id: data.clerk_id,
+        first_name: data.first_name ?? data.firstName,
+        last_name: data.last_name ?? data.lastName,
+        email: data.email,
+        organization_id: getOrganizationId(options),
+      }
+    : {
+        phone: data?.phone ?? data,
+        country_code: data?.country_code ?? data?.countryCode ?? "+91",
+        organization_id: getOrganizationId(options),
+      };
 
   return requestJson(
     `${getApiBaseUrl(options)}/api/login`,
@@ -376,7 +385,7 @@ export const loginUser = async (data: Record<string, unknown> = {}, options: Req
       body: JSON.stringify(payload),
       cache: "no-store",
     },
-    "Failed to send OTP",
+    isClerk ? "Failed to authenticate with Clerk" : "Failed to send OTP",
   );
 };
 

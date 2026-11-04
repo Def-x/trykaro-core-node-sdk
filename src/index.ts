@@ -1,6 +1,7 @@
 
 // ─── Context ──────────────────────────────────────────────────────────────────
 export { CoreProvider, useCore } from "./context/CoreProvider";
+export { ClerkStoreProvider, type ClerkStoreProviderProps } from "./context/ClerkStoreProvider";
 
 // ─── Hooks ────────────────────────────────────────────────────────────────────
 export { useCart } from "./hooks/useCart";
@@ -8,6 +9,15 @@ export { useAddToCart } from "./hooks/useAddToCart";
 export { useCurrencyFormat } from "./hooks/useCurrencyFormat";
 export { useAuth } from "./hooks/useAuth";
 export { useLogout } from "./hooks/useLogout";
+export {
+  useClerkStoreAuth,
+  type UseClerkStoreAuthOptions,
+} from "./hooks/useClerkStoreAuth";
+export {
+  useOtpStoreAuth,
+  isTokenExpired,
+  type UseOtpStoreAuthOptions,
+} from "./hooks/useOtpStoreAuth";
 export { useVariantSelection } from "./hooks/useVariantSelection";
 export { useAddresses } from "./hooks/useAddresses";
 export { default as useCartInfo } from "./hooks/userCartInfo";

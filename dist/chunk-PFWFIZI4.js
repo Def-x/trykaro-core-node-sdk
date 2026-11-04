@@ -352,7 +352,14 @@ var deleteAddressAction = async (addressId, options = {}) => {
   return res;
 };
 var loginUser = async (data = {}, options = {}) => {
-  const payload = {
+  const isClerk = Boolean(data?.clerk_id);
+  const payload = isClerk ? {
+    clerk_id: data.clerk_id,
+    first_name: data.first_name ?? data.firstName,
+    last_name: data.last_name ?? data.lastName,
+    email: data.email,
+    organization_id: getOrganizationId(options)
+  } : {
     phone: data?.phone ?? data,
     country_code: data?.country_code ?? data?.countryCode ?? "+91",
     organization_id: getOrganizationId(options)
@@ -365,7 +372,7 @@ var loginUser = async (data = {}, options = {}) => {
       body: JSON.stringify(payload),
       cache: "no-store"
     },
-    "Failed to send OTP"
+    isClerk ? "Failed to authenticate with Clerk" : "Failed to send OTP"
   );
 };
 var signUpUser = async (data = {}, options = {}) => {
@@ -850,5 +857,5 @@ var getOrgVideosAction = async (options = {}) => {
 };
 
 export { applyDiscountAction, buildHeaders, configureStorefront, createAddressAction, createCartAction, createCartPaymentAction, createLineItemAction, createPhonePeOrderAction, createRazorpayOrderAction, createStripePaymentIntentAction, deleteAddressAction, deleteLineItemAction, getAddressesAction, getAllTaxonsAction, getApiBaseUrl, getAvailableDiscountsAction, getCartAction, getCartByIdAction, getCurrentUserLikedProductsAction, getEnv, getLikedProductsAction, getOrderByIdAction, getOrderInvoiceAction, getOrdersAction, getOrgVideosAction, getOrganizationAction, getOrganizationId, getProductByIdAction, getProductsAction, getProductsByIdsAction, getProductsFilterAction, getRecentlyViewedProductsAction, getRelatedProductsAction, getServerToken, getStorefrontGlobalConfig, getTaxonByIdAction, getTaxonomiesAction, getTaxonomyByIdAction, getUserAction, likeProductAction, loginUser, removeDiscountAction, revalidateCacheTag, signUpUser, trackDiscountEventAction, unlikeProductAction, updateAddressAction, updateCartAction, updateCartIdLineItemsAction, updateCartPaymentAction, updateLineItemAction, updatePhonePePaymentAction, updateRazorpayPaymentAction, updateUserAction, validateCartTotal, verifyOtp };
-//# sourceMappingURL=chunk-LDADU2LN.js.map
-//# sourceMappingURL=chunk-LDADU2LN.js.map
+//# sourceMappingURL=chunk-PFWFIZI4.js.map
+//# sourceMappingURL=chunk-PFWFIZI4.js.map

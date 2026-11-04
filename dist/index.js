@@ -1,7 +1,7 @@
-import { removeDiscountById } from './chunk-UO4637RA.js';
-export { applyDiscount, removeDiscountById } from './chunk-UO4637RA.js';
-import { configureStorefront, trackDiscountEventAction, removeDiscountAction, applyDiscountAction, getAvailableDiscountsAction, getOrderInvoiceAction, getOrderByIdAction, getOrdersAction, updateUserAction, getUserAction, deleteAddressAction, updateAddressAction, createAddressAction, getAddressesAction, createStripePaymentIntentAction, updatePhonePePaymentAction, createPhonePeOrderAction, updateCartPaymentAction, createCartPaymentAction, updateRazorpayPaymentAction, createRazorpayOrderAction, deleteLineItemAction, updateLineItemAction, createLineItemAction, updateCartIdLineItemsAction, updateCartAction, createCartAction, getCartByIdAction, getCartAction, getCurrentUserLikedProductsAction, verifyOtp, signUpUser, loginUser, validateCartTotal } from './chunk-LDADU2LN.js';
-export { applyDiscountAction, buildHeaders, configureStorefront, createAddressAction, createCartAction, createCartPaymentAction, createLineItemAction, createPhonePeOrderAction, createRazorpayOrderAction, createStripePaymentIntentAction, deleteAddressAction, deleteLineItemAction, getAddressesAction, getAllTaxonsAction, getApiBaseUrl, getAvailableDiscountsAction, getCartAction, getCartByIdAction, getCurrentUserLikedProductsAction, getEnv, getLikedProductsAction, getOrderByIdAction, getOrderInvoiceAction, getOrdersAction, getOrgVideosAction, getOrganizationAction, getOrganizationId, getProductByIdAction, getProductsAction, getProductsByIdsAction, getProductsFilterAction, getRecentlyViewedProductsAction, getRelatedProductsAction, getServerToken, getStorefrontGlobalConfig, getTaxonByIdAction, getTaxonomiesAction, getTaxonomyByIdAction, getUserAction, likeProductAction, loginUser, removeDiscountAction, revalidateCacheTag, signUpUser, trackDiscountEventAction, unlikeProductAction, updateAddressAction, updateCartAction, updateCartIdLineItemsAction, updateCartPaymentAction, updateLineItemAction, updatePhonePePaymentAction, updateRazorpayPaymentAction, updateUserAction, validateCartTotal, verifyOtp } from './chunk-LDADU2LN.js';
+import { removeDiscountById } from './chunk-MGN7FXLI.js';
+export { applyDiscount, removeDiscountById } from './chunk-MGN7FXLI.js';
+import { configureStorefront, trackDiscountEventAction, removeDiscountAction, applyDiscountAction, getAvailableDiscountsAction, getOrderInvoiceAction, getOrderByIdAction, getOrdersAction, updateUserAction, getUserAction, deleteAddressAction, updateAddressAction, createAddressAction, getAddressesAction, createStripePaymentIntentAction, updatePhonePePaymentAction, createPhonePeOrderAction, updateCartPaymentAction, createCartPaymentAction, updateRazorpayPaymentAction, createRazorpayOrderAction, deleteLineItemAction, updateLineItemAction, createLineItemAction, updateCartIdLineItemsAction, updateCartAction, createCartAction, getCartByIdAction, getCartAction, loginUser, signUpUser, verifyOtp, getCurrentUserLikedProductsAction, validateCartTotal } from './chunk-PFWFIZI4.js';
+export { applyDiscountAction, buildHeaders, configureStorefront, createAddressAction, createCartAction, createCartPaymentAction, createLineItemAction, createPhonePeOrderAction, createRazorpayOrderAction, createStripePaymentIntentAction, deleteAddressAction, deleteLineItemAction, getAddressesAction, getAllTaxonsAction, getApiBaseUrl, getAvailableDiscountsAction, getCartAction, getCartByIdAction, getCurrentUserLikedProductsAction, getEnv, getLikedProductsAction, getOrderByIdAction, getOrderInvoiceAction, getOrdersAction, getOrgVideosAction, getOrganizationAction, getOrganizationId, getProductByIdAction, getProductsAction, getProductsByIdsAction, getProductsFilterAction, getRecentlyViewedProductsAction, getRelatedProductsAction, getServerToken, getStorefrontGlobalConfig, getTaxonByIdAction, getTaxonomiesAction, getTaxonomyByIdAction, getUserAction, likeProductAction, loginUser, removeDiscountAction, revalidateCacheTag, signUpUser, trackDiscountEventAction, unlikeProductAction, updateAddressAction, updateCartAction, updateCartIdLineItemsAction, updateCartPaymentAction, updateLineItemAction, updatePhonePePaymentAction, updateRazorpayPaymentAction, updateUserAction, validateCartTotal, verifyOtp } from './chunk-PFWFIZI4.js';
 import { getPaymentGateway } from './chunk-UG7KTLQ5.js';
 import { trackAddToCart, trackCustomEvent, buildItem, trackBeginCheckout, trackAddShippingInfo, trackAddPaymentInfo, trackPurchase, trackPaymentFailed } from './chunk-O76ELHLQ.js';
 export { buildItem, buildMeta, clearEcommerce, initGtmConfig, pushToDataLayer, trackAddPaymentInfo, trackAddShippingInfo, trackAddToCart, trackApplyCoupon, trackBeginCheckout, trackCustomEvent, trackPageView, trackPaymentFailed, trackPurchase, trackSearch, trackViewItem } from './chunk-O76ELHLQ.js';
@@ -13,6 +13,7 @@ import { __publicField } from './chunk-V6TY7KAL.js';
 import React4, { createContext, useEffect, useMemo, useState, useCallback, useContext, useRef, Component } from 'react';
 import { jsxs, jsx, Fragment } from 'react/jsx-runtime';
 import Cookies from 'js-cookie';
+import { useUser, useClerk } from '@clerk/nextjs';
 import { flatten, map, compact, filter, uniqBy } from 'lodash';
 import { useRazorpay } from 'react-razorpay';
 import { createPortal } from 'react-dom';
@@ -514,6 +515,142 @@ var useCore = () => {
   }
   return context;
 };
+function decodeJwt(token) {
+  try {
+    const base64Url = token.split(".")[1];
+    if (!base64Url) return null;
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(base64).split("").map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2)).join("")
+    );
+    return JSON.parse(jsonPayload);
+  } catch {
+    return null;
+  }
+}
+function useClerkStoreAuth(options = {}) {
+  const { isSignedIn, user, isLoaded } = useUser();
+  const clerk = useClerk();
+  const [token, setToken] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("access_token") || Cookies.get("access_token") || null;
+    }
+    return null;
+  });
+  const isSyncingRef = useRef(false);
+  useEffect(() => {
+    if (!isLoaded || typeof isSignedIn !== "boolean") return;
+    const currentToken = typeof window !== "undefined" ? localStorage.getItem("access_token") || Cookies.get("access_token") : null;
+    let isTokenValid = false;
+    if (currentToken) {
+      const decoded = decodeJwt(currentToken);
+      isTokenValid = Boolean(decoded?.exp && Date.now() / 1e3 < decoded.exp);
+    }
+    if (!isSignedIn) {
+      if (currentToken) {
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("access_token");
+          localStorage.removeItem("cartid");
+          localStorage.removeItem("user");
+        }
+        Cookies.remove("access_token", { path: "/" });
+        setToken(null);
+      }
+      return;
+    }
+    if (isSignedIn && user && !isTokenValid && !isSyncingRef.current) {
+      isSyncingRef.current = true;
+      const payload = {
+        clerk_id: user.id,
+        first_name: user.firstName || "",
+        last_name: user.lastName || "",
+        email: user.primaryEmailAddress?.emailAddress || user.emailAddresses?.[0]?.emailAddress || ""
+      };
+      const loginFn = options.loginAction || loginUser;
+      loginFn(payload).then((res) => {
+        const newToken = res?.token || res?.access_token;
+        if (newToken) {
+          setToken(newToken);
+          if (typeof window !== "undefined") {
+            localStorage.setItem("access_token", newToken);
+          }
+          const decoded = decodeJwt(newToken);
+          const expiresAt = decoded?.exp ? new Date(decoded.exp * 1e3) : void 0;
+          const isHttps = typeof window !== "undefined" && window.location.protocol === "https:";
+          Cookies.set("access_token", newToken, {
+            expires: expiresAt,
+            secure: isHttps,
+            sameSite: isHttps ? "None" : "Lax",
+            path: "/"
+          });
+          options.onLoginSuccess?.(res);
+        }
+      }).catch((err) => {
+        console.error("[useClerkStoreAuth] Failed to sync Clerk session with Defx backend:", err);
+      }).finally(() => {
+        isSyncingRef.current = false;
+      });
+    }
+  }, [isSignedIn, isLoaded, user?.id, options.loginAction, options.onLoginSuccess]);
+  const logout = useCallback(async () => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("cartid");
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("user");
+    }
+    Cookies.remove("access_token", { path: "/" });
+    setToken(null);
+    try {
+      await clerk.signOut?.();
+    } catch (err) {
+      console.error("[useClerkStoreAuth] Error signing out from Clerk:", err);
+    }
+    const redirectPath = options.redirectOnLogout ?? "/";
+    if (options.navigate) {
+      options.navigate(redirectPath);
+    } else if (typeof window !== "undefined") {
+      window.location.href = redirectPath;
+    }
+  }, [clerk, options.redirectOnLogout, options.navigate]);
+  const openSignIn = useCallback(
+    (opts) => {
+      clerk.openSignIn?.(opts);
+    },
+    [clerk]
+  );
+  const openSignUp = useCallback(
+    (opts) => {
+      clerk.openSignUp?.(opts);
+    },
+    [clerk]
+  );
+  return useMemo(
+    () => ({
+      isSignedIn: Boolean(isSignedIn),
+      isLoaded: Boolean(isLoaded),
+      user,
+      token,
+      access_token: token,
+      logout,
+      openSignIn,
+      openSignUp
+    }),
+    [isSignedIn, isLoaded, user, token, logout, openSignIn, openSignUp]
+  );
+}
+var ClerkStoreProvider = ({
+  children,
+  authOptions,
+  config,
+  ...props
+}) => {
+  const auth = useClerkStoreAuth(authOptions);
+  const resolvedConfig = {
+    ...config,
+    authType: "clerk"
+  };
+  return /* @__PURE__ */ jsx(CoreProvider, { config: resolvedConfig, auth, ...props, children });
+};
 
 // src/hooks/useCart.ts
 var useCart = () => {
@@ -853,6 +990,208 @@ var useLogout = () => {
   };
   return logout;
 };
+function decodeJwt2(token) {
+  try {
+    const base64Url = token.split(".")[1];
+    if (!base64Url) return null;
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(base64).split("").map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2)).join("")
+    );
+    return JSON.parse(jsonPayload);
+  } catch {
+    return null;
+  }
+}
+function isTokenExpired(token) {
+  if (!token) return true;
+  const decoded = decodeJwt2(token);
+  if (!decoded?.exp) return false;
+  return Date.now() / 1e3 >= decoded.exp;
+}
+function useOtpStoreAuth(options = {}) {
+  const [token, setToken] = useState(null);
+  const [user, setUser] = useState(null);
+  const [userId, setUserId] = useState(null);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState("signin");
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const storedToken = localStorage.getItem("access_token") || Cookies.get("access_token") || null;
+    if (!storedToken || isTokenExpired(storedToken)) {
+      if (storedToken) {
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("user");
+        Cookies.remove("access_token", { path: "/" });
+      }
+      setToken(null);
+      setUser(null);
+      setUserId(null);
+      setIsLoaded(true);
+      return;
+    }
+    setToken(storedToken);
+    const decoded = decodeJwt2(storedToken);
+    const resolvedUserId = decoded?.sub ?? decoded?.user_id ?? decoded?.id ?? null;
+    setUserId(resolvedUserId);
+    let storedUser = null;
+    try {
+      const u = localStorage.getItem("user");
+      if (u) storedUser = JSON.parse(u);
+    } catch {
+    }
+    if (storedUser) {
+      setUser(storedUser);
+      setIsLoaded(true);
+    } else {
+      getUserAction({ token: storedToken }).then((fetchedUser) => {
+        if (fetchedUser && !fetchedUser.error && !fetchedUser.serverError) {
+          setUser(fetchedUser);
+          localStorage.setItem("user", JSON.stringify(fetchedUser));
+        }
+      }).catch((err) => {
+        console.warn("[useOtpStoreAuth] Failed to fetch user profile:", err);
+      }).finally(() => {
+        setIsLoaded(true);
+      });
+    }
+  }, []);
+  const setAuth = useCallback((data) => {
+    const nextToken = data?.token || data?.access_token || null;
+    const nextUser = data?.user || null;
+    setToken(nextToken);
+    setUser(nextUser);
+    if (nextToken) {
+      const decoded = decodeJwt2(nextToken);
+      const resolvedUserId = decoded?.sub ?? decoded?.user_id ?? decoded?.id ?? null;
+      setUserId(resolvedUserId);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("access_token", nextToken);
+        if (nextUser) {
+          localStorage.setItem("user", JSON.stringify(nextUser));
+        }
+      }
+      const expiresAt = decoded?.exp ? new Date(decoded.exp * 1e3) : void 0;
+      const isHttps = typeof window !== "undefined" && window.location.protocol === "https:";
+      Cookies.set("access_token", nextToken, {
+        expires: expiresAt,
+        secure: isHttps,
+        sameSite: isHttps ? "None" : "Lax",
+        path: "/"
+      });
+    } else {
+      setUserId(null);
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("user");
+      }
+      Cookies.remove("access_token", { path: "/" });
+    }
+  }, []);
+  const clearAuth = useCallback(() => {
+    setToken(null);
+    setUser(null);
+    setUserId(null);
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("user");
+      localStorage.removeItem("cartid");
+    }
+    Cookies.remove("access_token", { path: "/" });
+  }, []);
+  const logout = useCallback(async () => {
+    clearAuth();
+    const redirectPath = options.redirectOnLogout ?? "/";
+    if (options.navigate) {
+      options.navigate(redirectPath);
+    } else if (typeof window !== "undefined") {
+      window.location.href = redirectPath;
+    }
+  }, [clearAuth, options.redirectOnLogout, options.navigate]);
+  const openSignIn = useCallback(() => {
+    setAuthMode("signin");
+    setIsAuthOpen(true);
+  }, []);
+  const openSignUp = useCallback(() => {
+    setAuthMode("signup");
+    setIsAuthOpen(true);
+  }, []);
+  const closeAuth = useCallback(() => {
+    setIsAuthOpen(false);
+  }, []);
+  const sendLoginOtp = useCallback(
+    async (phone, countryCode = options.countryCode ?? "+91") => {
+      return loginUser({ phone, country_code: countryCode });
+    },
+    [options.countryCode]
+  );
+  const sendSignUpOtp = useCallback(
+    async (payload) => {
+      return signUpUser({
+        firstName: payload.firstName,
+        lastName: payload.lastName,
+        phone: payload.phone,
+        countryCode: payload.countryCode ?? options.countryCode ?? "+91"
+      });
+    },
+    [options.countryCode]
+  );
+  const verifyPhoneOtp = useCallback(
+    async (phone, code, countryCode = options.countryCode ?? "+91") => {
+      const res = await verifyOtp({ phone, country_code: countryCode, code });
+      const newToken = res?.token || res?.access_token;
+      if (newToken) {
+        setAuth({
+          token: newToken,
+          access_token: newToken,
+          user: res?.user ?? null
+        });
+        options.onLoginSuccess?.(res);
+      }
+      return res;
+    },
+    [options.countryCode, options.onLoginSuccess, setAuth]
+  );
+  return useMemo(
+    () => ({
+      isSignedIn: Boolean(token && !isTokenExpired(token)),
+      isLoaded,
+      user,
+      userId,
+      token,
+      access_token: token,
+      logout,
+      openSignIn,
+      openSignUp,
+      setAuth,
+      clearAuth,
+      isAuthOpen,
+      authMode,
+      closeAuth,
+      sendLoginOtp,
+      sendSignUpOtp,
+      verifyPhoneOtp
+    }),
+    [
+      token,
+      isLoaded,
+      user,
+      userId,
+      logout,
+      openSignIn,
+      openSignUp,
+      setAuth,
+      clearAuth,
+      isAuthOpen,
+      authMode,
+      closeAuth,
+      sendLoginOtp,
+      sendSignUpOtp,
+      verifyPhoneOtp
+    ]
+  );
+}
 function useVariantSelection(rawProduct) {
   const [selectedOptionsType, setSelectedOptionsType] = useState([]);
   const allVariantOptions = flatten(
@@ -6376,6 +6715,6 @@ var StorefrontAuthError = class extends StorefrontError {
   }
 };
 
-export { AccountAddressesPage, AccountLayout, AccountOrderDetailContent, AccountOrdersPage, AccountPage, AccountSidebar, AccountWishlistPage, AddressCard2 as AddressCard, AddressForm, AuthManager, CartItem, CartMismatchBanner_default as CartMismatchBanner, CartPage, CartSummary, CoreProvider, CouponSection_default as CouponSection, CustomOTPAuth, DEFAULT_NAV_ITEMS as DEFAULT_ACCOUNT_NAV_ITEMS, DeveloperErrorBoundary, EmptyState, Order, OrdersList, Popup, ProfileForm, Spinner, StorefrontApiError, StorefrontAuthError, StorefrontError, ThirdPartyScripts, UserInfo, ViewCart, injectContentSquare, injectHotjar, invalidateLikedProductsCache, nameToSlug, useAddToCart, useAddresses, useAuth, useCart, userCartInfo_default as useCartInfo, useCore, useCurrencyFormat, useGetCurrentUserLikedProductsQuery, useLogout, usePaymentGateway, useVariantSelection };
+export { AccountAddressesPage, AccountLayout, AccountOrderDetailContent, AccountOrdersPage, AccountPage, AccountSidebar, AccountWishlistPage, AddressCard2 as AddressCard, AddressForm, AuthManager, CartItem, CartMismatchBanner_default as CartMismatchBanner, CartPage, CartSummary, ClerkStoreProvider, CoreProvider, CouponSection_default as CouponSection, CustomOTPAuth, DEFAULT_NAV_ITEMS as DEFAULT_ACCOUNT_NAV_ITEMS, DeveloperErrorBoundary, EmptyState, Order, OrdersList, Popup, ProfileForm, Spinner, StorefrontApiError, StorefrontAuthError, StorefrontError, ThirdPartyScripts, UserInfo, ViewCart, injectContentSquare, injectHotjar, invalidateLikedProductsCache, isTokenExpired, nameToSlug, useAddToCart, useAddresses, useAuth, useCart, userCartInfo_default as useCartInfo, useClerkStoreAuth, useCore, useCurrencyFormat, useGetCurrentUserLikedProductsQuery, useLogout, useOtpStoreAuth, usePaymentGateway, useVariantSelection };
 //# sourceMappingURL=index.js.map
 //# sourceMappingURL=index.js.map
