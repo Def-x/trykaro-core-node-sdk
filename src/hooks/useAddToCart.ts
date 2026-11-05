@@ -265,17 +265,54 @@ export function useAddToCart() {
   /**
    * Remove a line item entirely from the cart.
    */
-  const handleDeleteLineItem = async (product: any) => {
+  const handleDeleteLineItem = async (productOrId: any) => {
     try {
       setIsAddToCartLoading(true);
-      const lineItem = product?.line_itemable
-        ? product
-        : (getCartItem(product) || product);
-      const lineItemId = lineItem?.id;
-      if (lineItemId) {
-        setDeletingLineItemId(lineItemId);
+
+      let lineItemId: string | number | null = null;
+      let targetProduct: any = null;
+
+      if (typeof productOrId === "string" || typeof productOrId === "number") {
+        const strId = String(productOrId);
+        // Direct match against a line item in cart
+        const directMatch = cart?.line_items?.find(
+          (it: any) => String(it.id) === strId
+        );
+        if (directMatch) {
+          lineItemId = directMatch.id;
+          targetProduct = directMatch;
+        } else {
+          // Match against line_itemable / product id
+          const productMatch = cart?.line_items?.find(
+            (it: any) => String(it.line_itemable?.id) === strId
+          );
+          if (productMatch) {
+            lineItemId = productMatch.id;
+            targetProduct = productMatch;
+          } else {
+            lineItemId = productOrId;
+          }
+        }
+      } else if (productOrId && typeof productOrId === "object") {
+        if (productOrId.line_itemable && productOrId.id != null) {
+          lineItemId = productOrId.id;
+          targetProduct = productOrId;
+        } else {
+          const found = getCartItem(productOrId) || cart?.line_items?.find(
+            (it: any) => String(it.id) === String(productOrId.id) || String(it.line_itemable?.id) === String(productOrId.id)
+          );
+          lineItemId = found?.id ?? productOrId.line_item_id ?? productOrId.id ?? null;
+          targetProduct = found ?? productOrId;
+        }
       }
-      await actions.deleteLineItem?.(lineItemId || product?.id);
+
+      if (!lineItemId || lineItemId === "undefined" || lineItemId === "null") {
+        console.error("[useAddToCart] handleDeleteLineItem: Invalid lineItemId", productOrId);
+        return;
+      }
+
+      setDeletingLineItemId(lineItemId);
+      await actions.deleteLineItem?.(lineItemId, { token: userToken });
 
       const activeCartId = cart?.id;
       if (activeCartId) {
@@ -286,16 +323,17 @@ export function useAddToCart() {
       const rawUserId = auth?.user?.id ?? auth?.user?.userId ?? null;
       const userId = rawUserId !== null ? String(rawUserId) : null;
       const currency = config?.currency ?? "INR";
+      const itemToTrack = targetProduct || productOrId;
       trackCustomEvent("remove_from_cart", userId, {
         currency,
         value:
-          Number(product?.line_itemable?.price ?? 0) * (product?.quantity ?? 1),
-        items: [buildItem(product, product?.quantity ?? 1)],
+          Number(itemToTrack?.line_itemable?.price ?? itemToTrack?.price ?? 0) * (itemToTrack?.quantity ?? 1),
+        items: [buildItem(itemToTrack, itemToTrack?.quantity ?? 1)],
       });
       // ───────────────────────────────────────────────────────────────
 
       toast?.success?.(
-        `${product?.line_itemable?.name || "Item"} removed from cart`,
+        `${itemToTrack?.line_itemable?.name || itemToTrack?.name || "Item"} removed from cart`,
       );
     } catch (err: any) {
       console.error("[useAddToCart] handleDeleteLineItem error:", err);
@@ -303,9 +341,7 @@ export function useAddToCart() {
       if (errorMsg && typeof errorMsg === "string") {
         toast?.error?.(errorMsg);
       } else {
-        toast?.error?.(
-          `Failed to remove ${product?.line_itemable?.name || "item"}`,
-        );
+        toast?.error?.("Failed to remove item");
       }
     } finally {
       setIsAddToCartLoading(false);

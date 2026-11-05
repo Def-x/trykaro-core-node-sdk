@@ -1,7 +1,7 @@
-import { removeDiscountById } from './chunk-MGN7FXLI.js';
-export { applyDiscount, removeDiscountById } from './chunk-MGN7FXLI.js';
-import { configureStorefront, trackDiscountEventAction, removeDiscountAction, applyDiscountAction, getAvailableDiscountsAction, getOrderInvoiceAction, getOrderByIdAction, getOrdersAction, updateUserAction, getUserAction, deleteAddressAction, updateAddressAction, createAddressAction, getAddressesAction, createStripePaymentIntentAction, updatePhonePePaymentAction, createPhonePeOrderAction, updateCartPaymentAction, createCartPaymentAction, updateRazorpayPaymentAction, createRazorpayOrderAction, deleteLineItemAction, updateLineItemAction, createLineItemAction, updateCartIdLineItemsAction, updateCartAction, createCartAction, getCartByIdAction, getCartAction, loginUser, signUpUser, verifyOtp, getCurrentUserLikedProductsAction, validateCartTotal } from './chunk-PFWFIZI4.js';
-export { applyDiscountAction, buildHeaders, configureStorefront, createAddressAction, createCartAction, createCartPaymentAction, createLineItemAction, createPhonePeOrderAction, createRazorpayOrderAction, createStripePaymentIntentAction, deleteAddressAction, deleteLineItemAction, getAddressesAction, getAllTaxonsAction, getApiBaseUrl, getAvailableDiscountsAction, getCartAction, getCartByIdAction, getCurrentUserLikedProductsAction, getEnv, getLikedProductsAction, getOrderByIdAction, getOrderInvoiceAction, getOrdersAction, getOrgVideosAction, getOrganizationAction, getOrganizationId, getProductByIdAction, getProductsAction, getProductsByIdsAction, getProductsFilterAction, getRecentlyViewedProductsAction, getRelatedProductsAction, getServerToken, getStorefrontGlobalConfig, getTaxonByIdAction, getTaxonomiesAction, getTaxonomyByIdAction, getUserAction, likeProductAction, loginUser, removeDiscountAction, revalidateCacheTag, signUpUser, trackDiscountEventAction, unlikeProductAction, updateAddressAction, updateCartAction, updateCartIdLineItemsAction, updateCartPaymentAction, updateLineItemAction, updatePhonePePaymentAction, updateRazorpayPaymentAction, updateUserAction, validateCartTotal, verifyOtp } from './chunk-PFWFIZI4.js';
+import { removeDiscountById } from './chunk-Q4DGRPAX.js';
+export { applyDiscount, removeDiscountById } from './chunk-Q4DGRPAX.js';
+import { configureStorefront, trackDiscountEventAction, removeDiscountAction, applyDiscountAction, getAvailableDiscountsAction, getOrderInvoiceAction, getOrderByIdAction, getOrdersAction, updateUserAction, getUserAction, deleteAddressAction, updateAddressAction, createAddressAction, getAddressesAction, createStripePaymentIntentAction, updatePhonePePaymentAction, createPhonePeOrderAction, updateCartPaymentAction, createCartPaymentAction, updateRazorpayPaymentAction, createRazorpayOrderAction, deleteLineItemAction, updateLineItemAction, createLineItemAction, updateCartIdLineItemsAction, updateCartAction, createCartAction, getCartByIdAction, getCartAction, getRegionsAction, loginUser, signUpUser, verifyOtp, getCurrentUserLikedProductsAction, validateCartTotal } from './chunk-JOF77JD5.js';
+export { applyDiscountAction, buildHeaders, configureStorefront, createAddressAction, createCartAction, createCartPaymentAction, createLineItemAction, createPhonePeOrderAction, createRazorpayOrderAction, createStripePaymentIntentAction, deleteAddressAction, deleteLineItemAction, getAddressesAction, getAllTaxonsAction, getApiBaseUrl, getAvailableDiscountsAction, getCartAction, getCartByIdAction, getCurrentUserLikedProductsAction, getEnv, getLikedProductsAction, getOrderByIdAction, getOrderInvoiceAction, getOrdersAction, getOrgVideosAction, getOrganizationAction, getOrganizationId, getProductByIdAction, getProductsAction, getProductsByIdsAction, getProductsFilterAction, getRecentlyViewedProductsAction, getRegionsAction, getRelatedProductsAction, getServerToken, getStorefrontGlobalConfig, getTaxonByIdAction, getTaxonomiesAction, getTaxonomyByIdAction, getUserAction, likeProductAction, loginUser, removeDiscountAction, revalidateCacheTag, signUpUser, trackDiscountEventAction, unlikeProductAction, updateAddressAction, updateCartAction, updateCartIdLineItemsAction, updateCartPaymentAction, updateLineItemAction, updatePhonePePaymentAction, updateRazorpayPaymentAction, updateUserAction, validateCartTotal, verifyOtp } from './chunk-JOF77JD5.js';
 import { getPaymentGateway } from './chunk-UG7KTLQ5.js';
 import { trackAddToCart, trackCustomEvent, buildItem, trackBeginCheckout, trackAddShippingInfo, trackAddPaymentInfo, trackPurchase, trackPaymentFailed } from './chunk-O76ELHLQ.js';
 export { buildItem, buildMeta, clearEcommerce, initGtmConfig, pushToDataLayer, trackAddPaymentInfo, trackAddShippingInfo, trackAddToCart, trackApplyCoupon, trackBeginCheckout, trackCustomEvent, trackPageView, trackPaymentFailed, trackPurchase, trackSearch, trackViewItem } from './chunk-O76ELHLQ.js';
@@ -197,6 +197,8 @@ function ThirdPartyScripts({
 }
 var CoreContext = createContext(null);
 var inbuiltActions = {
+  // Regions
+  getRegions: getRegionsAction,
   // Cart
   getCart: getCartAction,
   getCartById: getCartByIdAction,
@@ -821,15 +823,48 @@ function useAddToCart() {
       setDeletingLineItemId(null);
     }
   };
-  const handleDeleteLineItem = async (product) => {
+  const handleDeleteLineItem = async (productOrId) => {
     try {
       setIsAddToCartLoading(true);
-      const lineItem = product?.line_itemable ? product : getCartItem(product) || product;
-      const lineItemId = lineItem?.id;
-      if (lineItemId) {
-        setDeletingLineItemId(lineItemId);
+      let lineItemId = null;
+      let targetProduct = null;
+      if (typeof productOrId === "string" || typeof productOrId === "number") {
+        const strId = String(productOrId);
+        const directMatch = cart?.line_items?.find(
+          (it) => String(it.id) === strId
+        );
+        if (directMatch) {
+          lineItemId = directMatch.id;
+          targetProduct = directMatch;
+        } else {
+          const productMatch = cart?.line_items?.find(
+            (it) => String(it.line_itemable?.id) === strId
+          );
+          if (productMatch) {
+            lineItemId = productMatch.id;
+            targetProduct = productMatch;
+          } else {
+            lineItemId = productOrId;
+          }
+        }
+      } else if (productOrId && typeof productOrId === "object") {
+        if (productOrId.line_itemable && productOrId.id != null) {
+          lineItemId = productOrId.id;
+          targetProduct = productOrId;
+        } else {
+          const found = getCartItem(productOrId) || cart?.line_items?.find(
+            (it) => String(it.id) === String(productOrId.id) || String(it.line_itemable?.id) === String(productOrId.id)
+          );
+          lineItemId = found?.id ?? productOrId.line_item_id ?? productOrId.id ?? null;
+          targetProduct = found ?? productOrId;
+        }
       }
-      await actions.deleteLineItem?.(lineItemId || product?.id);
+      if (!lineItemId || lineItemId === "undefined" || lineItemId === "null") {
+        console.error("[useAddToCart] handleDeleteLineItem: Invalid lineItemId", productOrId);
+        return;
+      }
+      setDeletingLineItemId(lineItemId);
+      await actions.deleteLineItem?.(lineItemId, { token: userToken });
       const activeCartId = cart?.id;
       if (activeCartId) {
         await refreshCart(activeCartId);
@@ -837,13 +872,14 @@ function useAddToCart() {
       const rawUserId = auth?.user?.id ?? auth?.user?.userId ?? null;
       const userId = rawUserId !== null ? String(rawUserId) : null;
       const currency = config?.currency ?? "INR";
+      const itemToTrack = targetProduct || productOrId;
       trackCustomEvent("remove_from_cart", userId, {
         currency,
-        value: Number(product?.line_itemable?.price ?? 0) * (product?.quantity ?? 1),
-        items: [buildItem(product, product?.quantity ?? 1)]
+        value: Number(itemToTrack?.line_itemable?.price ?? itemToTrack?.price ?? 0) * (itemToTrack?.quantity ?? 1),
+        items: [buildItem(itemToTrack, itemToTrack?.quantity ?? 1)]
       });
       toast?.success?.(
-        `${product?.line_itemable?.name || "Item"} removed from cart`
+        `${itemToTrack?.line_itemable?.name || itemToTrack?.name || "Item"} removed from cart`
       );
     } catch (err) {
       console.error("[useAddToCart] handleDeleteLineItem error:", err);
@@ -851,9 +887,7 @@ function useAddToCart() {
       if (errorMsg && typeof errorMsg === "string") {
         toast?.error?.(errorMsg);
       } else {
-        toast?.error?.(
-          `Failed to remove ${product?.line_itemable?.name || "item"}`
-        );
+        toast?.error?.("Failed to remove item");
       }
     } finally {
       setIsAddToCartLoading(false);

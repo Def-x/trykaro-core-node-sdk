@@ -227,15 +227,21 @@ var updateLineItemAction = async (lineItemId, body, options = {}) => requestJson
   },
   "Failed to update line item"
 );
-var deleteLineItemAction = async (lineItemId, options = {}) => requestJson(
-  `${getApiBaseUrl(options)}/api/line_items/${lineItemId}`,
-  {
-    method: "DELETE",
-    headers: await buildHeaders(options),
-    cache: "no-store"
-  },
-  "Failed to delete line item"
-);
+var deleteLineItemAction = async (lineItemId, options = {}) => {
+  if (!lineItemId || lineItemId === "undefined" || lineItemId === "null") {
+    console.warn("[deleteLineItemAction] Invalid lineItemId provided:", lineItemId);
+    return null;
+  }
+  return requestJson(
+    `${getApiBaseUrl(options)}/api/line_items/${lineItemId}`,
+    {
+      method: "DELETE",
+      headers: await buildHeaders(options),
+      cache: "no-store"
+    },
+    "Failed to delete line item"
+  );
+};
 var createRazorpayOrderAction = async (cartId, options = {}) => requestJson(
   `${getApiBaseUrl(options)}/api/cart_payments`,
   {
@@ -855,7 +861,22 @@ var getOrgVideosAction = async (options = {}) => {
   );
   return requestJson(url, fetchConfig, "Failed to fetch organization videos");
 };
+var getRegionsAction = async (options = {}) => {
+  const url = `${getApiBaseUrl(options)}/api/regions`;
+  const fetchConfig = await buildCachedFetchConfig(
+    ["regions"],
+    3600,
+    options
+  );
+  try {
+    const res = await requestJson(url, fetchConfig, "Failed to fetch regions");
+    return Array.isArray(res) ? res : res?.data || [];
+  } catch (err) {
+    console.warn("[storefrontActions] getRegionsAction error:", err);
+    return [];
+  }
+};
 
-export { applyDiscountAction, buildHeaders, configureStorefront, createAddressAction, createCartAction, createCartPaymentAction, createLineItemAction, createPhonePeOrderAction, createRazorpayOrderAction, createStripePaymentIntentAction, deleteAddressAction, deleteLineItemAction, getAddressesAction, getAllTaxonsAction, getApiBaseUrl, getAvailableDiscountsAction, getCartAction, getCartByIdAction, getCurrentUserLikedProductsAction, getEnv, getLikedProductsAction, getOrderByIdAction, getOrderInvoiceAction, getOrdersAction, getOrgVideosAction, getOrganizationAction, getOrganizationId, getProductByIdAction, getProductsAction, getProductsByIdsAction, getProductsFilterAction, getRecentlyViewedProductsAction, getRelatedProductsAction, getServerToken, getStorefrontGlobalConfig, getTaxonByIdAction, getTaxonomiesAction, getTaxonomyByIdAction, getUserAction, likeProductAction, loginUser, removeDiscountAction, revalidateCacheTag, signUpUser, trackDiscountEventAction, unlikeProductAction, updateAddressAction, updateCartAction, updateCartIdLineItemsAction, updateCartPaymentAction, updateLineItemAction, updatePhonePePaymentAction, updateRazorpayPaymentAction, updateUserAction, validateCartTotal, verifyOtp };
-//# sourceMappingURL=chunk-PFWFIZI4.js.map
-//# sourceMappingURL=chunk-PFWFIZI4.js.map
+export { applyDiscountAction, buildHeaders, configureStorefront, createAddressAction, createCartAction, createCartPaymentAction, createLineItemAction, createPhonePeOrderAction, createRazorpayOrderAction, createStripePaymentIntentAction, deleteAddressAction, deleteLineItemAction, getAddressesAction, getAllTaxonsAction, getApiBaseUrl, getAvailableDiscountsAction, getCartAction, getCartByIdAction, getCurrentUserLikedProductsAction, getEnv, getLikedProductsAction, getOrderByIdAction, getOrderInvoiceAction, getOrdersAction, getOrgVideosAction, getOrganizationAction, getOrganizationId, getProductByIdAction, getProductsAction, getProductsByIdsAction, getProductsFilterAction, getRecentlyViewedProductsAction, getRegionsAction, getRelatedProductsAction, getServerToken, getStorefrontGlobalConfig, getTaxonByIdAction, getTaxonomiesAction, getTaxonomyByIdAction, getUserAction, likeProductAction, loginUser, removeDiscountAction, revalidateCacheTag, signUpUser, trackDiscountEventAction, unlikeProductAction, updateAddressAction, updateCartAction, updateCartIdLineItemsAction, updateCartPaymentAction, updateLineItemAction, updatePhonePePaymentAction, updateRazorpayPaymentAction, updateUserAction, validateCartTotal, verifyOtp };
+//# sourceMappingURL=chunk-JOF77JD5.js.map
+//# sourceMappingURL=chunk-JOF77JD5.js.map

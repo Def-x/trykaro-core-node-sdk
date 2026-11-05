@@ -172,8 +172,12 @@ export const updateLineItemAction = async (lineItemId: string | number, body: Re
     "Failed to update line item",
   );
 
-export const deleteLineItemAction = async (lineItemId: string | number, options: RequestOptions = {}): Promise<any> =>
-  requestJson(
+export const deleteLineItemAction = async (lineItemId: string | number, options: RequestOptions = {}): Promise<any> => {
+  if (!lineItemId || lineItemId === "undefined" || lineItemId === "null") {
+    console.warn("[deleteLineItemAction] Invalid lineItemId provided:", lineItemId);
+    return null;
+  }
+  return requestJson(
     `${getApiBaseUrl(options)}/api/line_items/${lineItemId}`,
     {
       method: "DELETE",
@@ -182,6 +186,7 @@ export const deleteLineItemAction = async (lineItemId: string | number, options:
     },
     "Failed to delete line item",
   );
+};
 
 // ─── Payments ─────────────────────────────────────────────────────────────────
 
@@ -986,4 +991,22 @@ export const getOrgVideosAction = async (options: RequestOptions = {}): Promise<
     options,
   );
   return requestJson(url, fetchConfig, "Failed to fetch organization videos");
+};
+
+// ─── Regions ──────────────────────────────────────────────────────────────────
+
+export const getRegionsAction = async (options: RequestOptions = {}): Promise<any> => {
+  const url = `${getApiBaseUrl(options)}/api/regions`;
+  const fetchConfig = await buildCachedFetchConfig(
+    ["regions"],
+    3600,
+    options,
+  );
+  try {
+    const res = await requestJson(url, fetchConfig, "Failed to fetch regions");
+    return Array.isArray(res) ? res : res?.data || [];
+  } catch (err) {
+    console.warn("[storefrontActions] getRegionsAction error:", err);
+    return [];
+  }
 };

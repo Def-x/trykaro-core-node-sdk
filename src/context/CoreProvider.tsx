@@ -56,6 +56,8 @@ const CoreContext = createContext<CoreContextValue | null>(null);
 // Actions bundled inside the package — used as defaults when the host app
 // does not inject its own action for a given key via the `actions` prop.
 const inbuiltActions: Record<string, any> = {
+  // Regions
+  getRegions: (storefrontActions as any).getRegionsAction,
   // Cart
   getCart: (storefrontActions as any).getCartAction,
   getCartById: (storefrontActions as any).getCartByIdAction,
