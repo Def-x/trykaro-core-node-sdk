@@ -2,8 +2,8 @@ import * as React from 'react';
 import React__default, { Component, ReactNode, ErrorInfo } from 'react';
 import { devLogger, captureDeveloperException } from './analytics/posthog.js';
 export { POSTHOG_INSTANCES, getDeveloperPostHog, getMerchantPostHog, getPostHogInstance, identifyDeveloperUser, initDeveloperPostHog, initMerchantPostHog, initPostHog, logDeveloper, resetDeveloperPostHog, sanitizePostHogToken, setDeveloperSuperProperties } from './analytics/posthog.js';
-import { S as StorefrontConfig, d as StorefrontActions, R as Region } from './storefrontActions-D7zaNAOy.js';
-export { e as RequestOptions, f as applyDiscountAction, g as createAddressAction, h as createCartAction, c as createCartPaymentAction, i as createLineItemAction, a as createPhonePeOrderAction, j as createRazorpayOrderAction, k as createStripePaymentIntentAction, l as deleteAddressAction, m as deleteLineItemAction, n as getAddressesAction, o as getAllTaxonsAction, p as getAvailableDiscountsAction, q as getCartAction, r as getCartByIdAction, s as getCurrentUserLikedProductsAction, t as getLikedProductsAction, v as getOrderByIdAction, w as getOrderInvoiceAction, x as getOrdersAction, y as getOrgVideosAction, z as getOrganizationAction, A as getProductByIdAction, B as getProductsAction, C as getProductsByIdsAction, D as getProductsFilterAction, E as getRecentlyViewedProductsAction, F as getRegionsAction, G as getRelatedProductsAction, H as getTaxonByIdAction, I as getTaxonomiesAction, J as getTaxonomyByIdAction, K as getUserAction, L as likeProductAction, M as loginUser, N as removeDiscountAction, O as signUpUser, P as trackDiscountEventAction, Q as unlikeProductAction, T as updateAddressAction, U as updateCartAction, V as updateCartIdLineItemsAction, u as updateCartPaymentAction, W as updateLineItemAction, b as updatePhonePePaymentAction, X as updateRazorpayPaymentAction, Y as updateUserAction, Z as validateCartTotal, _ as verifyOtp } from './storefrontActions-D7zaNAOy.js';
+import { S as StorefrontConfig, d as StorefrontActions, R as Region } from './storefrontActions-DP5B6p30.js';
+export { e as RequestOptions, f as applyDiscountAction, g as createAddressAction, h as createCartAction, c as createCartPaymentAction, i as createLineItemAction, a as createPhonePeOrderAction, j as createRazorpayOrderAction, k as createStripePaymentIntentAction, l as deleteAddressAction, m as deleteLineItemAction, n as getAddressesAction, o as getAllTaxonsAction, p as getAvailableDiscountsAction, q as getCartAction, r as getCartByIdAction, s as getCurrentUserLikedProductsAction, t as getLikedProductsAction, v as getOrderByIdAction, w as getOrderInvoiceAction, x as getOrdersAction, y as getOrgVideosAction, z as getOrganizationAction, A as getProductByIdAction, B as getProductsAction, C as getProductsByIdsAction, D as getProductsFilterAction, E as getRecentlyViewedProductsAction, F as getRegionsAction, G as getRelatedProductsAction, H as getTaxonByIdAction, I as getTaxonomiesAction, J as getTaxonomyByIdAction, K as getUserAction, L as likeProductAction, M as loginUser, N as removeDiscountAction, O as signUpUser, P as trackDiscountEventAction, Q as unlikeProductAction, T as updateAddressAction, U as updateCartAction, V as updateCartIdLineItemsAction, u as updateCartPaymentAction, W as updateLineItemAction, b as updatePhonePePaymentAction, X as updateRazorpayPaymentAction, Y as updateUserAction, Z as validateCartTotal, _ as verifyOtp } from './storefrontActions-DP5B6p30.js';
 export { applyDiscount, buildHeaders, configureStorefront, getApiBaseUrl, getEnv, getOrganizationId, getServerToken, getStorefrontGlobalConfig, removeDiscountById, revalidateCacheTag } from './actions.js';
 export { buildItem, buildMeta, clearEcommerce, initGtmConfig, pushToDataLayer, trackAddPaymentInfo, trackAddShippingInfo, trackAddToCart, trackApplyCoupon, trackBeginCheckout, trackCustomEvent, trackPageView, trackPaymentFailed, trackPurchase, trackSearch, trackViewItem } from './analytics/gtm.js';
 export { initMetaPixelConfig, trackMetaAddPaymentInfo, trackMetaAddToCart, trackMetaCompleteRegistration, trackMetaInitiateCheckout, trackMetaLead, trackMetaPageView, trackMetaPurchase, trackMetaSearch, trackMetaViewContent } from './analytics/meta.js';
@@ -158,6 +158,11 @@ interface CoreContextValue {
     addresses?: any[];
     isAddressLoading?: boolean;
     refreshAddresses?: () => Promise<any> | void;
+    isCartDrawerOpen?: boolean;
+    setIsCartDrawerOpen?: React__default.Dispatch<React__default.SetStateAction<boolean>>;
+    openCartDrawer?: () => void;
+    closeCartDrawer?: () => void;
+    toggleCartDrawer?: () => void;
     [key: string]: any;
 }
 interface CoreProviderProps {
@@ -263,7 +268,9 @@ declare const useCart: () => {
  *  toast.error(msg)
  */
 declare function useAddToCart(): {
-    handleAddToCart: (product: any, customizations?: any[], overrideQty?: number | null) => Promise<void>;
+    handleAddToCart: (product: any, customizations?: any[], overrideQty?: number | null, options?: {
+        openDrawer?: boolean;
+    }) => Promise<void>;
     handleDecreaseQty: (product: any, customizations?: any[]) => Promise<void>;
     handleDeleteLineItem: (productOrId: any) => Promise<void>;
     getCartItem: (product: any, customizations?: any[]) => LineItem;
@@ -457,6 +464,15 @@ interface PaymentGatewayInfo {
  */
 declare function usePaymentGateway(): PaymentGatewayInfo;
 
+interface UseCartDrawerReturn {
+    isCartDrawerOpen: boolean;
+    openCartDrawer: () => void;
+    closeCartDrawer: () => void;
+    toggleCartDrawer: () => void;
+    setIsCartDrawerOpen: (open: boolean) => void;
+}
+declare const useCartDrawer: () => UseCartDrawerReturn;
+
 /**
  * useGetCurrentUserLikedProductsQuery
  *
@@ -586,7 +602,25 @@ interface CartSummaryProps {
 }
 declare const CartSummary: React__default.FC<CartSummaryProps>;
 
-declare const ViewCart: React__default.FC;
+interface ViewCartProps {
+    enableFastCheckout?: boolean;
+}
+declare const ViewCart: React__default.FC<ViewCartProps>;
+
+interface CartDrawerProps {
+    isOpen?: boolean;
+    onClose?: () => void;
+    freeShippingThreshold?: number;
+}
+declare const CartDrawer: React__default.FC<CartDrawerProps>;
+
+interface FastCheckoutDrawerProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onPaymentSuccess?: () => void;
+    router?: any;
+}
+declare const FastCheckoutDrawer: React__default.FC<FastCheckoutDrawerProps>;
 
 declare const CouponSection: React__default.FC;
 
@@ -1060,4 +1094,4 @@ declare class StorefrontAuthError extends StorefrontError {
     constructor(message?: string);
 }
 
-export { AccountAddressesPage, AccountLayout, AccountOrderDetailContent, AccountOrdersPage, AccountPage, AccountSidebar, AccountWishlistPage, type Address, AddressCard, AddressForm, AuthManager, type AuthState, type AuthUser, type Cart, CartItem, CartMismatchBanner, CartPage, CartSummary, ClerkStoreProvider, type ClerkStoreProviderProps, CoreProvider, CouponSection, CustomOTPAuth, type Customization, DEFAULT_NAV_ITEMS as DEFAULT_ACCOUNT_NAV_ITEMS, DeveloperErrorBoundary, EmptyState, type FrameworkAdapter, type GtmConfig, type GtmItem, type GtmMeta, type LineItem, type LineItemPayload, type MetaPixelConfig, type OptionType, type OptionValue, Order, type OrderPayment, type Order$1 as OrderType, OrdersList, type PaymentGatewayInfo, Popup, type Product, type ProductImage, type ProductVariant, ProfileForm, Region, type RouterAdapter, type SellingQuantity, Spinner, StorefrontActions, StorefrontApiError, StorefrontAuthError, StorefrontConfig, StorefrontError, type Taxon, ThirdPartyScripts, type UseClerkStoreAuthOptions, type UseOtpStoreAuthOptions, UserInfo, type VariantOption, ViewCart, captureDeveloperException, devLogger, injectContentSquare, injectHotjar, invalidateLikedProductsCache, isTokenExpired, nameToSlug, useAddToCart, useAddresses, useAuth, useCart, useCartInfo, useClerkStoreAuth, useCore, useCurrencyFormat, useGetCurrentUserLikedProductsQuery, useLogout, useOtpStoreAuth, usePaymentGateway, useVariantSelection };
+export { AccountAddressesPage, AccountLayout, AccountOrderDetailContent, AccountOrdersPage, AccountPage, AccountSidebar, AccountWishlistPage, type Address, AddressCard, AddressForm, AuthManager, type AuthState, type AuthUser, type Cart, CartDrawer, type CartDrawerProps, CartItem, CartMismatchBanner, CartPage, CartSummary, ClerkStoreProvider, type ClerkStoreProviderProps, CoreProvider, CouponSection, CustomOTPAuth, type Customization, DEFAULT_NAV_ITEMS as DEFAULT_ACCOUNT_NAV_ITEMS, DeveloperErrorBoundary, EmptyState, FastCheckoutDrawer, type FastCheckoutDrawerProps, type FrameworkAdapter, type GtmConfig, type GtmItem, type GtmMeta, type LineItem, type LineItemPayload, type MetaPixelConfig, type OptionType, type OptionValue, Order, type OrderPayment, type Order$1 as OrderType, OrdersList, type PaymentGatewayInfo, Popup, type Product, type ProductImage, type ProductVariant, ProfileForm, Region, type RouterAdapter, type SellingQuantity, Spinner, StorefrontActions, StorefrontApiError, StorefrontAuthError, StorefrontConfig, StorefrontError, type Taxon, ThirdPartyScripts, type UseCartDrawerReturn, type UseClerkStoreAuthOptions, type UseOtpStoreAuthOptions, UserInfo, type VariantOption, ViewCart, captureDeveloperException, devLogger, injectContentSquare, injectHotjar, invalidateLikedProductsCache, isTokenExpired, nameToSlug, useAddToCart, useAddresses, useAuth, useCart, useCartDrawer, useCartInfo, useClerkStoreAuth, useCore, useCurrencyFormat, useGetCurrentUserLikedProductsQuery, useLogout, useOtpStoreAuth, usePaymentGateway, useVariantSelection };

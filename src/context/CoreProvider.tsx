@@ -12,6 +12,7 @@ import * as storefrontActions from "../actions/storefrontActions";
 import * as discountActions from "../actions/discountActions";
 import { configureStorefront } from "../utils/request";
 import { ThirdPartyScripts } from "../components/tracking/ThirdPartyScripts";
+import { CartDrawer } from "../components/cart/CartDrawer";
 import {
   initDeveloperPostHog,
   getDeveloperPostHog,
@@ -48,6 +49,11 @@ export interface CoreContextValue {
   addresses?: any[];
   isAddressLoading?: boolean;
   refreshAddresses?: () => Promise<any> | void;
+  isCartDrawerOpen?: boolean;
+  setIsCartDrawerOpen?: React.Dispatch<React.SetStateAction<boolean>>;
+  openCartDrawer?: () => void;
+  closeCartDrawer?: () => void;
+  toggleCartDrawer?: () => void;
   [key: string]: any;
 }
 
@@ -185,6 +191,10 @@ export const CoreProvider: React.FC<CoreProviderProps> = ({
 
   const [cart, setCart] = useState<Cart | null | undefined>();
   const [isCartLoading, setIsCartLoading] = useState(true);
+  const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
+  const openCartDrawer = useCallback(() => setIsCartDrawerOpen(true), []);
+  const closeCartDrawer = useCallback(() => setIsCartDrawerOpen(false), []);
+  const toggleCartDrawer = useCallback(() => setIsCartDrawerOpen((prev) => !prev), []);
   const [region, setRegion] = useState<Region | null>(resolvedConfig?.region ?? null);
   const [authState, setAuthState] = useState<AuthState>(() => injectedAuth ?? {});
   const authType = resolvedConfig?.authType ?? "clerk";
@@ -417,6 +427,11 @@ export const CoreProvider: React.FC<CoreProviderProps> = ({
       posthogDeveloper: getDeveloperPostHog(),
       adapter,
       linkComponent,
+      isCartDrawerOpen,
+      setIsCartDrawerOpen,
+      openCartDrawer,
+      closeCartDrawer,
+      toggleCartDrawer,
     }),
     [
       cart,
@@ -431,6 +446,10 @@ export const CoreProvider: React.FC<CoreProviderProps> = ({
       secondaryColor,
       adapter,
       linkComponent,
+      isCartDrawerOpen,
+      openCartDrawer,
+      closeCartDrawer,
+      toggleCartDrawer,
     ],
   );
 
@@ -450,6 +469,7 @@ export const CoreProvider: React.FC<CoreProviderProps> = ({
         }
       >
         {children}
+        {!resolvedConfig?.disableCartDrawer && <CartDrawer />}
       </div>
     </CoreContext.Provider>
   );

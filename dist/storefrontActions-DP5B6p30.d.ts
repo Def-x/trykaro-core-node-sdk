@@ -35,6 +35,8 @@ interface StorefrontConfig {
     posthogDeveloperToken?: string;
     posthogDeveloperHost?: string;
     enablePosthogInDev?: boolean;
+    disableCartDrawer?: boolean;
+    freeShippingThreshold?: number;
     [key: string]: any;
 }
 
