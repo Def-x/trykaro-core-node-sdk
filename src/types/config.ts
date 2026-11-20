@@ -4,6 +4,7 @@ export interface Region {
   id?: string | number;
   name?: string;
   currency?: string;
+  currencySymbol?: string;
   locale?: string;
   currency_symbol?: string;
   invoice_setting?: { currency_symbol?: string };
@@ -18,6 +19,7 @@ export interface StorefrontConfig {
   apiBaseUrl?: string;
   regionId?: string | null;
   currency?: string;
+  currencySymbol?: string;
   locale?: string;
   authType?: 'clerk' | 'own';
   countryCode?: string;
@@ -34,5 +36,7 @@ export interface StorefrontConfig {
   posthogDeveloperToken?: string;
   posthogDeveloperHost?: string;
   enablePosthogInDev?: boolean;
+  disableCartDrawer?: boolean;
+  freeShippingThreshold?: number;
   [key: string]: any;
 }

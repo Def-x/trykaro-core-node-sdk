@@ -19,13 +19,17 @@ export interface PaymentGatewayInfo {
 export function usePaymentGateway(): PaymentGatewayInfo {
   const { config, orgData } = useCore();
 
-  const activeRegion = config?.activeRegion ?? config?.region ?? null;
+  const isRegionBased = Boolean(config?.isRegion);
+  const activeRegion = isRegionBased
+    ? (config?.activeRegion ?? config?.region ?? null)
+    : null;
   const orgPaymentConfig = orgData?.organization_setting?.payment ?? {};
   const regionPaymentConfig = activeRegion?.payment_config ?? null;
-  const paymentConfig = regionPaymentConfig ?? orgPaymentConfig;
+  const paymentConfig =
+    isRegionBased && regionPaymentConfig ? regionPaymentConfig : orgPaymentConfig;
 
   const rawPaymentGateway =
-    activeRegion?.payment_gateway ||
+    (isRegionBased && activeRegion?.payment_gateway) ||
     orgPaymentConfig?.mode ||
     orgPaymentConfig?.gateway ||
     "";
@@ -40,11 +44,15 @@ export function usePaymentGateway(): PaymentGatewayInfo {
   const isRazorpayGateway = !isStripeGateway && !isPhonePeGateway;
 
   const stripePublishableKey =
-    paymentConfig?.stripe_publishable_key ??
+    (isRegionBased ? paymentConfig?.stripe_publishable_key : null) ??
     orgPaymentConfig?.stripe_publishable_key ??
+    orgPaymentConfig?.publishable_key ??
     "";
   const razorpayKeyId =
-    paymentConfig?.razor_pay_key_id ?? orgPaymentConfig?.razor_pay_key_id ?? "";
+    (isRegionBased ? paymentConfig?.razor_pay_key_id : null) ??
+    orgPaymentConfig?.razor_pay_key_id ??
+    orgPaymentConfig?.key_id ??
+    "";
 
   const paymentGatewayLabel = isPhonePeGateway
     ? "PhonePe"

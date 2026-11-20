@@ -26,6 +26,10 @@ export {
   type PaymentGatewayInfo,
 } from "./hooks/usePaymentGateway";
 export {
+  useCartDrawer,
+  type UseCartDrawerReturn,
+} from "./hooks/useCartDrawer";
+export {
   useGetCurrentUserLikedProductsQuery,
   invalidateLikedProductsCache,
 } from "./hooks/useLikedProducts";
@@ -40,6 +44,8 @@ export { CartPage } from "./components/cart/CartPage";
 export { CartItem } from "./components/cart/CartItem";
 export { CartSummary } from "./components/cart/CartSummary";
 export { ViewCart } from "./components/cart/ViewCart";
+export { CartDrawer, type CartDrawerProps } from "./components/cart/CartDrawer";
+export { FastCheckoutDrawer, type FastCheckoutDrawerProps } from "./components/cart/FastCheckoutDrawer";
 export { default as CouponSection } from "./components/cart/CouponSection";
 export { default as CartMismatchBanner } from "./components/cart/CartMismatchBanner";
 

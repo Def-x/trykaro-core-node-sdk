@@ -1,4 +1,4 @@
-import { getApiBaseUrl, buildHeaders } from './chunk-JOF77JD5.js';
+import { getApiBaseUrl, buildHeaders } from './chunk-RR2OSHMK.js';
 
 // src/actions/discountActions.ts
 var buildHeaders2 = async (token, orgId) => buildHeaders({ token, orgId, json: true, requireAuth: false });
@@ -61,5 +61,5 @@ var applyDiscount = async ({
 };
 
 export { applyDiscount, removeDiscountById };
-//# sourceMappingURL=chunk-Q4DGRPAX.js.map
-//# sourceMappingURL=chunk-Q4DGRPAX.js.map
+//# sourceMappingURL=chunk-EK7XNL25.js.map
+//# sourceMappingURL=chunk-EK7XNL25.js.map

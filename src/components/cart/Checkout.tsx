@@ -413,25 +413,40 @@ const OrderInfo: React.FC<OrderInfoProps> = ({
         contact,
       },
       theme: { color: primaryColor },
+      modal: {
+        ondismiss: () => {
+          setIsProcessingPayment(false);
+          setIsPlacingOrder(false);
+        },
+      },
     };
 
-    const razorpay = new Razorpay(options);
-    razorpay.on("payment.failed", (response: any) => {
-      console.error("Razorpay payment failed:", response);
-      toast?.error?.(response?.error?.description || "Payment failed");
+    try {
+      const razorpay = new Razorpay(options);
+      razorpay.on("payment.failed", (response: any) => {
+        console.error("Razorpay payment failed:", response);
+        toast?.error?.(response?.error?.description || "Payment failed");
 
-      const userId = auth?.userId ?? auth?.user?.id ?? user?.id ?? null;
-      const currency = config?.currency ?? "INR";
-      trackPaymentFailed({
-        userId,
-        cart,
-        currency,
-        errorCode: response?.error?.code ?? "",
-        errorReason:
-          response?.error?.reason ?? response?.error?.description ?? "",
+        const userId = auth?.userId ?? auth?.user?.id ?? user?.id ?? null;
+        const currency = config?.currency ?? "INR";
+        trackPaymentFailed({
+          userId,
+          cart,
+          currency,
+          errorCode: response?.error?.code ?? "",
+          errorReason:
+            response?.error?.reason ?? response?.error?.description ?? "",
+        });
+        setIsProcessingPayment(false);
+        setIsPlacingOrder(false);
       });
-    });
-    razorpay.open();
+      setIsPlacingOrder(false);
+      razorpay.open();
+    } catch (err: any) {
+      console.error("Failed to open Razorpay modal:", err);
+      setIsProcessingPayment(false);
+      setIsPlacingOrder(false);
+    }
   };
 
   const onPhonePeHandler = (res: any) => {
