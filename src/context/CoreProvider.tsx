@@ -134,13 +134,19 @@ export const CoreProvider: React.FC<CoreProviderProps> = ({
   adapter,
   linkComponent,
 }) => {
-  const isRegionBased = !!(config?.isRegion || config?.activeRegion || config?.region);
-  const resolvedRegion = (config?.activeRegion ?? config?.region ?? null) as Region | null;
-  const resolvedRegionId = (config?.regionId ?? resolvedRegion?.id ?? null) as string | null;
-  const resolvedCurrency =
-    resolvedRegion?.currency ?? config?.currency ?? "INR";
-  const resolvedLocale =
-    resolvedRegion?.locale ?? config?.locale ?? "en-IN";
+  const isRegionBased = Boolean(config?.isRegion);
+  const resolvedRegion = isRegionBased
+    ? ((config?.activeRegion ?? config?.region ?? null) as Region | null)
+    : null;
+  const resolvedRegionId = isRegionBased
+    ? ((config?.regionId ?? resolvedRegion?.id ?? null) as string | null)
+    : null;
+  const resolvedCurrency = isRegionBased
+    ? (resolvedRegion?.currency ?? config?.currency ?? orgData?.organization_setting?.currency ?? "INR")
+    : (config?.currency ?? orgData?.organization_setting?.currency ?? "INR");
+  const resolvedLocale = isRegionBased
+    ? (resolvedRegion?.locale ?? config?.locale ?? orgData?.organization_setting?.locale ?? "en-IN")
+    : (config?.locale ?? orgData?.organization_setting?.locale ?? "en-IN");
   const resolvedConfig = useMemo(
     () => ({
       ...config,

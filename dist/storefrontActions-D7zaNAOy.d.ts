@@ -2,6 +2,7 @@ interface Region {
     id?: string | number;
     name?: string;
     currency?: string;
+    currencySymbol?: string;
     locale?: string;
     currency_symbol?: string;
     invoice_setting?: {
@@ -17,6 +18,7 @@ interface StorefrontConfig {
     apiBaseUrl?: string;
     regionId?: string | null;
     currency?: string;
+    currencySymbol?: string;
     locale?: string;
     authType?: 'clerk' | 'own';
     countryCode?: string;
@@ -178,7 +180,7 @@ declare const signUpUser: (data?: Record<string, unknown> | FormData, options?: 
 declare const verifyOtp: (data?: Record<string, unknown>, options?: RequestOptions) => Promise<any>;
 declare const getUserAction: (options?: RequestOptions) => Promise<any>;
 declare const updateUserAction: (userId: string | number, userData: Record<string, unknown>, options?: RequestOptions) => Promise<any>;
-declare const getOrdersAction: (regionId: string | null, page?: number, options?: RequestOptions) => Promise<any>;
+declare const getOrdersAction: (regionId?: string | null, page?: number, options?: RequestOptions) => Promise<any>;
 declare const getOrderByIdAction: (orderId: string | number, options?: RequestOptions) => Promise<any>;
 declare const getOrderInvoiceAction: (orderId: string | number, options?: RequestOptions) => Promise<any>;
 declare const getAvailableDiscountsAction: (params?: RequestOptions & {

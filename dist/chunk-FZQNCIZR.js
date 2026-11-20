@@ -439,30 +439,69 @@ var updateUserAction = async (userId, userData, options = {}) => requestJson(
   },
   "Failed to update user"
 );
-var getOrdersAction = async (regionId, page = 1, options = {}) => {
-  const url = new URL(`${getApiBaseUrl(options)}/api/get_current_user_orders`);
-  if (regionId) url.searchParams.set("region_id", regionId);
-  url.searchParams.set("page", page.toString());
-  url.searchParams.set("per_page", "10");
-  return requestJson(
-    url.toString(),
+var getOrdersAction = async (regionId = null, page = 1, options = {}) => {
+  const token = await getServerToken(options?.token);
+  const baseUrl = getApiBaseUrl(options);
+  const headers = await buildHeaders({ ...options, token });
+  const url1 = new URL(`${baseUrl}/api/get_current_user_orders`);
+  if (regionId) url1.searchParams.set("region_id", regionId);
+  url1.searchParams.set("page", page.toString());
+  url1.searchParams.set("per_page", "20");
+  const res1 = await requestJson(
+    url1.toString(),
     {
       method: "GET",
-      headers: await buildHeaders(options),
+      headers,
       cache: "no-store"
     },
     "Failed to get orders"
   );
+  const hasOrders1 = Array.isArray(res1) && res1.length > 0 || Array.isArray(res1?.orders) && res1.orders.length > 0 || Array.isArray(res1?.data?.orders) && res1.data.orders.length > 0 || Array.isArray(res1?.data) && res1.data.length > 0 || Array.isArray(res1?.current_user_orders) && res1.current_user_orders.length > 0;
+  if (hasOrders1) return res1;
+  if (!res1 || res1.serverError || !hasOrders1) {
+    const url2 = new URL(`${baseUrl}/api/orders`);
+    if (regionId) url2.searchParams.set("region_id", regionId);
+    url2.searchParams.set("page", page.toString());
+    url2.searchParams.set("per_page", "20");
+    const res2 = await requestJson(
+      url2.toString(),
+      {
+        method: "GET",
+        headers,
+        cache: "no-store"
+      },
+      "Failed to get orders"
+    );
+    const hasOrders2 = Array.isArray(res2) && res2.length > 0 || Array.isArray(res2?.orders) && res2.orders.length > 0 || Array.isArray(res2?.data?.orders) && res2.data.orders.length > 0 || Array.isArray(res2?.data) && res2.data.length > 0;
+    if (hasOrders2 || !res2?.serverError && res1?.serverError) return res2;
+  }
+  return res1;
 };
-var getOrderByIdAction = async (orderId, options = {}) => requestJson(
-  `${getApiBaseUrl(options)}/api/orders/${orderId}`,
-  {
-    method: "GET",
-    headers: await buildHeaders(options),
-    cache: "no-store"
-  },
-  "Failed to get order"
-);
+var getOrderByIdAction = async (orderId, options = {}) => {
+  const token = await getServerToken(options?.token);
+  const baseUrl = getApiBaseUrl(options);
+  const headers = await buildHeaders({ ...options, token });
+  const res1 = await requestJson(
+    `${baseUrl}/api/orders/${orderId}`,
+    {
+      method: "GET",
+      headers,
+      cache: "no-store"
+    },
+    "Failed to get order"
+  );
+  if (res1 && !res1.serverError) return res1;
+  const res2 = await requestJson(
+    `${baseUrl}/api/get_order/${orderId}`,
+    {
+      method: "GET",
+      headers,
+      cache: "no-store"
+    },
+    "Failed to get order"
+  );
+  return res2 && !res2.serverError ? res2 : res1;
+};
 var getOrderInvoiceAction = async (orderId, options = {}) => {
   const res = await fetch(
     `${getApiBaseUrl(options)}/api/generate_invoice_pdf/${orderId}`,
@@ -878,5 +917,5 @@ var getRegionsAction = async (options = {}) => {
 };
 
 export { applyDiscountAction, buildHeaders, configureStorefront, createAddressAction, createCartAction, createCartPaymentAction, createLineItemAction, createPhonePeOrderAction, createRazorpayOrderAction, createStripePaymentIntentAction, deleteAddressAction, deleteLineItemAction, getAddressesAction, getAllTaxonsAction, getApiBaseUrl, getAvailableDiscountsAction, getCartAction, getCartByIdAction, getCurrentUserLikedProductsAction, getEnv, getLikedProductsAction, getOrderByIdAction, getOrderInvoiceAction, getOrdersAction, getOrgVideosAction, getOrganizationAction, getOrganizationId, getProductByIdAction, getProductsAction, getProductsByIdsAction, getProductsFilterAction, getRecentlyViewedProductsAction, getRegionsAction, getRelatedProductsAction, getServerToken, getStorefrontGlobalConfig, getTaxonByIdAction, getTaxonomiesAction, getTaxonomyByIdAction, getUserAction, likeProductAction, loginUser, removeDiscountAction, revalidateCacheTag, signUpUser, trackDiscountEventAction, unlikeProductAction, updateAddressAction, updateCartAction, updateCartIdLineItemsAction, updateCartPaymentAction, updateLineItemAction, updatePhonePePaymentAction, updateRazorpayPaymentAction, updateUserAction, validateCartTotal, verifyOtp };
-//# sourceMappingURL=chunk-JOF77JD5.js.map
-//# sourceMappingURL=chunk-JOF77JD5.js.map
+//# sourceMappingURL=chunk-FZQNCIZR.js.map
+//# sourceMappingURL=chunk-FZQNCIZR.js.map

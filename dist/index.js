@@ -1,7 +1,7 @@
-import { removeDiscountById } from './chunk-Q4DGRPAX.js';
-export { applyDiscount, removeDiscountById } from './chunk-Q4DGRPAX.js';
-import { configureStorefront, trackDiscountEventAction, removeDiscountAction, applyDiscountAction, getAvailableDiscountsAction, getOrderInvoiceAction, getOrderByIdAction, getOrdersAction, updateUserAction, getUserAction, deleteAddressAction, updateAddressAction, createAddressAction, getAddressesAction, createStripePaymentIntentAction, updatePhonePePaymentAction, createPhonePeOrderAction, updateCartPaymentAction, createCartPaymentAction, updateRazorpayPaymentAction, createRazorpayOrderAction, deleteLineItemAction, updateLineItemAction, createLineItemAction, updateCartIdLineItemsAction, updateCartAction, createCartAction, getCartByIdAction, getCartAction, getRegionsAction, loginUser, signUpUser, verifyOtp, getCurrentUserLikedProductsAction, validateCartTotal } from './chunk-JOF77JD5.js';
-export { applyDiscountAction, buildHeaders, configureStorefront, createAddressAction, createCartAction, createCartPaymentAction, createLineItemAction, createPhonePeOrderAction, createRazorpayOrderAction, createStripePaymentIntentAction, deleteAddressAction, deleteLineItemAction, getAddressesAction, getAllTaxonsAction, getApiBaseUrl, getAvailableDiscountsAction, getCartAction, getCartByIdAction, getCurrentUserLikedProductsAction, getEnv, getLikedProductsAction, getOrderByIdAction, getOrderInvoiceAction, getOrdersAction, getOrgVideosAction, getOrganizationAction, getOrganizationId, getProductByIdAction, getProductsAction, getProductsByIdsAction, getProductsFilterAction, getRecentlyViewedProductsAction, getRegionsAction, getRelatedProductsAction, getServerToken, getStorefrontGlobalConfig, getTaxonByIdAction, getTaxonomiesAction, getTaxonomyByIdAction, getUserAction, likeProductAction, loginUser, removeDiscountAction, revalidateCacheTag, signUpUser, trackDiscountEventAction, unlikeProductAction, updateAddressAction, updateCartAction, updateCartIdLineItemsAction, updateCartPaymentAction, updateLineItemAction, updatePhonePePaymentAction, updateRazorpayPaymentAction, updateUserAction, validateCartTotal, verifyOtp } from './chunk-JOF77JD5.js';
+import { removeDiscountById } from './chunk-PE252SUX.js';
+export { applyDiscount, removeDiscountById } from './chunk-PE252SUX.js';
+import { configureStorefront, trackDiscountEventAction, removeDiscountAction, applyDiscountAction, getAvailableDiscountsAction, getOrderInvoiceAction, getOrderByIdAction, getOrdersAction, updateUserAction, getUserAction, deleteAddressAction, updateAddressAction, createAddressAction, getAddressesAction, createStripePaymentIntentAction, updatePhonePePaymentAction, createPhonePeOrderAction, updateCartPaymentAction, createCartPaymentAction, updateRazorpayPaymentAction, createRazorpayOrderAction, deleteLineItemAction, updateLineItemAction, createLineItemAction, updateCartIdLineItemsAction, updateCartAction, createCartAction, getCartByIdAction, getCartAction, getRegionsAction, loginUser, signUpUser, verifyOtp, getCurrentUserLikedProductsAction, validateCartTotal } from './chunk-FZQNCIZR.js';
+export { applyDiscountAction, buildHeaders, configureStorefront, createAddressAction, createCartAction, createCartPaymentAction, createLineItemAction, createPhonePeOrderAction, createRazorpayOrderAction, createStripePaymentIntentAction, deleteAddressAction, deleteLineItemAction, getAddressesAction, getAllTaxonsAction, getApiBaseUrl, getAvailableDiscountsAction, getCartAction, getCartByIdAction, getCurrentUserLikedProductsAction, getEnv, getLikedProductsAction, getOrderByIdAction, getOrderInvoiceAction, getOrdersAction, getOrgVideosAction, getOrganizationAction, getOrganizationId, getProductByIdAction, getProductsAction, getProductsByIdsAction, getProductsFilterAction, getRecentlyViewedProductsAction, getRegionsAction, getRelatedProductsAction, getServerToken, getStorefrontGlobalConfig, getTaxonByIdAction, getTaxonomiesAction, getTaxonomyByIdAction, getUserAction, likeProductAction, loginUser, removeDiscountAction, revalidateCacheTag, signUpUser, trackDiscountEventAction, unlikeProductAction, updateAddressAction, updateCartAction, updateCartIdLineItemsAction, updateCartPaymentAction, updateLineItemAction, updatePhonePePaymentAction, updateRazorpayPaymentAction, updateUserAction, validateCartTotal, verifyOtp } from './chunk-FZQNCIZR.js';
 import { getPaymentGateway } from './chunk-UG7KTLQ5.js';
 import { trackAddToCart, trackCustomEvent, buildItem, trackBeginCheckout, trackAddShippingInfo, trackAddPaymentInfo, trackPurchase, trackPaymentFailed } from './chunk-O76ELHLQ.js';
 export { buildItem, buildMeta, clearEcommerce, initGtmConfig, pushToDataLayer, trackAddPaymentInfo, trackAddShippingInfo, trackAddToCart, trackApplyCoupon, trackBeginCheckout, trackCustomEvent, trackPageView, trackPaymentFailed, trackPurchase, trackSearch, trackViewItem } from './chunk-O76ELHLQ.js';
@@ -251,11 +251,11 @@ var CoreProvider = ({
   adapter,
   linkComponent
 }) => {
-  const isRegionBased = !!(config?.isRegion || config?.activeRegion || config?.region);
-  const resolvedRegion = config?.activeRegion ?? config?.region ?? null;
-  const resolvedRegionId = config?.regionId ?? resolvedRegion?.id ?? null;
-  const resolvedCurrency = resolvedRegion?.currency ?? config?.currency ?? "INR";
-  const resolvedLocale = resolvedRegion?.locale ?? config?.locale ?? "en-IN";
+  const isRegionBased = Boolean(config?.isRegion);
+  const resolvedRegion = isRegionBased ? config?.activeRegion ?? config?.region ?? null : null;
+  const resolvedRegionId = isRegionBased ? config?.regionId ?? resolvedRegion?.id ?? null : null;
+  const resolvedCurrency = isRegionBased ? resolvedRegion?.currency ?? config?.currency ?? orgData?.organization_setting?.currency ?? "INR" : config?.currency ?? orgData?.organization_setting?.currency ?? "INR";
+  const resolvedLocale = isRegionBased ? resolvedRegion?.locale ?? config?.locale ?? orgData?.organization_setting?.locale ?? "en-IN" : config?.locale ?? orgData?.organization_setting?.locale ?? "en-IN";
   const resolvedConfig = useMemo(
     () => ({
       ...config,
@@ -909,15 +909,34 @@ function useAddToCart() {
 }
 
 // src/hooks/useCurrencyFormat.ts
+var SYMBOL_TO_ISO = {
+  "\u20B9": "INR",
+  Rs: "INR",
+  "Rs.": "INR",
+  "$": "USD",
+  "\u20AC": "EUR",
+  "\xA3": "GBP",
+  "\xA5": "JPY",
+  "A$": "AUD",
+  "C$": "CAD",
+  AED: "AED"
+};
 function useCurrencyFormat() {
   const { config, orgData } = useCore();
-  const activeRegion = config?.isRegion ? config?.activeRegion ?? config?.region ?? null : null;
-  const currency = activeRegion?.currency ?? config?.currency ?? orgData?.organization_setting?.currency ?? "INR";
-  const locale = activeRegion?.locale ?? config?.locale ?? orgData?.organization_setting?.locale ?? "en-IN";
-  const currencySymbol = activeRegion?.invoice_setting?.currency_symbol ?? activeRegion?.currency_symbol ?? null;
+  const isRegionBased = Boolean(config?.isRegion);
+  const activeRegion = isRegionBased ? config?.activeRegion ?? config?.region ?? null : null;
+  const rawCurrency = isRegionBased ? activeRegion?.currency ?? config?.currency ?? orgData?.organization_setting?.currency ?? "INR" : config?.currency ?? orgData?.organization_setting?.currency ?? "INR";
+  const locale = isRegionBased ? activeRegion?.locale ?? config?.locale ?? orgData?.organization_setting?.locale ?? "en-IN" : config?.locale ?? orgData?.organization_setting?.locale ?? "en-IN";
+  const isIsoCode = typeof rawCurrency === "string" && /^[A-Z]{3}$/i.test(rawCurrency.trim());
+  const mappedIso = !isIsoCode && typeof rawCurrency === "string" ? SYMBOL_TO_ISO[rawCurrency.trim()] : null;
+  const currency = isIsoCode ? rawCurrency.trim().toUpperCase() : mappedIso ?? config?.currency ?? orgData?.organization_setting?.currency ?? "INR";
+  const symbolFromCurrency = !isIsoCode && typeof rawCurrency === "string" ? rawCurrency.trim() : null;
+  const orgSymbol = orgData?.invoice_setting?.currency_symbol || orgData?.organization_setting?.invoice_setting?.currency_symbol || orgData?.organization_setting?.currency_symbol;
+  const currencySymbol = isRegionBased ? activeRegion?.invoice_setting?.currency_symbol || activeRegion?.currency_symbol || config?.currencySymbol || orgSymbol || symbolFromCurrency || null : config?.currencySymbol || orgSymbol || symbolFromCurrency || (currency === "INR" ? "\u20B9" : null);
   const formatCurrency = (amount) => {
     if (amount == null) return "";
     const numericAmount = Number(amount);
+    if (isNaN(numericAmount)) return String(amount);
     const formattedAmount = new Intl.NumberFormat(locale, {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
@@ -925,10 +944,14 @@ function useCurrencyFormat() {
     if (currencySymbol) {
       return `${currencySymbol}${formattedAmount}`;
     }
-    return new Intl.NumberFormat(locale, {
-      style: "currency",
-      currency
-    }).format(numericAmount);
+    try {
+      return new Intl.NumberFormat(locale, {
+        style: "currency",
+        currency: isIsoCode ? currency : "INR"
+      }).format(numericAmount);
+    } catch {
+      return `${currencySymbol || currency} ${formattedAmount}`;
+    }
   };
   return { formatCurrency };
 }
@@ -1417,17 +1440,18 @@ var userCartInfo_default = useCartInfo;
 // src/hooks/usePaymentGateway.ts
 function usePaymentGateway() {
   const { config, orgData } = useCore();
-  const activeRegion = config?.activeRegion ?? config?.region ?? null;
+  const isRegionBased = Boolean(config?.isRegion);
+  const activeRegion = isRegionBased ? config?.activeRegion ?? config?.region ?? null : null;
   const orgPaymentConfig = orgData?.organization_setting?.payment ?? {};
   const regionPaymentConfig = activeRegion?.payment_config ?? null;
-  const paymentConfig = regionPaymentConfig ?? orgPaymentConfig;
-  const rawPaymentGateway = activeRegion?.payment_gateway || orgPaymentConfig?.mode || orgPaymentConfig?.gateway || "";
+  const paymentConfig = isRegionBased && regionPaymentConfig ? regionPaymentConfig : orgPaymentConfig;
+  const rawPaymentGateway = isRegionBased && activeRegion?.payment_gateway || orgPaymentConfig?.mode || orgPaymentConfig?.gateway || "";
   const paymentGateway = String(rawPaymentGateway || "razorpay").toLowerCase();
   const isStripeGateway = paymentGateway === "stripe";
   const isPhonePeGateway = paymentGateway === "phonepe" || paymentGateway === "phone_pe" || paymentGateway === "phonepe_pg" || paymentGateway === "phone-pe";
   const isRazorpayGateway = !isStripeGateway && !isPhonePeGateway;
-  const stripePublishableKey = paymentConfig?.stripe_publishable_key ?? orgPaymentConfig?.stripe_publishable_key ?? "";
-  const razorpayKeyId = paymentConfig?.razor_pay_key_id ?? orgPaymentConfig?.razor_pay_key_id ?? "";
+  const stripePublishableKey = (isRegionBased ? paymentConfig?.stripe_publishable_key : null) ?? orgPaymentConfig?.stripe_publishable_key ?? orgPaymentConfig?.publishable_key ?? "";
+  const razorpayKeyId = (isRegionBased ? paymentConfig?.razor_pay_key_id : null) ?? orgPaymentConfig?.razor_pay_key_id ?? orgPaymentConfig?.key_id ?? "";
   const paymentGatewayLabel = isPhonePeGateway ? "PhonePe" : isStripeGateway ? "Stripe" : isRazorpayGateway ? "Razorpay" : paymentGateway ? paymentGateway.charAt(0).toUpperCase() + paymentGateway.slice(1).replace(/_/g, " ") : "Razorpay";
   return {
     gateway: paymentGateway,

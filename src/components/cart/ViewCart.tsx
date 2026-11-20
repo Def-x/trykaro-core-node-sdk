@@ -13,10 +13,16 @@ import { useAddToCart } from "../../hooks/useAddToCart";
 import { useCart } from "../../hooks/useCart";
 import { useCore } from "../../context/CoreProvider";
 import CouponSection from "./CouponSection";
+import FastCheckoutDrawer from "./FastCheckoutDrawer";
 
-export const ViewCart: React.FC = () => {
+export interface ViewCartProps {
+  enableFastCheckout?: boolean;
+}
+
+export const ViewCart: React.FC<ViewCartProps> = ({ enableFastCheckout = false }) => {
   const [discountOpen, setDiscountOpen] = useState(false);
   const [isPaymentRedirecting, setIsPaymentRedirecting] = useState(false);
+  const [fastCheckoutOpen, setFastCheckoutOpen] = useState(false);
   const { cart, cartItems } = useAddToCart();
   const { isCartLoading } = useCart();
   const { formatCurrency } = useCurrencyFormat();
@@ -383,6 +389,21 @@ export const ViewCart: React.FC = () => {
                         this order 🎉
                       </p>
                     )}
+
+                    {enableFastCheckout && (
+                      <button
+                        onClick={() => setFastCheckoutOpen(true)}
+                        className="w-full mt-4 py-3.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-[var(--font-bold)] text-sm flex items-center justify-between shadow-lg shadow-emerald-600/20 transition-all active:scale-[0.98]"
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <span>⚡ Quick Checkout</span>
+                          <span className="bg-emerald-500 text-white text-[10px] uppercase font-bold px-2 py-0.5 rounded-full">
+                            UPI / 1-Tap
+                          </span>
+                        </span>
+                        <span>{display_total ? formatCurrency(display_total) : "—"} →</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -390,6 +411,16 @@ export const ViewCart: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* ── GoKwik-like Fast Checkout Drawer ── */}
+      <FastCheckoutDrawer
+        isOpen={fastCheckoutOpen}
+        onClose={() => setFastCheckoutOpen(false)}
+        onPaymentSuccess={() => {
+          setFastCheckoutOpen(false);
+          setIsPaymentRedirecting(true);
+        }}
+      />
     </div>
   );
 };
