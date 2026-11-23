@@ -10,6 +10,7 @@ import React, {
 } from "react";
 import * as storefrontActions from "../actions/storefrontActions";
 import * as discountActions from "../actions/discountActions";
+import * as loyaltyActions from "../actions/loyaltyActions";
 import { configureStorefront } from "../utils/request";
 import { ThirdPartyScripts } from "../components/tracking/ThirdPartyScripts";
 import { CartDrawer } from "../components/cart/CartDrawer";
@@ -109,6 +110,11 @@ const inbuiltActions: Record<string, any> = {
   removeDiscount: (storefrontActions as any).removeDiscountAction,
   removeDiscountById: (discountActions as any).removeDiscountById,
   trackDiscountEvent: (storefrontActions as any).trackDiscountEventAction,
+  // Loyalty & Rewards
+  getLoyaltyProfile: (loyaltyActions as any).getLoyaltyProfileAction,
+  getLoyaltyRewards: (loyaltyActions as any).getLoyaltyRewardsAction,
+  getLoyaltyTransactions: (loyaltyActions as any).getLoyaltyTransactionsAction,
+  applyLoyaltyPoints: (loyaltyActions as any).applyLoyaltyPointsAction,
 };
 
 const EMPTY_ACTIONS: Record<string, any> = {};

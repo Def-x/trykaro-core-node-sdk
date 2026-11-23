@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useCore } from "../../context/CoreProvider";
 import { useAddToCart } from "../../hooks/useAddToCart";
 import { useCurrencyFormat } from "../../hooks/useCurrencyFormat";
+import { useLoyalty } from "../../hooks/useLoyalty";
 import FastCheckoutDrawer from "./FastCheckoutDrawer";
 
 export interface CartDrawerProps {
@@ -53,8 +54,22 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   const onClose = propOnClose !== undefined ? propOnClose : (contextCloseDrawer ?? (() => {}));
 
   const token = auth?.token ?? auth?.access_token ?? null;
-  const freeShippingThreshold =
-    propThreshold ?? config?.freeShippingThreshold ?? 499;
+
+  // Loyalty points redemption
+  const {
+    availablePoints,
+    monetaryValue,
+    isApplying: isApplyingLoyalty,
+    applyPoints,
+  } = useLoyalty({ autoFetch: Boolean(token) });
+  const [loyaltyPointsInput, setLoyaltyPointsInput] = useState<number>(100);
+  const [isLoyaltyOpen, setIsLoyaltyOpen] = useState(false);
+  const pointsConversionRate =
+    availablePoints > 0 && monetaryValue > 0
+      ? monetaryValue / availablePoints
+      : 0.877;
+  const freeShippingThreshold = propThreshold ?? config?.freeShippingThreshold;
+  const hasFreeShippingConfig = typeof freeShippingThreshold === "number" && freeShippingThreshold > 0;
 
   useEffect(() => {
     setMounted(true);
@@ -105,16 +120,19 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
       String((cart?.promo_total ?? 0) > 10000 ? (cart?.promo_total ?? 0) / 100 : (cart?.promo_total ?? 0)),
   ) || 0;
 
+  const rawShipTotal = parseFloat(
+    String(cart?.display_ship_total ?? "").replace(/[^0-9.]/g, "") ||
+      String((cart?.ship_total ?? 0) > 10000 ? (cart?.ship_total ?? 0) / 100 : (cart?.ship_total ?? 0)),
+  ) || 0;
+
   // Free shipping tracker
-  const freeShippingUnlocked = rawItemTotal >= freeShippingThreshold;
-  const amountNeededForFreeShipping = Math.max(
-    0,
-    freeShippingThreshold - rawItemTotal,
-  );
-  const shippingProgressPct = Math.min(
-    100,
-    Math.round((rawItemTotal / freeShippingThreshold) * 100),
-  );
+  const freeShippingUnlocked = hasFreeShippingConfig && rawItemTotal >= (freeShippingThreshold || 0);
+  const amountNeededForFreeShipping = hasFreeShippingConfig
+    ? Math.max(0, (freeShippingThreshold || 0) - rawItemTotal)
+    : 0;
+  const shippingProgressPct = hasFreeShippingConfig
+    ? Math.min(100, Math.round((rawItemTotal / (freeShippingThreshold || 1)) * 100))
+    : 0;
 
   // Applied coupons from cart
   const appliedDiscounts = ((cart as any)?.cart_discounts || []).filter(
@@ -291,10 +309,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
         </div>
 
         {/* ── Free Shipping Progress Bar (Bombay Shaving Co Style) ── */}
-        {items.length > 0 && (
+        {items.length > 0 && hasFreeShippingConfig && (
           <div className="px-4 py-3 bg-gray-50/80 border-b border-gray-100 shrink-0">
             <div className="flex items-center justify-between text-xs mb-1.5 font-[var(--font-medium)]">
-              {freeShippingUnlocked ? (
+              {freeShippingUnlocked && rawShipTotal === 0 ? (
                 <span className="text-emerald-700 font-bold flex items-center gap-1">
                   <span>🎉</span> You unlocked <strong>FREE Delivery!</strong>
                 </span>
@@ -318,7 +336,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 className="h-full rounded-full transition-all duration-500 ease-out"
                 style={{
                   width: `${shippingProgressPct}%`,
-                  backgroundColor: freeShippingUnlocked ? "#10b981" : primaryColor,
+                  backgroundColor: freeShippingUnlocked && rawShipTotal === 0 ? "#10b981" : primaryColor,
                 }}
               />
             </div>
@@ -581,6 +599,121 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
             </div>
           )}
 
+          {/* ── Loyalty Points Redemption (SBS Rewards) ── */}
+          {items.length > 0 && token && availablePoints > 0 && (
+            <div className="my-2.5 p-3 bg-gradient-to-br from-amber-50/70 via-orange-50/40 to-white border border-amber-200/80 rounded-xl shadow-xs">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-amber-500 text-sm">⭐</span>
+                  <span className="font-[var(--font-bold)] text-xs text-gray-900">
+                    Redeem SBS Points
+                  </span>
+                  <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-900 border border-amber-200">
+                    {availablePoints.toLocaleString()} pts
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsLoyaltyOpen((o) => !o)}
+                  className="text-[11px] font-semibold text-[#E65100] hover:underline cursor-pointer flex items-center gap-1"
+                >
+                  <span>{isLoyaltyOpen ? "Close" : "Redeem"}</span>
+                  <span className="text-xs">{isLoyaltyOpen ? "▴" : "▾"}</span>
+                </button>
+              </div>
+
+              {isLoyaltyOpen ? (
+                <div className="mt-2.5 pt-2 border-t border-amber-200/60 space-y-2.5">
+                  <div className="flex items-center justify-between text-[11px] text-gray-600">
+                    <span>
+                      Worth: <strong className="text-gray-900">{formatCurrency(monetaryValue)}</strong>
+                    </span>
+                    <span className="text-emerald-700 font-semibold">
+                      Saves {formatCurrency(Math.min(availablePoints, Math.max(0, loyaltyPointsInput)) * pointsConversionRate)}
+                    </span>
+                  </div>
+
+                  <div className="flex gap-1.5">
+                    <input
+                      type="number"
+                      min={100}
+                      max={availablePoints}
+                      step={50}
+                      value={loyaltyPointsInput}
+                      onChange={(e) => setLoyaltyPointsInput(Math.min(availablePoints, Math.max(0, Number(e.target.value))))}
+                      className="flex-1 px-3 py-1.5 border border-amber-300 rounded-lg text-xs font-semibold text-gray-900 bg-white focus:outline-none focus:ring-1 focus:ring-[#E65100]"
+                      placeholder="Min 100 pts"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setLoyaltyPointsInput(availablePoints)}
+                      className="px-2.5 py-1.5 bg-white border border-amber-300 rounded-lg text-[11px] font-bold text-[#E65100] hover:bg-orange-50 cursor-pointer shrink-0"
+                    >
+                      Max
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!cart?.id) {
+                          toast?.error?.("Cart not found");
+                          return;
+                        }
+                        await applyPoints({
+                          cart_id: String(cart.id),
+                          points_to_use: loyaltyPointsInput,
+                        });
+                      }}
+                      disabled={isApplyingLoyalty || loyaltyPointsInput < 100 || loyaltyPointsInput > availablePoints}
+                      className="px-3.5 py-1.5 text-white text-xs font-bold rounded-lg transition-opacity disabled:opacity-50 cursor-pointer shrink-0 shadow-xs bg-[#E65100] hover:bg-[#cf4800]"
+                    >
+                      {isApplyingLoyalty ? "Applying..." : "Apply"}
+                    </button>
+                  </div>
+
+                  {/* Preset chips */}
+                  <div className="flex flex-wrap gap-1.5 pt-0.5">
+                    {[100, 250, 500, 1000]
+                      .filter((p) => p <= availablePoints)
+                      .map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => setLoyaltyPointsInput(preset)}
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-colors cursor-pointer ${
+                            loyaltyPointsInput === preset
+                              ? "bg-[#E65100] text-white border-[#E65100]"
+                              : "bg-white text-gray-700 border-amber-200 hover:border-amber-400"
+                          }`}
+                        >
+                          {preset} Pts (-{formatCurrency(preset * pointsConversionRate)})
+                        </button>
+                      ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="mt-1 text-[11px] text-gray-500">
+                  You have {availablePoints.toLocaleString()} points worth {formatCurrency(monetaryValue)}. Click Redeem to apply points.
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Prompt if not signed in */}
+          {items.length > 0 && !token && (
+            <div className="my-2 p-2.5 bg-orange-50/50 border border-orange-200/50 rounded-xl flex items-center justify-between text-xs text-gray-600">
+              <span className="flex items-center gap-1.5">
+                <span>⭐</span>
+                <span>Have SBS reward points?</span>
+              </span>
+              <a
+                href="/account/rewards"
+                className="text-[11px] font-bold text-[#E65100] hover:underline"
+              >
+                Sign in to redeem
+              </a>
+            </div>
+          )}
+
           {/* ── Bill Summary Details ── */}
           {items.length > 0 && (
             <div className="py-3 text-xs space-y-2">
@@ -591,7 +724,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
               {rawPromoTotal > 0 && (
                 <div className="flex justify-between text-emerald-600 font-medium">
-                  <span>Coupon Discount</span>
+                  <span>Discount</span>
                   <span>− {formatCurrency(rawPromoTotal)}</span>
                 </div>
               )}
@@ -599,14 +732,20 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               <div className="flex justify-between text-gray-600">
                 <span>Delivery Fee</span>
                 <span>
-                  {freeShippingUnlocked ? (
+                  {cart?.display_ship_total != null || cart?.ship_total != null ? (
+                    rawShipTotal === 0 ? (
+                      <span className="text-emerald-600 font-bold uppercase">
+                        FREE
+                      </span>
+                    ) : (
+                      formatCurrency(cart?.display_ship_total ?? rawShipTotal)
+                    )
+                  ) : hasFreeShippingConfig && freeShippingUnlocked ? (
                     <span className="text-emerald-600 font-bold uppercase">
                       FREE
                     </span>
-                  ) : cart?.display_ship_total ? (
-                    formatCurrency(cart.display_ship_total)
                   ) : (
-                    "₹49"
+                    <span className="text-gray-500">Calculated at checkout</span>
                   )}
                 </span>
               </div>

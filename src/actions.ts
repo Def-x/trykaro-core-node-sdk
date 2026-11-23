@@ -6,4 +6,5 @@
  */
 export * from "./actions/storefrontActions";
 export * from "./actions/discountActions";
+export * from "./actions/loyaltyActions";
 

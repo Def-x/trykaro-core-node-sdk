@@ -1,7 +1,7 @@
-import { removeDiscountById } from './chunk-EK7XNL25.js';
-export { applyDiscount, removeDiscountById } from './chunk-EK7XNL25.js';
-import { configureStorefront, trackDiscountEventAction, removeDiscountAction, applyDiscountAction, getAvailableDiscountsAction, getOrderInvoiceAction, getOrderByIdAction, getOrdersAction, updateUserAction, getUserAction, deleteAddressAction, updateAddressAction, createAddressAction, getAddressesAction, createStripePaymentIntentAction, updatePhonePePaymentAction, createPhonePeOrderAction, updateCartPaymentAction, createCartPaymentAction, updateRazorpayPaymentAction, createRazorpayOrderAction, deleteLineItemAction, updateLineItemAction, createLineItemAction, updateCartIdLineItemsAction, updateCartAction, createCartAction, getCartByIdAction, getCartAction, getRegionsAction, loginUser, signUpUser, verifyOtp, getCurrentUserLikedProductsAction, validateCartTotal } from './chunk-RR2OSHMK.js';
-export { applyDiscountAction, buildHeaders, configureStorefront, createAddressAction, createCartAction, createCartPaymentAction, createLineItemAction, createPhonePeOrderAction, createRazorpayOrderAction, createStripePaymentIntentAction, deleteAddressAction, deleteLineItemAction, getAddressesAction, getAllTaxonsAction, getApiBaseUrl, getAvailableDiscountsAction, getCartAction, getCartByIdAction, getCurrentUserLikedProductsAction, getEnv, getLikedProductsAction, getOrderByIdAction, getOrderInvoiceAction, getOrdersAction, getOrgVideosAction, getOrganizationAction, getOrganizationId, getProductByIdAction, getProductsAction, getProductsByIdsAction, getProductsFilterAction, getRecentlyViewedProductsAction, getRegionsAction, getRelatedProductsAction, getServerToken, getStorefrontGlobalConfig, getTaxonByIdAction, getTaxonomiesAction, getTaxonomyByIdAction, getUserAction, likeProductAction, loginUser, removeDiscountAction, revalidateCacheTag, signUpUser, trackDiscountEventAction, unlikeProductAction, updateAddressAction, updateCartAction, updateCartIdLineItemsAction, updateCartPaymentAction, updateLineItemAction, updatePhonePePaymentAction, updateRazorpayPaymentAction, updateUserAction, validateCartTotal, verifyOtp } from './chunk-RR2OSHMK.js';
+import { getLoyaltyProfileAction, getLoyaltyRewardsAction, getLoyaltyTransactionsAction, applyLoyaltyPointsAction, removeDiscountById } from './chunk-FU6T37BZ.js';
+export { applyDiscount, applyLoyaltyPointsAction, getLoyaltyProfileAction, getLoyaltyRewardsAction, getLoyaltyTransactionsAction, removeDiscountById } from './chunk-FU6T37BZ.js';
+import { configureStorefront, trackDiscountEventAction, removeDiscountAction, applyDiscountAction, getAvailableDiscountsAction, getOrderInvoiceAction, getOrderByIdAction, getOrdersAction, updateUserAction, getUserAction, deleteAddressAction, updateAddressAction, createAddressAction, getAddressesAction, createStripePaymentIntentAction, updatePhonePePaymentAction, createPhonePeOrderAction, updateCartPaymentAction, createCartPaymentAction, updateRazorpayPaymentAction, createRazorpayOrderAction, deleteLineItemAction, updateLineItemAction, createLineItemAction, updateCartIdLineItemsAction, updateCartAction, createCartAction, getCartByIdAction, getCartAction, getRegionsAction, loginUser, signUpUser, verifyOtp, getCurrentUserLikedProductsAction, validateCartTotal } from './chunk-EV4KF7EK.js';
+export { applyDiscountAction, buildHeaders, configureStorefront, createAddressAction, createCartAction, createCartPaymentAction, createLineItemAction, createPhonePeOrderAction, createRazorpayOrderAction, createStripePaymentIntentAction, deleteAddressAction, deleteLineItemAction, getAddressesAction, getAllTaxonsAction, getApiBaseUrl, getAvailableDiscountsAction, getCartAction, getCartByIdAction, getCurrentUserLikedProductsAction, getEnv, getLikedProductsAction, getOrderByIdAction, getOrderInvoiceAction, getOrdersAction, getOrgVideosAction, getOrganizationAction, getOrganizationId, getProductByIdAction, getProductsAction, getProductsByIdsAction, getProductsFilterAction, getRecentlyViewedProductsAction, getRegionsAction, getRelatedProductsAction, getServerToken, getStorefrontGlobalConfig, getTaxonByIdAction, getTaxonomiesAction, getTaxonomyByIdAction, getUserAction, likeProductAction, loginUser, removeDiscountAction, revalidateCacheTag, signUpUser, trackDiscountEventAction, unlikeProductAction, updateAddressAction, updateCartAction, updateCartIdLineItemsAction, updateCartPaymentAction, updateLineItemAction, updatePhonePePaymentAction, updateRazorpayPaymentAction, updateUserAction, validateCartTotal, verifyOtp } from './chunk-EV4KF7EK.js';
 import { getPaymentGateway } from './chunk-UG7KTLQ5.js';
 import { trackBeginCheckout, trackAddShippingInfo, trackAddPaymentInfo, trackPurchase, trackPaymentFailed, trackAddToCart, trackCustomEvent, buildItem } from './chunk-O76ELHLQ.js';
 export { buildItem, buildMeta, clearEcommerce, initGtmConfig, pushToDataLayer, trackAddPaymentInfo, trackAddShippingInfo, trackAddToCart, trackApplyCoupon, trackBeginCheckout, trackCustomEvent, trackPageView, trackPaymentFailed, trackPurchase, trackSearch, trackViewItem } from './chunk-O76ELHLQ.js';
@@ -494,6 +494,298 @@ function useCurrencyFormat() {
   };
   return { formatCurrency };
 }
+var useLoyalty = (options = {}) => {
+  const { autoFetch = true } = options;
+  const { actions, auth, config, cart, setCart, toast } = useCore();
+  const token = auth?.token ?? auth?.access_token ?? null;
+  const signedIn = !!((auth?.isSignedIn ?? false) || token);
+  const [profile, setProfile] = useState(null);
+  const [customer, setCustomer] = useState(null);
+  const [rewards, setRewards] = useState([]);
+  const [transactions, setTransactions] = useState([]);
+  const [transactionsTotalCount, setTransactionsTotalCount] = useState(0);
+  const [transactionsPage, setTransactionsPage] = useState(1);
+  const [transactionsPerPage, setTransactionsPerPage] = useState(20);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isRewardsLoading, setIsRewardsLoading] = useState(false);
+  const [isTransactionsLoading, setIsTransactionsLoading] = useState(false);
+  const [isApplying, setIsApplying] = useState(false);
+  const [error, setError] = useState(null);
+  const fetchProfile = useCallback(async () => {
+    if (!token && !signedIn) {
+      setProfile(null);
+      setCustomer(null);
+      setIsLoading(false);
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
+    try {
+      const getProfileFn = actions?.getLoyaltyProfile || getLoyaltyProfileAction;
+      const res = await getProfileFn({
+        token,
+        config,
+        apiBaseUrl: config?.apiBaseUrl,
+        orgId: config?.storeId
+      });
+      if (res?.customer) {
+        setProfile(res);
+        setCustomer(res.customer);
+      } else {
+        setProfile(res || null);
+        setCustomer(null);
+      }
+    } catch (err) {
+      console.warn("Failed to fetch loyalty profile:", err);
+      setProfile(null);
+      setCustomer(null);
+      setError(err?.message || "Failed to fetch loyalty profile");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [actions?.getLoyaltyProfile, token, signedIn, config]);
+  const fetchRewards = useCallback(async () => {
+    if (!token && !signedIn) {
+      setRewards([]);
+      return;
+    }
+    setIsRewardsLoading(true);
+    try {
+      const getRewardsFn = actions?.getLoyaltyRewards || getLoyaltyRewardsAction;
+      const res = await getRewardsFn({
+        token,
+        config,
+        apiBaseUrl: config?.apiBaseUrl,
+        orgId: config?.storeId
+      });
+      if (res && Array.isArray(res.rewards)) {
+        setRewards(res.rewards);
+      } else {
+        setRewards([]);
+      }
+    } catch (err) {
+      console.error("Failed to fetch loyalty rewards:", err);
+    } finally {
+      setIsRewardsLoading(false);
+    }
+  }, [actions?.getLoyaltyRewards, token, signedIn, config]);
+  const fetchTransactions = useCallback(
+    async (params = {}) => {
+      const page = params.page ?? transactionsPage;
+      const perPage = params.per_page ?? transactionsPerPage;
+      if (!token && !signedIn) {
+        setTransactions([]);
+        setTransactionsTotalCount(0);
+        return;
+      }
+      setIsTransactionsLoading(true);
+      try {
+        const getTransactionsFn = actions?.getLoyaltyTransactions || getLoyaltyTransactionsAction;
+        const res = await getTransactionsFn(
+          { page, per_page: perPage },
+          {
+            token,
+            config,
+            apiBaseUrl: config?.apiBaseUrl,
+            orgId: config?.storeId
+          }
+        );
+        if (res?.transactions && Array.isArray(res.transactions)) {
+          setTransactions(res.transactions);
+          setTransactionsTotalCount(res.total_count ?? res.transactions.length);
+          if (res.page) setTransactionsPage(res.page);
+          if (res.per_page) setTransactionsPerPage(res.per_page);
+        } else {
+          setTransactions([]);
+          setTransactionsTotalCount(0);
+        }
+      } catch (err) {
+        console.warn("Failed to fetch loyalty transactions:", err);
+        setTransactions([]);
+        setTransactionsTotalCount(0);
+      } finally {
+        setIsTransactionsLoading(false);
+      }
+    },
+    [actions?.getLoyaltyTransactions, token, signedIn, config, transactionsPage, transactionsPerPage]
+  );
+  useEffect(() => {
+    if (autoFetch && (token || signedIn)) {
+      fetchProfile();
+      fetchRewards();
+      fetchTransactions({ page: 1, per_page: 20 });
+    }
+  }, [autoFetch, token, signedIn, fetchProfile, fetchRewards, fetchTransactions]);
+  const applyPoints = useCallback(
+    async ({
+      cart_id,
+      points_to_use
+    }) => {
+      const targetCartId = cart_id || cart?.id;
+      if (!targetCartId) {
+        const errMsg = "Cart ID is required to apply loyalty points";
+        toast?.error?.(errMsg);
+        return { success: false, serverError: errMsg };
+      }
+      if (!points_to_use || points_to_use <= 0) {
+        const errMsg = "Please enter a valid amount of points to redeem";
+        toast?.error?.(errMsg);
+        return { success: false, serverError: errMsg };
+      }
+      setIsApplying(true);
+      try {
+        const applyFn = actions?.applyLoyaltyPoints || applyLoyaltyPointsAction;
+        const res = await applyFn(
+          {
+            cart_id: String(targetCartId),
+            points_to_use: Number(points_to_use)
+          },
+          {
+            token,
+            config,
+            apiBaseUrl: config?.apiBaseUrl,
+            orgId: config?.storeId
+          }
+        );
+        if (res?.serverError) {
+          toast?.error?.(res.serverError);
+          return res;
+        }
+        if (res?.cart && setCart) {
+          setCart(res.cart);
+        } else if (actions?.getCart && token) {
+          try {
+            const updated = await actions.getCart(config?.regionId, { token });
+            if (setCart && updated) {
+              setCart(Array.isArray(updated) ? updated[0] : updated);
+            }
+          } catch {
+          }
+        }
+        toast?.success?.(
+          `Successfully applied ${points_to_use} points to your cart!`
+        );
+        const convRate = customer && customer.available_points > 0 && customer.monetary_value_inr > 0 ? customer.monetary_value_inr / customer.available_points : 0.877;
+        setCustomer(
+          (prev) => prev ? {
+            ...prev,
+            available_points: Math.max(
+              0,
+              prev.available_points - Number(points_to_use)
+            ),
+            total_redeemed: (prev.total_redeemed || 0) + Number(points_to_use),
+            monetary_value_inr: Math.max(
+              0,
+              Math.round(
+                (prev.available_points - Number(points_to_use)) * convRate * 100
+              ) / 100
+            )
+          } : null
+        );
+        return {
+          success: true,
+          cart_id: String(targetCartId),
+          points_to_use,
+          ...res
+        };
+      } catch (err) {
+        const errMsg = err?.message || "Failed to apply points to cart";
+        toast?.error?.(errMsg);
+        return {
+          success: false,
+          serverError: errMsg
+        };
+      } finally {
+        setIsApplying(false);
+      }
+    },
+    [cart?.id, actions, token, config, setCart, toast]
+  );
+  const copyReferralCode = useCallback(async () => {
+    const code = customer?.referral_code;
+    if (!code) return false;
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard) {
+        await navigator.clipboard.writeText(code);
+        toast?.success?.(`Referral code ${code} copied to clipboard!`);
+        return true;
+      }
+      return false;
+    } catch {
+      toast?.error?.("Failed to copy referral code");
+      return false;
+    }
+  }, [customer?.referral_code, toast]);
+  const copyReferralLink = useCallback(async () => {
+    const link = customer?.referral_link;
+    if (!link) return false;
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard) {
+        await navigator.clipboard.writeText(link);
+        toast?.success?.("Referral link copied to clipboard!");
+        return true;
+      }
+      return false;
+    } catch {
+      toast?.error?.("Failed to copy referral link");
+      return false;
+    }
+  }, [customer?.referral_link, toast]);
+  const shareWhatsApp = useCallback(
+    (customText) => {
+      const link = customer?.referral_link;
+      const code = customer?.referral_code;
+      const text = customText || `Hey! Sign up using my referral link to get exciting discounts on fine fabrics at SBS Textiles: ${link || ""} (Code: ${code || ""})`;
+      if (typeof window !== "undefined") {
+        window.open(
+          `https://wa.me/?text=${encodeURIComponent(text)}`,
+          "_blank",
+          "noopener,noreferrer"
+        );
+      }
+    },
+    [customer?.referral_link, customer?.referral_code]
+  );
+  const availablePoints = customer?.available_points ?? 0;
+  const monetaryValue = customer?.monetary_value_inr ?? 0;
+  const pointsName = customer?.points_name ?? "Points";
+  const totalEarned = customer?.total_earned ?? availablePoints;
+  const totalRedeemed = customer?.total_redeemed ?? 0;
+  const totalExpired = customer?.total_expired ?? 0;
+  const referralCode = customer?.referral_code ?? "";
+  const referralLink = customer?.referral_link ?? "";
+  const tier = customer?.tier || (totalEarned >= 5e3 ? "PLATINUM MEMBER" : totalEarned >= 2e3 ? "GOLD MEMBER" : "SILVER MEMBER");
+  return {
+    profile,
+    customer,
+    rewards,
+    availablePoints,
+    monetaryValue,
+    pointsName,
+    totalEarned,
+    totalRedeemed,
+    totalExpired,
+    referralCode,
+    referralLink,
+    tier,
+    transactions,
+    transactionsTotalCount,
+    transactionsPage,
+    transactionsPerPage,
+    isLoading,
+    isRewardsLoading,
+    isTransactionsLoading,
+    isApplying,
+    error,
+    refetch: fetchProfile,
+    refetchRewards: fetchRewards,
+    refetchTransactions: fetchTransactions,
+    applyPoints,
+    copyReferralCode,
+    copyReferralLink,
+    shareWhatsApp
+  };
+};
 
 // src/hooks/usePaymentGateway.ts
 function usePaymentGateway() {
@@ -2021,7 +2313,17 @@ var CartDrawer = ({
   const onClose = propOnClose !== void 0 ? propOnClose : contextCloseDrawer ?? (() => {
   });
   const token = auth?.token ?? auth?.access_token ?? null;
-  const freeShippingThreshold = propThreshold ?? config?.freeShippingThreshold ?? 499;
+  const {
+    availablePoints,
+    monetaryValue,
+    isApplying: isApplyingLoyalty,
+    applyPoints
+  } = useLoyalty({ autoFetch: Boolean(token) });
+  const [loyaltyPointsInput, setLoyaltyPointsInput] = useState(100);
+  const [isLoyaltyOpen, setIsLoyaltyOpen] = useState(false);
+  const pointsConversionRate = availablePoints > 0 && monetaryValue > 0 ? monetaryValue / availablePoints : 0.877;
+  const freeShippingThreshold = propThreshold ?? config?.freeShippingThreshold;
+  const hasFreeShippingConfig = typeof freeShippingThreshold === "number" && freeShippingThreshold > 0;
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -2058,15 +2360,12 @@ var CartDrawer = ({
   const rawPromoTotal = parseFloat(
     cart?.display_promo_total?.replace(/[^0-9.]/g, "") || String((cart?.promo_total ?? 0) > 1e4 ? (cart?.promo_total ?? 0) / 100 : cart?.promo_total ?? 0)
   ) || 0;
-  const freeShippingUnlocked = rawItemTotal >= freeShippingThreshold;
-  const amountNeededForFreeShipping = Math.max(
-    0,
-    freeShippingThreshold - rawItemTotal
-  );
-  const shippingProgressPct = Math.min(
-    100,
-    Math.round(rawItemTotal / freeShippingThreshold * 100)
-  );
+  const rawShipTotal = parseFloat(
+    String(cart?.display_ship_total ?? "").replace(/[^0-9.]/g, "") || String((cart?.ship_total ?? 0) > 1e4 ? (cart?.ship_total ?? 0) / 100 : cart?.ship_total ?? 0)
+  ) || 0;
+  const freeShippingUnlocked = hasFreeShippingConfig && rawItemTotal >= (freeShippingThreshold || 0);
+  const amountNeededForFreeShipping = hasFreeShippingConfig ? Math.max(0, (freeShippingThreshold || 0) - rawItemTotal) : 0;
+  const shippingProgressPct = hasFreeShippingConfig ? Math.min(100, Math.round(rawItemTotal / (freeShippingThreshold || 1) * 100)) : 0;
   const appliedDiscounts = (cart?.cart_discounts || []).filter(
     (c) => c.code || c.id || c.name || c.display_action_value || c.discount_id
   );
@@ -2217,9 +2516,9 @@ var CartDrawer = ({
               }
             )
           ] }),
-          items.length > 0 && /* @__PURE__ */ jsxs("div", { className: "px-4 py-3 bg-gray-50/80 border-b border-gray-100 shrink-0", children: [
+          items.length > 0 && hasFreeShippingConfig && /* @__PURE__ */ jsxs("div", { className: "px-4 py-3 bg-gray-50/80 border-b border-gray-100 shrink-0", children: [
             /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between text-xs mb-1.5 font-[var(--font-medium)]", children: [
-              freeShippingUnlocked ? /* @__PURE__ */ jsxs("span", { className: "text-emerald-700 font-bold flex items-center gap-1", children: [
+              freeShippingUnlocked && rawShipTotal === 0 ? /* @__PURE__ */ jsxs("span", { className: "text-emerald-700 font-bold flex items-center gap-1", children: [
                 /* @__PURE__ */ jsx("span", { children: "\u{1F389}" }),
                 " You unlocked ",
                 /* @__PURE__ */ jsx("strong", { children: "FREE Delivery!" })
@@ -2243,7 +2542,7 @@ var CartDrawer = ({
                 className: "h-full rounded-full transition-all duration-500 ease-out",
                 style: {
                   width: `${shippingProgressPct}%`,
-                  backgroundColor: freeShippingUnlocked ? "#10b981" : primaryColor
+                  backgroundColor: freeShippingUnlocked && rawShipTotal === 0 ? "#10b981" : primaryColor
                 }
               }
             ) })
@@ -2464,13 +2763,127 @@ var CartDrawer = ({
                 }) })
               ] })
             ] }),
+            items.length > 0 && token && availablePoints > 0 && /* @__PURE__ */ jsxs("div", { className: "my-2.5 p-3 bg-gradient-to-br from-amber-50/70 via-orange-50/40 to-white border border-amber-200/80 rounded-xl shadow-xs", children: [
+              /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between", children: [
+                /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-1.5", children: [
+                  /* @__PURE__ */ jsx("span", { className: "text-amber-500 text-sm", children: "\u2B50" }),
+                  /* @__PURE__ */ jsx("span", { className: "font-[var(--font-bold)] text-xs text-gray-900", children: "Redeem SBS Points" }),
+                  /* @__PURE__ */ jsxs("span", { className: "rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-900 border border-amber-200", children: [
+                    availablePoints.toLocaleString(),
+                    " pts"
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxs(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: () => setIsLoyaltyOpen((o) => !o),
+                    className: "text-[11px] font-semibold text-[#E65100] hover:underline cursor-pointer flex items-center gap-1",
+                    children: [
+                      /* @__PURE__ */ jsx("span", { children: isLoyaltyOpen ? "Close" : "Redeem" }),
+                      /* @__PURE__ */ jsx("span", { className: "text-xs", children: isLoyaltyOpen ? "\u25B4" : "\u25BE" })
+                    ]
+                  }
+                )
+              ] }),
+              isLoyaltyOpen ? /* @__PURE__ */ jsxs("div", { className: "mt-2.5 pt-2 border-t border-amber-200/60 space-y-2.5", children: [
+                /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between text-[11px] text-gray-600", children: [
+                  /* @__PURE__ */ jsxs("span", { children: [
+                    "Worth: ",
+                    /* @__PURE__ */ jsx("strong", { className: "text-gray-900", children: formatCurrency(monetaryValue) })
+                  ] }),
+                  /* @__PURE__ */ jsxs("span", { className: "text-emerald-700 font-semibold", children: [
+                    "Saves ",
+                    formatCurrency(Math.min(availablePoints, Math.max(0, loyaltyPointsInput)) * pointsConversionRate)
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxs("div", { className: "flex gap-1.5", children: [
+                  /* @__PURE__ */ jsx(
+                    "input",
+                    {
+                      type: "number",
+                      min: 100,
+                      max: availablePoints,
+                      step: 50,
+                      value: loyaltyPointsInput,
+                      onChange: (e) => setLoyaltyPointsInput(Math.min(availablePoints, Math.max(0, Number(e.target.value)))),
+                      className: "flex-1 px-3 py-1.5 border border-amber-300 rounded-lg text-xs font-semibold text-gray-900 bg-white focus:outline-none focus:ring-1 focus:ring-[#E65100]",
+                      placeholder: "Min 100 pts"
+                    }
+                  ),
+                  /* @__PURE__ */ jsx(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: () => setLoyaltyPointsInput(availablePoints),
+                      className: "px-2.5 py-1.5 bg-white border border-amber-300 rounded-lg text-[11px] font-bold text-[#E65100] hover:bg-orange-50 cursor-pointer shrink-0",
+                      children: "Max"
+                    }
+                  ),
+                  /* @__PURE__ */ jsx(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: async () => {
+                        if (!cart?.id) {
+                          toast?.error?.("Cart not found");
+                          return;
+                        }
+                        await applyPoints({
+                          cart_id: String(cart.id),
+                          points_to_use: loyaltyPointsInput
+                        });
+                      },
+                      disabled: isApplyingLoyalty || loyaltyPointsInput < 100 || loyaltyPointsInput > availablePoints,
+                      className: "px-3.5 py-1.5 text-white text-xs font-bold rounded-lg transition-opacity disabled:opacity-50 cursor-pointer shrink-0 shadow-xs bg-[#E65100] hover:bg-[#cf4800]",
+                      children: isApplyingLoyalty ? "Applying..." : "Apply"
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsx("div", { className: "flex flex-wrap gap-1.5 pt-0.5", children: [100, 250, 500, 1e3].filter((p) => p <= availablePoints).map((preset) => /* @__PURE__ */ jsxs(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: () => setLoyaltyPointsInput(preset),
+                    className: `px-2 py-0.5 rounded text-[10px] font-bold border transition-colors cursor-pointer ${loyaltyPointsInput === preset ? "bg-[#E65100] text-white border-[#E65100]" : "bg-white text-gray-700 border-amber-200 hover:border-amber-400"}`,
+                    children: [
+                      preset,
+                      " Pts (-",
+                      formatCurrency(preset * pointsConversionRate),
+                      ")"
+                    ]
+                  },
+                  preset
+                )) })
+              ] }) : /* @__PURE__ */ jsxs("p", { className: "mt-1 text-[11px] text-gray-500", children: [
+                "You have ",
+                availablePoints.toLocaleString(),
+                " points worth ",
+                formatCurrency(monetaryValue),
+                ". Click Redeem to apply points."
+              ] })
+            ] }),
+            items.length > 0 && !token && /* @__PURE__ */ jsxs("div", { className: "my-2 p-2.5 bg-orange-50/50 border border-orange-200/50 rounded-xl flex items-center justify-between text-xs text-gray-600", children: [
+              /* @__PURE__ */ jsxs("span", { className: "flex items-center gap-1.5", children: [
+                /* @__PURE__ */ jsx("span", { children: "\u2B50" }),
+                /* @__PURE__ */ jsx("span", { children: "Have SBS reward points?" })
+              ] }),
+              /* @__PURE__ */ jsx(
+                "a",
+                {
+                  href: "/account/rewards",
+                  className: "text-[11px] font-bold text-[#E65100] hover:underline",
+                  children: "Sign in to redeem"
+                }
+              )
+            ] }),
             items.length > 0 && /* @__PURE__ */ jsxs("div", { className: "py-3 text-xs space-y-2", children: [
               /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-gray-600", children: [
                 /* @__PURE__ */ jsx("span", { children: "Item Subtotal" }),
                 /* @__PURE__ */ jsx("span", { children: cart?.display_item_total ? formatCurrency(cart.display_item_total) : formatCurrency(rawItemTotal) })
               ] }),
               rawPromoTotal > 0 && /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-emerald-600 font-medium", children: [
-                /* @__PURE__ */ jsx("span", { children: "Coupon Discount" }),
+                /* @__PURE__ */ jsx("span", { children: "Discount" }),
                 /* @__PURE__ */ jsxs("span", { children: [
                   "\u2212 ",
                   formatCurrency(rawPromoTotal)
@@ -2478,7 +2891,7 @@ var CartDrawer = ({
               ] }),
               /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-gray-600", children: [
                 /* @__PURE__ */ jsx("span", { children: "Delivery Fee" }),
-                /* @__PURE__ */ jsx("span", { children: freeShippingUnlocked ? /* @__PURE__ */ jsx("span", { className: "text-emerald-600 font-bold uppercase", children: "FREE" }) : cart?.display_ship_total ? formatCurrency(cart.display_ship_total) : "\u20B949" })
+                /* @__PURE__ */ jsx("span", { children: cart?.display_ship_total != null || cart?.ship_total != null ? rawShipTotal === 0 ? /* @__PURE__ */ jsx("span", { className: "text-emerald-600 font-bold uppercase", children: "FREE" }) : formatCurrency(cart?.display_ship_total ?? rawShipTotal) : hasFreeShippingConfig && freeShippingUnlocked ? /* @__PURE__ */ jsx("span", { className: "text-emerald-600 font-bold uppercase", children: "FREE" }) : /* @__PURE__ */ jsx("span", { className: "text-gray-500", children: "Calculated at checkout" }) })
               ] }),
               /* @__PURE__ */ jsxs("div", { className: "border-t border-gray-100 pt-2 flex justify-between font-[var(--font-bold)] text-sm text-gray-900", children: [
                 /* @__PURE__ */ jsx("span", { children: "Grand Total" }),
@@ -2572,7 +2985,12 @@ var inbuiltActions = {
   applyDiscount: applyDiscountAction,
   removeDiscount: removeDiscountAction,
   removeDiscountById,
-  trackDiscountEvent: trackDiscountEventAction
+  trackDiscountEvent: trackDiscountEventAction,
+  // Loyalty & Rewards
+  getLoyaltyProfile: getLoyaltyProfileAction,
+  getLoyaltyRewards: getLoyaltyRewardsAction,
+  getLoyaltyTransactions: getLoyaltyTransactionsAction,
+  applyLoyaltyPoints: applyLoyaltyPointsAction
 };
 var EMPTY_ACTIONS = {};
 var EMPTY_CONFIG = {};
@@ -6197,6 +6615,14 @@ var CouponSection = () => {
   const { cart, setCart, actions, auth, config, toast } = useCore();
   const token = auth?.token ?? auth?.access_token ?? null;
   const { formatCurrency } = useCurrencyFormat();
+  const {
+    availablePoints,
+    monetaryValue,
+    isApplying: isApplyingLoyalty,
+    applyPoints
+  } = useLoyalty({ autoFetch: Boolean(token) });
+  const [isLoyaltyOpen, setIsLoyaltyOpen] = useState(false);
+  const [loyaltyPointsInput, setLoyaltyPointsInput] = useState(100);
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const [errorMessage, setErrorMessage] = useState(null);
@@ -6520,6 +6946,106 @@ var CouponSection = () => {
             );
           }) })
         ] })
+      ] })
+    ] }),
+    availablePoints > 0 && /* @__PURE__ */ jsxs("div", { className: "mt-2", children: [
+      /* @__PURE__ */ jsxs(
+        "button",
+        {
+          type: "button",
+          onClick: () => setIsLoyaltyOpen((prev) => !prev),
+          "aria-expanded": isLoyaltyOpen,
+          className: "w-full flex items-center justify-between border-b border-[var(--borders)] px-1 py-3 cursor-pointer",
+          children: [
+            /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-medium)] text-[14px] text-[var(--main)] flex items-center gap-1.5 flex-wrap", children: [
+              /* @__PURE__ */ jsx("span", { children: "\u2B50" }),
+              /* @__PURE__ */ jsx("span", { children: "Redeem Points" }),
+              /* @__PURE__ */ jsxs("span", { className: "rounded bg-orange-100 px-1.5 py-0.5 text-[10px] font-bold text-[#E65100]", children: [
+                availablePoints.toLocaleString(),
+                " pts available"
+              ] })
+            ] }),
+            /* @__PURE__ */ jsx("span", { className: "text-[var(--main)] text-[16px]", children: isLoyaltyOpen ? "\u25B4" : "\u25BE" })
+          ]
+        }
+      ),
+      isLoyaltyOpen && /* @__PURE__ */ jsxs("div", { className: "mt-3 flex flex-col gap-3 rounded-xl bg-gradient-to-br from-amber-50/70 via-orange-50/40 to-white p-3.5 border border-amber-200/80 shadow-xs", children: [
+        /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between text-xs text-gray-700", children: [
+          /* @__PURE__ */ jsxs("span", { children: [
+            "Available: ",
+            /* @__PURE__ */ jsxs("strong", { children: [
+              availablePoints.toLocaleString(),
+              " pts"
+            ] }),
+            " (Worth ",
+            /* @__PURE__ */ jsx("strong", { children: formatCurrency(monetaryValue) }),
+            ")"
+          ] }),
+          /* @__PURE__ */ jsxs("span", { className: "text-emerald-700 font-semibold text-[11px]", children: [
+            "Saves ",
+            formatCurrency(Math.min(availablePoints, Math.max(0, loyaltyPointsInput)) * (availablePoints > 0 && monetaryValue > 0 ? monetaryValue / availablePoints : 0.877))
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "flex gap-2", children: [
+          /* @__PURE__ */ jsx(
+            "input",
+            {
+              type: "number",
+              "aria-label": "Points to redeem",
+              value: loyaltyPointsInput,
+              onChange: (e) => setLoyaltyPointsInput(Math.min(availablePoints, Math.max(0, Number(e.target.value)))),
+              min: 100,
+              max: availablePoints,
+              step: 50,
+              placeholder: "Min 100 pts",
+              className: "border border-amber-300 rounded-lg px-3 py-2 text-[13px] text-gray-900 font-semibold outline-none flex-1 bg-white focus:border-[#E65100]"
+            }
+          ),
+          /* @__PURE__ */ jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => setLoyaltyPointsInput(availablePoints),
+              className: "px-3 py-2 bg-white border border-amber-300 rounded-lg text-xs font-bold text-[#E65100] hover:bg-orange-50 cursor-pointer shrink-0",
+              children: "Max"
+            }
+          ),
+          /* @__PURE__ */ jsx(
+            "button",
+            {
+              type: "button",
+              onClick: async () => {
+                if (!cart?.id) {
+                  triggerToast.error("Cart not found");
+                  return;
+                }
+                await applyPoints({
+                  cart_id: String(cart.id),
+                  points_to_use: loyaltyPointsInput
+                });
+              },
+              disabled: isApplyingLoyalty || loyaltyPointsInput < 100 || loyaltyPointsInput > availablePoints,
+              className: "text-white text-[12px] font-[var(--font-bold)] px-4 py-2 rounded-lg border-none cursor-pointer tracking-wide disabled:opacity-60 shrink-0 shadow-xs",
+              style: { background: "var(--core-primary, #E65100)" },
+              children: isApplyingLoyalty ? "APPLYING..." : "REDEEM"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsx("div", { className: "flex flex-wrap gap-1.5 pt-0.5", children: [100, 250, 500, 1e3].filter((p) => p <= availablePoints).map((preset) => /* @__PURE__ */ jsxs(
+          "button",
+          {
+            type: "button",
+            onClick: () => setLoyaltyPointsInput(preset),
+            className: `px-2.5 py-1 rounded text-[11px] font-bold border transition-colors cursor-pointer ${loyaltyPointsInput === preset ? "bg-[#E65100] text-white border-[#E65100]" : "bg-white text-gray-700 border-amber-200 hover:border-amber-400"}`,
+            children: [
+              preset,
+              " Pts (-",
+              formatCurrency(preset * (availablePoints > 0 && monetaryValue > 0 ? monetaryValue / availablePoints : 0.877)),
+              ")"
+            ]
+          },
+          preset
+        )) })
       ] })
     ] })
   ] });
@@ -7481,10 +8007,28 @@ var AccountCopyIcon = (props) => /* @__PURE__ */ jsxs(IconBase, { ...props, chil
   /* @__PURE__ */ jsx("rect", { x: "2", y: "2", width: "13", height: "13", rx: "2" })
 ] });
 var AccountCheckIcon = (props) => /* @__PURE__ */ jsx(IconBase, { ...props, children: /* @__PURE__ */ jsx("path", { d: "M20 6 9 17l-5-5" }) });
+var AccountGiftIcon = (props) => /* @__PURE__ */ jsxs(IconBase, { ...props, children: [
+  /* @__PURE__ */ jsx("polyline", { points: "20 12 20 22 4 22 4 12" }),
+  /* @__PURE__ */ jsx("rect", { x: "2", y: "7", width: "20", height: "5" }),
+  /* @__PURE__ */ jsx("line", { x1: "12", y1: "22", x2: "12", y2: "7" }),
+  /* @__PURE__ */ jsx("path", { d: "M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" }),
+  /* @__PURE__ */ jsx("path", { d: "M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" })
+] });
+var AccountAwardIcon = (props) => /* @__PURE__ */ jsxs(IconBase, { ...props, children: [
+  /* @__PURE__ */ jsx("circle", { cx: "12", cy: "8", r: "6" }),
+  /* @__PURE__ */ jsx("path", { d: "M15.477 12.89 17 22l-5-3-5 3 1.523-9.11" })
+] });
+var AccountStarIcon = (props) => /* @__PURE__ */ jsx(IconBase, { ...props, children: /* @__PURE__ */ jsx("polygon", { points: "12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" }) });
+var AccountClockIcon = (props) => /* @__PURE__ */ jsxs(IconBase, { ...props, children: [
+  /* @__PURE__ */ jsx("circle", { cx: "12", cy: "12", r: "10" }),
+  /* @__PURE__ */ jsx("polyline", { points: "12 6 12 12 16 14" })
+] });
+var AccountSparklesIcon = (props) => /* @__PURE__ */ jsx(IconBase, { ...props, children: /* @__PURE__ */ jsx("path", { d: "m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z" }) });
 var DEFAULT_NAV_ITEMS = [
   { label: "My Addresses", href: "/account/addresses", icon: AccountMapPinIcon },
   { label: "My Orders", href: "/account/orders", icon: AccountShoppingBagIcon },
-  { label: "My Wishlist", href: "/account/wishlist", icon: AccountHeartIcon }
+  { label: "My Wishlist", href: "/account/wishlist", icon: AccountHeartIcon },
+  { label: "Loyalty & Rewards", href: "/account/rewards", icon: AccountGiftIcon }
 ];
 var getContactInfo = (user) => user?.phone || user?.mobile || user?.email || user?.email_address || user?.primaryPhoneNumber?.phoneNumber || user?.primaryEmailAddress?.emailAddress || "Guest User";
 var AccountSidebar = ({
@@ -7578,8 +8122,29 @@ var AccountLayout = ({
   className = "",
   containerClassName = "",
   panelClassName = "",
-  mainClassName = ""
+  mainClassName = "",
+  fullWidth
 }) => {
+  const router = useStorefrontRouter(sidebarProps?.router);
+  const [clientPath, setClientPath] = useState("");
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setClientPath(window.location.pathname);
+    }
+  }, []);
+  const activePath = sidebarProps?.pathname || router?.pathname || clientPath || (typeof window !== "undefined" ? window.location.pathname : "");
+  const isRewardsPage = fullWidth || Boolean(
+    activePath && (activePath.includes("/rewards") || activePath.includes("/loyalty"))
+  );
+  if (isRewardsPage) {
+    return /* @__PURE__ */ jsx("div", { className: `min-h-screen bg-[#F8F9FA] ${className}`, children: /* @__PURE__ */ jsx(
+      "div",
+      {
+        className: `mx-auto max-w-[1240px] px-4 py-8 max-md:px-3 max-md:py-4 ${containerClassName}`,
+        children
+      }
+    ) });
+  }
   return /* @__PURE__ */ jsx("div", { className: `min-h-screen bg-[#F0F0F0] ${className}`, children: /* @__PURE__ */ jsx("div", { className: `mx-auto max-w-[900px] px-4 py-8 ${containerClassName}`, children: /* @__PURE__ */ jsxs(
     "div",
     {
@@ -8394,6 +8959,614 @@ var AccountWishlistPage = ({
     ] })
   ] });
 };
+var AccountRewardsPage = ({
+  router: overrideRouter,
+  showBreadcrumb = true,
+  className = ""
+}) => {
+  useStorefrontRouter(overrideRouter);
+  const { cart, auth, toast } = useCore();
+  const { formatCurrency } = useCurrencyFormat();
+  const {
+    customer,
+    availablePoints,
+    monetaryValue,
+    pointsName,
+    totalEarned,
+    totalRedeemed,
+    referralCode,
+    referralLink,
+    tier,
+    transactions,
+    transactionsTotalCount,
+    transactionsPage,
+    transactionsPerPage,
+    isTransactionsLoading,
+    refetchTransactions,
+    isLoading,
+    isApplying,
+    applyPoints,
+    copyReferralCode,
+    copyReferralLink,
+    shareWhatsApp
+  } = useLoyalty();
+  const [activeTab, setActiveTab] = useState("dashboard");
+  const [isReferralModalOpen, setIsReferralModalOpen] = useState(false);
+  const [pointsToRedeemInput, setPointsToRedeemInput] = useState(100);
+  const [historyFilter, setHistoryFilter] = useState("all");
+  const [codeCopied, setCodeCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const conversionRate = useMemo(() => {
+    if (availablePoints > 0 && monetaryValue > 0) {
+      return monetaryValue / availablePoints;
+    }
+    return 0.1;
+  }, [availablePoints, monetaryValue]);
+  const displayPoints = availablePoints ?? 0;
+  const displayMonetaryValue = monetaryValue ?? 0;
+  const displayPointsName = pointsName || "Points";
+  const displayTotalEarned = totalEarned ?? availablePoints ?? 0;
+  const displayTotalRedeemed = totalRedeemed ?? 0;
+  const displayReferralCode = referralCode || "";
+  const displayReferralLink = referralLink || "";
+  const handleCopyCode = async () => {
+    const success = await copyReferralCode();
+    if (success) {
+      setCodeCopied(true);
+      setTimeout(() => setCodeCopied(false), 2e3);
+    }
+  };
+  const handleCopyLink = async () => {
+    const success = await copyReferralLink();
+    if (success) {
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2e3);
+    }
+  };
+  const handleApplyCheckoutPoints = async () => {
+    if (!cart?.id) {
+      toast?.error?.("Please add items to your cart first.");
+      return;
+    }
+    await applyPoints({ cart_id: cart.id, points_to_use: pointsToRedeemInput });
+  };
+  const formatTransactionDate = (dateStr) => {
+    if (!dateStr) return "Today";
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      return d.toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric"
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+  const activityRows = useMemo(() => {
+    if (transactions && transactions.length > 0) {
+      return transactions.map((t) => {
+        const isEarned = t.transaction_type === "earned";
+        const isExpired = t.transaction_type === "expired";
+        const isRedeemed = t.transaction_type === "redeemed";
+        const delta = isEarned ? t.points : -t.points;
+        const type = isExpired ? "expired" : isRedeemed ? "redeemed" : "earned";
+        const title = t.metadata?.rule_name || (t.source_type === "purchase" ? "Purchase Reward" : "Loyalty Reward");
+        const subtitle = t.source_id ? `Order #${t.source_id.slice(0, 8)} \u2022 ${t.metadata?.action_type || t.source_type}` : t.metadata?.action_type || "Standard Loyalty Transaction";
+        const status = t.status === "completed" ? "Available" : t.status === "pending" ? "Pending" : "Available";
+        return {
+          id: t.id,
+          title,
+          subtitle,
+          date: formatTransactionDate(t.created_at),
+          delta,
+          status,
+          expiry: isEarned ? "Available" : void 0,
+          type
+        };
+      });
+    }
+    return [];
+  }, [transactions]);
+  const filteredActivity = useMemo(() => {
+    if (historyFilter === "all") return activityRows;
+    return activityRows.filter((item) => item.type === historyFilter);
+  }, [activityRows, historyFilter]);
+  return /* @__PURE__ */ jsxs("div", { className: `w-full font-sans text-[#222222] ${className}`, children: [
+    /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-4 border-b border-gray-200 pb-4 mb-6 md:flex-row md:items-center md:justify-between", children: [
+      showBreadcrumb && /* @__PURE__ */ jsx("nav", { "aria-label": "Breadcrumb", className: "text-xs text-gray-500 font-medium", children: /* @__PURE__ */ jsxs("ol", { className: "flex items-center gap-1.5 flex-wrap", children: [
+        /* @__PURE__ */ jsx("li", { children: /* @__PURE__ */ jsx(StorefrontLink, { href: "/", className: "hover:text-gray-900 transition-colors", children: "Home" }) }),
+        /* @__PURE__ */ jsx("li", { children: "/" }),
+        /* @__PURE__ */ jsx("li", { children: /* @__PURE__ */ jsx(StorefrontLink, { href: "/account", className: "hover:text-gray-900 transition-colors", children: "My Account" }) }),
+        /* @__PURE__ */ jsx("li", { children: "/" }),
+        /* @__PURE__ */ jsx("li", { className: "font-semibold text-gray-900", children: "Loyalty & Rewards" })
+      ] }) }),
+      /* @__PURE__ */ jsx("div", { className: "flex items-center gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]", children: [
+        { key: "dashboard", label: "Dashboard" },
+        { key: "history", label: "Points Activity & History" },
+        { key: "redeem", label: "Redeem at Checkout" }
+      ].map((tab) => {
+        const isActive = activeTab === tab.key;
+        return /* @__PURE__ */ jsx(
+          "button",
+          {
+            type: "button",
+            onClick: () => setActiveTab(tab.key),
+            className: `whitespace-nowrap px-4 py-1.5 text-xs font-semibold rounded-full transition-all cursor-pointer ${isActive ? "bg-[#E65100] text-white shadow-sm" : "bg-white border border-gray-200 text-gray-600 hover:border-gray-400 hover:text-gray-900"}`,
+            children: tab.label
+          },
+          tab.key
+        );
+      }) })
+    ] }),
+    activeTab === "dashboard" && /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-6", children: [
+      /* @__PURE__ */ jsx("div", { className: "relative rounded-2xl border border-orange-200/80 bg-gradient-to-br from-white via-orange-50/20 to-amber-50/30 p-6 md:p-8 shadow-sm", children: /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between", children: [
+        /* @__PURE__ */ jsxs("div", { children: [
+          /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3", children: [
+            /* @__PURE__ */ jsx("span", { className: "text-[11px] font-bold uppercase tracking-wider text-gray-500", children: "SBS Rewards Balance" }),
+            /* @__PURE__ */ jsxs("span", { className: "inline-flex items-center gap-1 rounded bg-emerald-50 px-2 py-0.5 text-[11px] font-bold tracking-wide text-emerald-700 border border-emerald-200", children: [
+              /* @__PURE__ */ jsx(AccountAwardIcon, { className: "h-3 w-3" }),
+              "TIER: ",
+              tier
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxs("div", { className: "mt-2 flex items-baseline gap-2.5", children: [
+            /* @__PURE__ */ jsx("span", { className: "text-4xl md:text-5xl font-extrabold tracking-tight text-gray-900", children: displayPoints.toLocaleString() }),
+            /* @__PURE__ */ jsx("span", { className: "text-xl md:text-2xl font-bold uppercase tracking-wide text-[#E65100]", children: displayPointsName })
+          ] }),
+          /* @__PURE__ */ jsxs("p", { className: "mt-2 flex items-center gap-1.5 text-xs text-gray-600 font-medium", children: [
+            /* @__PURE__ */ jsx("span", { className: "text-[#E65100]", children: "\u272A" }),
+            /* @__PURE__ */ jsxs("span", { children: [
+              "Worth",
+              " ",
+              /* @__PURE__ */ jsx("strong", { className: "text-gray-900", children: formatCurrency(displayMonetaryValue) }),
+              " ",
+              "off eligible orders (100 pts = ",
+              formatCurrency(100 * conversionRate),
+              ")"
+            ] })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "flex flex-wrap items-center gap-2.5 pt-2 lg:pt-0", children: [
+          /* @__PURE__ */ jsxs(
+            "button",
+            {
+              type: "button",
+              onClick: () => setActiveTab("redeem"),
+              className: "inline-flex items-center gap-2 rounded-lg bg-[#E65100] px-4 py-2.5 text-xs font-semibold text-white shadow-sm hover:bg-[#cf4800] transition-colors cursor-pointer",
+              children: [
+                /* @__PURE__ */ jsx(AccountShoppingBagIcon, { className: "h-4 w-4" }),
+                "Shop & Redeem Points"
+              ]
+            }
+          ),
+          /* @__PURE__ */ jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => setActiveTab("history"),
+              className: "inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer",
+              children: "View Full History"
+            }
+          ),
+          /* @__PURE__ */ jsxs(
+            "button",
+            {
+              type: "button",
+              onClick: () => setIsReferralModalOpen(true),
+              className: "inline-flex items-center gap-2 rounded-lg border border-orange-300 bg-orange-50/50 px-4 py-2.5 text-xs font-semibold text-[#E65100] hover:bg-orange-100/50 transition-colors cursor-pointer",
+              children: [
+                /* @__PURE__ */ jsx(AccountGiftIcon, { className: "h-4 w-4" }),
+                "Refer a Friend"
+              ]
+            }
+          )
+        ] })
+      ] }) }),
+      /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4", children: [
+        /* @__PURE__ */ jsxs("div", { className: "rounded-xl border border-gray-200 bg-white p-4 shadow-xs", children: [
+          /* @__PURE__ */ jsx("span", { className: "text-xs font-medium text-gray-500", children: "Available to Redeem" }),
+          /* @__PURE__ */ jsxs("p", { className: "mt-1 text-xl sm:text-2xl font-bold text-gray-900", children: [
+            displayPoints.toLocaleString(),
+            " ",
+            /* @__PURE__ */ jsx("span", { className: "text-xs font-normal text-gray-500", children: "pts" })
+          ] }),
+          /* @__PURE__ */ jsxs("p", { className: "mt-1 text-xs font-semibold text-emerald-600", children: [
+            formatCurrency(displayMonetaryValue),
+            " cash value"
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "rounded-xl border border-gray-200 bg-white p-4 shadow-xs", children: [
+          /* @__PURE__ */ jsx("span", { className: "text-xs font-medium text-gray-500", children: "Total Earned to Date" }),
+          /* @__PURE__ */ jsxs("p", { className: "mt-1 text-xl sm:text-2xl font-bold text-gray-900", children: [
+            displayTotalEarned.toLocaleString(),
+            " ",
+            /* @__PURE__ */ jsx("span", { className: "text-xs font-normal text-gray-500", children: "pts" })
+          ] }),
+          /* @__PURE__ */ jsx("p", { className: "mt-1 text-xs text-gray-500", children: "Lifetime earned" })
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "rounded-xl border border-gray-200 bg-white p-4 shadow-xs", children: [
+          /* @__PURE__ */ jsx("span", { className: "text-xs font-medium text-gray-500", children: "Total Redeemed" }),
+          /* @__PURE__ */ jsxs("p", { className: "mt-1 text-xl sm:text-2xl font-bold text-gray-900", children: [
+            displayTotalRedeemed.toLocaleString(),
+            " ",
+            /* @__PURE__ */ jsx("span", { className: "text-xs font-normal text-gray-500", children: "pts" })
+          ] }),
+          /* @__PURE__ */ jsxs("p", { className: "mt-1 text-xs font-semibold text-emerald-600", children: [
+            formatCurrency(displayTotalRedeemed * conversionRate),
+            " saved"
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "rounded-xl border border-gray-200 bg-white p-4 shadow-xs", children: [
+          /* @__PURE__ */ jsx("span", { className: "text-xs font-medium text-gray-500", children: "Pending Qualification" }),
+          /* @__PURE__ */ jsxs("p", { className: "mt-1 text-xl sm:text-2xl font-bold text-gray-900", children: [
+            customer?.pending_points ?? 0,
+            " ",
+            /* @__PURE__ */ jsx("span", { className: "text-xs font-normal text-gray-500", children: "pts" })
+          ] }),
+          /* @__PURE__ */ jsx("p", { className: "mt-1 text-xs text-gray-500", children: customer?.pending_points ? "Pending qualification" : "No points in transit" })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxs("div", { className: "rounded-xl border border-gray-200 bg-white p-5 shadow-xs", children: [
+        /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between mb-4", children: [
+          /* @__PURE__ */ jsxs("div", { children: [
+            /* @__PURE__ */ jsx("h3", { className: "text-base font-bold text-gray-900", children: "Recent Loyalty Activity" }),
+            /* @__PURE__ */ jsx("p", { className: "text-xs text-gray-500", children: "Last 5 ledger transactions and their validity" })
+          ] }),
+          /* @__PURE__ */ jsx("span", { className: "text-[11px] font-medium text-gray-500", children: "Ledger Currency: SBS Points" })
+        ] }),
+        /* @__PURE__ */ jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxs("table", { className: "w-full text-left text-xs border-collapse", children: [
+          /* @__PURE__ */ jsx("thead", { children: /* @__PURE__ */ jsxs("tr", { className: "border-b border-gray-200 text-gray-400 font-bold uppercase tracking-wider text-[10px]", children: [
+            /* @__PURE__ */ jsx("th", { className: "py-2.5 px-3", children: "Activity / Reference" }),
+            /* @__PURE__ */ jsx("th", { className: "py-2.5 px-3", children: "Date" }),
+            /* @__PURE__ */ jsx("th", { className: "py-2.5 px-3 text-right", children: "Points Delta" }),
+            /* @__PURE__ */ jsx("th", { className: "py-2.5 px-3 text-right", children: "Status / Expiry" })
+          ] }) }),
+          /* @__PURE__ */ jsx("tbody", { className: "divide-y divide-gray-100", children: activityRows.length === 0 ? /* @__PURE__ */ jsx("tr", { children: /* @__PURE__ */ jsx("td", { colSpan: 4, className: "py-8 text-center text-xs text-gray-500", children: "No loyalty transactions recorded yet." }) }) : activityRows.slice(0, 5).map((row) => /* @__PURE__ */ jsxs("tr", { className: "hover:bg-gray-50/70 transition-colors", children: [
+            /* @__PURE__ */ jsx("td", { className: "py-3 px-3", children: /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2.5", children: [
+              /* @__PURE__ */ jsx(
+                "span",
+                {
+                  className: `flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${row.delta > 0 ? "bg-emerald-50 text-emerald-600" : row.type === "expired" ? "bg-gray-100 text-gray-500" : "bg-red-50 text-red-600"}`,
+                  children: row.delta > 0 ? "+" : row.type === "expired" ? "\u27F3" : "\u2212"
+                }
+              ),
+              /* @__PURE__ */ jsxs("div", { children: [
+                /* @__PURE__ */ jsx("p", { className: "font-semibold text-gray-900", children: row.title }),
+                /* @__PURE__ */ jsx("p", { className: "text-[11px] text-gray-500", children: row.subtitle })
+              ] })
+            ] }) }),
+            /* @__PURE__ */ jsx("td", { className: "py-3 px-3 text-gray-600 whitespace-nowrap", children: row.date }),
+            /* @__PURE__ */ jsxs(
+              "td",
+              {
+                className: `py-3 px-3 text-right font-bold whitespace-nowrap ${row.delta > 0 ? "text-emerald-600" : "text-red-600"}`,
+                children: [
+                  row.delta > 0 ? `+${row.delta}` : row.delta,
+                  " Pts"
+                ]
+              }
+            ),
+            /* @__PURE__ */ jsx("td", { className: "py-3 px-3 text-right whitespace-nowrap", children: /* @__PURE__ */ jsxs(
+              "span",
+              {
+                className: `inline-block rounded px-2 py-0.5 text-[11px] font-semibold ${row.status === "Available" ? "bg-emerald-50 text-emerald-700" : row.status === "Redeemed" ? "bg-gray-100 text-gray-600" : "bg-red-50 text-red-700"}`,
+                children: [
+                  row.status,
+                  " ",
+                  row.expiry ? `(${row.expiry})` : ""
+                ]
+              }
+            ) })
+          ] }, row.id)) })
+        ] }) }),
+        /* @__PURE__ */ jsx("div", { className: "mt-4 border-t border-gray-100 pt-3 text-center", children: /* @__PURE__ */ jsxs(
+          "button",
+          {
+            type: "button",
+            onClick: () => setActiveTab("history"),
+            className: "text-xs font-semibold text-[#E65100] hover:underline cursor-pointer",
+            children: [
+              "View All ",
+              transactionsTotalCount > 0 ? `${transactionsTotalCount} ` : "",
+              "Transactions \u2192"
+            ]
+          }
+        ) })
+      ] })
+    ] }),
+    activeTab === "history" && /* @__PURE__ */ jsx("div", { className: "flex flex-col gap-6", children: /* @__PURE__ */ jsxs("div", { className: "rounded-xl border border-gray-200 bg-white p-6 shadow-xs", children: [
+      /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6", children: [
+        /* @__PURE__ */ jsxs("div", { children: [
+          /* @__PURE__ */ jsx("h3", { className: "text-base font-bold text-gray-900", children: "Points Activity Ledger" }),
+          /* @__PURE__ */ jsx("p", { className: "text-xs text-gray-500", children: "Complete transaction history and validity status" })
+        ] }),
+        /* @__PURE__ */ jsx("div", { className: "flex items-center gap-2", children: ["all", "earned", "redeemed", "expired"].map((filter2) => /* @__PURE__ */ jsx(
+          "button",
+          {
+            type: "button",
+            onClick: () => setHistoryFilter(filter2),
+            className: `rounded-full px-3 py-1 text-xs font-semibold capitalize transition-all cursor-pointer ${historyFilter === filter2 ? "bg-[#E65100] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`,
+            children: filter2
+          },
+          filter2
+        )) })
+      ] }),
+      /* @__PURE__ */ jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxs("table", { className: "w-full text-left text-xs border-collapse", children: [
+        /* @__PURE__ */ jsx("thead", { children: /* @__PURE__ */ jsxs("tr", { className: "border-b border-gray-200 text-gray-400 font-bold uppercase tracking-wider text-[10px]", children: [
+          /* @__PURE__ */ jsx("th", { className: "py-2.5 px-3", children: "Activity / Reference" }),
+          /* @__PURE__ */ jsx("th", { className: "py-2.5 px-3", children: "Date" }),
+          /* @__PURE__ */ jsx("th", { className: "py-2.5 px-3 text-right", children: "Points Delta" }),
+          /* @__PURE__ */ jsx("th", { className: "py-2.5 px-3 text-right", children: "Status / Expiry" })
+        ] }) }),
+        /* @__PURE__ */ jsx("tbody", { className: "divide-y divide-gray-100", children: filteredActivity.length === 0 ? /* @__PURE__ */ jsx("tr", { children: /* @__PURE__ */ jsx("td", { colSpan: 4, className: "py-8 text-center text-xs text-gray-500", children: "No transactions found for this filter." }) }) : filteredActivity.map((row) => /* @__PURE__ */ jsxs("tr", { className: "hover:bg-gray-50/70 transition-colors", children: [
+          /* @__PURE__ */ jsx("td", { className: "py-3 px-3", children: /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2.5", children: [
+            /* @__PURE__ */ jsx(
+              "span",
+              {
+                className: `flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${row.delta > 0 ? "bg-emerald-50 text-emerald-600" : row.type === "expired" ? "bg-gray-100 text-gray-500" : "bg-red-50 text-red-600"}`,
+                children: row.delta > 0 ? "+" : row.type === "expired" ? "\u27F3" : "\u2212"
+              }
+            ),
+            /* @__PURE__ */ jsxs("div", { children: [
+              /* @__PURE__ */ jsx("p", { className: "font-semibold text-gray-900", children: row.title }),
+              /* @__PURE__ */ jsx("p", { className: "text-[11px] text-gray-500", children: row.subtitle })
+            ] })
+          ] }) }),
+          /* @__PURE__ */ jsx("td", { className: "py-3 px-3 text-gray-600 whitespace-nowrap", children: row.date }),
+          /* @__PURE__ */ jsxs(
+            "td",
+            {
+              className: `py-3 px-3 text-right font-bold whitespace-nowrap ${row.delta > 0 ? "text-emerald-600" : "text-red-600"}`,
+              children: [
+                row.delta > 0 ? `+${row.delta}` : row.delta,
+                " Pts"
+              ]
+            }
+          ),
+          /* @__PURE__ */ jsx("td", { className: "py-3 px-3 text-right whitespace-nowrap", children: /* @__PURE__ */ jsxs(
+            "span",
+            {
+              className: `inline-block rounded px-2 py-0.5 text-[11px] font-semibold ${row.status === "Available" ? "bg-emerald-50 text-emerald-700" : row.status === "Redeemed" ? "bg-gray-100 text-gray-600" : "bg-red-50 text-red-700"}`,
+              children: [
+                row.status,
+                " ",
+                row.expiry ? `(${row.expiry})` : ""
+              ]
+            }
+          ) })
+        ] }, row.id)) })
+      ] }) }),
+      transactionsTotalCount > transactionsPerPage && /* @__PURE__ */ jsxs("div", { className: "mt-4 flex items-center justify-between border-t border-gray-100 pt-3 text-xs text-gray-500", children: [
+        /* @__PURE__ */ jsxs("span", { children: [
+          "Showing ",
+          Math.min(filteredActivity.length, transactionsPerPage),
+          " of",
+          " ",
+          transactionsTotalCount,
+          " transactions"
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
+          /* @__PURE__ */ jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => refetchTransactions({
+                page: Math.max(1, transactionsPage - 1),
+                per_page: transactionsPerPage
+              }),
+              disabled: transactionsPage <= 1 || isTransactionsLoading,
+              className: "rounded border border-gray-300 px-2.5 py-1 text-xs font-semibold hover:bg-gray-50 disabled:opacity-50 cursor-pointer",
+              children: "Previous"
+            }
+          ),
+          /* @__PURE__ */ jsxs("span", { className: "font-semibold text-gray-700", children: [
+            "Page ",
+            transactionsPage,
+            " of",
+            " ",
+            Math.ceil(transactionsTotalCount / transactionsPerPage) || 1
+          ] }),
+          /* @__PURE__ */ jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => refetchTransactions({
+                page: transactionsPage + 1,
+                per_page: transactionsPerPage
+              }),
+              disabled: transactionsPage >= Math.ceil(transactionsTotalCount / transactionsPerPage) || isTransactionsLoading,
+              className: "rounded border border-gray-300 px-2.5 py-1 text-xs font-semibold hover:bg-gray-50 disabled:opacity-50 cursor-pointer",
+              children: "Next"
+            }
+          )
+        ] })
+      ] })
+    ] }) }),
+    activeTab === "redeem" && /* @__PURE__ */ jsx("div", { className: "flex flex-col gap-6", children: /* @__PURE__ */ jsxs("div", { className: "rounded-xl border border-gray-200 bg-white p-6 shadow-xs max-w-2xl mx-auto w-full", children: [
+      /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3 border-b border-gray-100 pb-4", children: [
+        /* @__PURE__ */ jsx("div", { className: "rounded-lg bg-orange-100 p-2 text-[#E65100]", children: /* @__PURE__ */ jsx(AccountShoppingBagIcon, { className: "h-6 w-6" }) }),
+        /* @__PURE__ */ jsxs("div", { children: [
+          /* @__PURE__ */ jsx("h3", { className: "text-base font-bold text-gray-900", children: "Redeem Points on Active Cart" }),
+          /* @__PURE__ */ jsxs("p", { className: "text-xs text-gray-500", children: [
+            "Available: ",
+            /* @__PURE__ */ jsxs("strong", { children: [
+              displayPoints.toLocaleString(),
+              " Points"
+            ] }),
+            " (Worth",
+            " ",
+            /* @__PURE__ */ jsx("strong", { children: formatCurrency(displayMonetaryValue) }),
+            ")"
+          ] })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxs("div", { className: "mt-6 space-y-4", children: [
+        cart?.id ? /* @__PURE__ */ jsxs("div", { className: "rounded-lg bg-gray-50 p-4 border border-gray-200 text-xs", children: [
+          /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-gray-700 mb-1", children: [
+            /* @__PURE__ */ jsx("span", { children: "Active Cart:" }),
+            /* @__PURE__ */ jsx("span", { className: "font-mono text-gray-900", children: cart.id })
+          ] }),
+          /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-gray-700", children: [
+            /* @__PURE__ */ jsx("span", { children: "Items in Cart:" }),
+            /* @__PURE__ */ jsxs("span", { className: "font-semibold text-gray-900", children: [
+              cart.item_count ?? cart.line_items?.length ?? 1,
+              " item(s)"
+            ] })
+          ] })
+        ] }) : /* @__PURE__ */ jsxs("div", { className: "rounded-lg bg-amber-50 p-4 border border-amber-200 text-xs text-amber-800", children: [
+          /* @__PURE__ */ jsx("p", { className: "font-semibold", children: "No active cart found" }),
+          /* @__PURE__ */ jsx("p", { className: "mt-1", children: "Add fabrics to your cart to apply points directly during checkout. You can also test the points application simulator below." })
+        ] }),
+        /* @__PURE__ */ jsxs("div", { children: [
+          /* @__PURE__ */ jsx("label", { className: "text-xs font-bold text-gray-700", children: "Points to Use (Minimum: 100 pts)" }),
+          /* @__PURE__ */ jsxs("div", { className: "mt-1 flex items-center gap-2", children: [
+            /* @__PURE__ */ jsx(
+              "input",
+              {
+                type: "number",
+                value: pointsToRedeemInput,
+                onChange: (e) => setPointsToRedeemInput(Number(e.target.value)),
+                max: displayPoints,
+                min: 100,
+                step: 50,
+                className: "flex-1 rounded-lg border border-gray-300 p-2.5 text-sm font-semibold text-gray-900 outline-none focus:border-[#E65100]"
+              }
+            ),
+            /* @__PURE__ */ jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => setPointsToRedeemInput(displayPoints),
+                className: "rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 cursor-pointer",
+                children: "Use Max"
+              }
+            )
+          ] })
+        ] }),
+        /* @__PURE__ */ jsx("div", { className: "flex flex-wrap gap-2 pt-1", children: [100, 250, 500, 1e3].map((preset) => /* @__PURE__ */ jsxs(
+          "button",
+          {
+            type: "button",
+            onClick: () => setPointsToRedeemInput(preset),
+            className: "rounded-md border border-gray-200 bg-gray-50 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-orange-50 hover:border-orange-300 hover:text-[#E65100] transition-colors cursor-pointer",
+            children: [
+              preset,
+              " Pts (",
+              formatCurrency(preset * conversionRate),
+              ")"
+            ]
+          },
+          preset
+        )) }),
+        /* @__PURE__ */ jsxs("div", { className: "rounded-lg bg-emerald-50 border border-emerald-200 p-4 text-xs text-emerald-800", children: [
+          /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between font-bold text-sm", children: [
+            /* @__PURE__ */ jsx("span", { children: "Estimated Savings:" }),
+            /* @__PURE__ */ jsxs("span", { className: "text-emerald-700", children: [
+              "-",
+              formatCurrency(pointsToRedeemInput * conversionRate)
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxs("p", { className: "mt-1 text-[11px] text-emerald-600", children: [
+            "Remaining balance after redemption:",
+            " ",
+            /* @__PURE__ */ jsxs("strong", { children: [
+              Math.max(0, displayPoints - pointsToRedeemInput).toLocaleString(),
+              " Points"
+            ] })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsx(
+          "button",
+          {
+            type: "button",
+            onClick: handleApplyCheckoutPoints,
+            disabled: isApplying || pointsToRedeemInput <= 0,
+            className: "w-full rounded-lg bg-[#E65100] py-3 text-sm font-bold text-white shadow-sm hover:bg-[#cf4800] transition-colors disabled:opacity-60 cursor-pointer",
+            children: isApplying ? "Applying Points..." : `Apply ${pointsToRedeemInput} Points to Cart`
+          }
+        )
+      ] })
+    ] }) }),
+    /* @__PURE__ */ jsxs("div", { className: "mt-12 flex flex-col items-center justify-between gap-3 border-t border-gray-200 pt-6 pb-2 text-[11px] text-gray-500 sm:flex-row", children: [
+      /* @__PURE__ */ jsx("p", { children: "SBS Textiles \u2022 Pure Linens, Cottons & Fine Suiting Since 1994" }),
+      /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-4", children: [
+        /* @__PURE__ */ jsx(StorefrontLink, { href: "/terms", className: "hover:text-gray-900 transition-colors", children: "Terms of Loyalty Program" }),
+        /* @__PURE__ */ jsx(StorefrontLink, { href: "/policy", className: "hover:text-gray-900 transition-colors", children: "Points Expiry Policy" }),
+        /* @__PURE__ */ jsx(StorefrontLink, { href: "/contact", className: "hover:text-gray-900 transition-colors", children: "Customer Support" })
+      ] })
+    ] }),
+    isReferralModalOpen && /* @__PURE__ */ jsx(
+      Popup,
+      {
+        isOpen: isReferralModalOpen,
+        onClose: () => setIsReferralModalOpen(false),
+        title: "Refer Friends & Earn 500 SBS Points",
+        children: /* @__PURE__ */ jsxs("div", { className: "space-y-4 py-2", children: [
+          /* @__PURE__ */ jsxs("p", { className: "text-xs text-gray-600 leading-relaxed", children: [
+            "Give your friends ",
+            /* @__PURE__ */ jsx("strong", { children: "\u20B9200 off" }),
+            " on their first fabric purchase of \u20B91,000+. When they complete their order, you automatically get ",
+            /* @__PURE__ */ jsx("strong", { children: "500 SBS Points" }),
+            " added to your account!"
+          ] }),
+          /* @__PURE__ */ jsxs("div", { children: [
+            /* @__PURE__ */ jsx("label", { className: "text-[11px] font-bold uppercase tracking-wider text-gray-500", children: "Your Referral Code" }),
+            /* @__PURE__ */ jsxs("div", { className: "mt-1 flex items-center justify-between rounded-lg border border-gray-300 bg-gray-50 p-2.5", children: [
+              /* @__PURE__ */ jsx("span", { className: "font-mono text-sm font-bold tracking-wider text-gray-900", children: displayReferralCode }),
+              /* @__PURE__ */ jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: handleCopyCode,
+                  className: "inline-flex items-center gap-1.5 rounded bg-white px-2.5 py-1 text-xs font-semibold text-gray-700 border border-gray-200 hover:bg-gray-100 transition-colors cursor-pointer",
+                  children: codeCopied ? /* @__PURE__ */ jsxs(Fragment, { children: [
+                    /* @__PURE__ */ jsx(AccountCheckIcon, { className: "h-3.5 w-3.5 text-emerald-600" }),
+                    /* @__PURE__ */ jsx("span", { className: "text-emerald-600", children: "Copied" })
+                  ] }) : /* @__PURE__ */ jsxs(Fragment, { children: [
+                    /* @__PURE__ */ jsx(AccountCopyIcon, { className: "h-3.5 w-3.5" }),
+                    /* @__PURE__ */ jsx("span", { children: "Copy" })
+                  ] })
+                }
+              )
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxs("div", { children: [
+            /* @__PURE__ */ jsx("label", { className: "text-[11px] font-bold uppercase tracking-wider text-gray-500", children: "Your Referral Link" }),
+            /* @__PURE__ */ jsxs("div", { className: "mt-1 flex items-center justify-between rounded-lg border border-gray-300 bg-gray-50 p-2.5", children: [
+              /* @__PURE__ */ jsx("span", { className: "truncate pr-2 font-mono text-xs text-gray-700", children: displayReferralLink }),
+              /* @__PURE__ */ jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: handleCopyLink,
+                  className: "inline-flex shrink-0 items-center gap-1.5 rounded bg-white px-2.5 py-1 text-xs font-semibold text-gray-700 border border-gray-200 hover:bg-gray-100 transition-colors cursor-pointer",
+                  children: linkCopied ? /* @__PURE__ */ jsxs(Fragment, { children: [
+                    /* @__PURE__ */ jsx(AccountCheckIcon, { className: "h-3.5 w-3.5 text-emerald-600" }),
+                    /* @__PURE__ */ jsx("span", { className: "text-emerald-600", children: "Copied" })
+                  ] }) : /* @__PURE__ */ jsxs(Fragment, { children: [
+                    /* @__PURE__ */ jsx(AccountCopyIcon, { className: "h-3.5 w-3.5" }),
+                    /* @__PURE__ */ jsx("span", { children: "Copy" })
+                  ] })
+                }
+              )
+            ] })
+          ] }),
+          /* @__PURE__ */ jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => shareWhatsApp(),
+              className: "w-full inline-flex items-center justify-center gap-2 rounded-lg bg-[#25D366] py-2.5 text-xs font-bold text-white shadow-xs hover:bg-[#20ba59] transition-colors cursor-pointer",
+              children: "Share on WhatsApp"
+            }
+          )
+        ] })
+      }
+    )
+  ] });
+};
 var DownloadIcon = () => /* @__PURE__ */ jsxs(
   "svg",
   {
@@ -8815,6 +9988,6 @@ var StorefrontAuthError = class extends StorefrontError {
   }
 };
 
-export { AccountAddressesPage, AccountLayout, AccountOrderDetailContent, AccountOrdersPage, AccountPage, AccountSidebar, AccountWishlistPage, AddressCard2 as AddressCard, AddressForm, AuthManager, CartDrawer, CartItem, CartMismatchBanner_default as CartMismatchBanner, CartPage, CartSummary, ClerkStoreProvider, CoreProvider, CouponSection_default as CouponSection, CustomOTPAuth, DEFAULT_NAV_ITEMS as DEFAULT_ACCOUNT_NAV_ITEMS, DeveloperErrorBoundary, EmptyState, FastCheckoutDrawer, Order, OrdersList, Popup, ProfileForm, Spinner, StorefrontApiError, StorefrontAuthError, StorefrontError, ThirdPartyScripts, UserInfo, ViewCart, injectContentSquare, injectHotjar, invalidateLikedProductsCache, isTokenExpired, nameToSlug, useAddToCart, useAddresses, useAuth, useCart, useCartDrawer, userCartInfo_default as useCartInfo, useClerkStoreAuth, useCore, useCurrencyFormat, useGetCurrentUserLikedProductsQuery, useLogout, useOtpStoreAuth, usePaymentGateway, useVariantSelection };
+export { AccountAddressesPage, AccountAwardIcon, AccountClockIcon, AccountGiftIcon, AccountLayout, AccountOrderDetailContent, AccountOrdersPage, AccountPage, AccountRewardsPage, AccountSidebar, AccountSparklesIcon, AccountStarIcon, AccountWishlistPage, AddressCard2 as AddressCard, AddressForm, AuthManager, CartDrawer, CartItem, CartMismatchBanner_default as CartMismatchBanner, CartPage, CartSummary, ClerkStoreProvider, CoreProvider, CouponSection_default as CouponSection, CustomOTPAuth, DEFAULT_NAV_ITEMS as DEFAULT_ACCOUNT_NAV_ITEMS, DeveloperErrorBoundary, EmptyState, FastCheckoutDrawer, Order, OrdersList, Popup, ProfileForm, Spinner, StorefrontApiError, StorefrontAuthError, StorefrontError, ThirdPartyScripts, UserInfo, ViewCart, injectContentSquare, injectHotjar, invalidateLikedProductsCache, isTokenExpired, nameToSlug, useAddToCart, useAddresses, useAuth, useCart, useCartDrawer, userCartInfo_default as useCartInfo, useClerkStoreAuth, useCore, useCurrencyFormat, useGetCurrentUserLikedProductsQuery, useLogout, useLoyalty, useOtpStoreAuth, usePaymentGateway, useVariantSelection };
 //# sourceMappingURL=index.js.map
 //# sourceMappingURL=index.js.map
