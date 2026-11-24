@@ -871,6 +871,25 @@ var FastCheckoutDrawer = ({
   router: overrideRouter
 }) => {
   const [mounted, setMounted] = useState(false);
+  const [shouldRender, setShouldRender] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+  useEffect(() => {
+    if (isOpen) {
+      setShouldRender(true);
+      const timer = requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setIsVisible(true);
+        });
+      });
+      return () => cancelAnimationFrame(timer);
+    } else {
+      setIsVisible(false);
+      const timer = setTimeout(() => {
+        setShouldRender(false);
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
   const router = useStorefrontRouter(overrideRouter);
   const { Razorpay } = useRazorpay();
   const {
@@ -1043,6 +1062,10 @@ var FastCheckoutDrawer = ({
   const rawPromoTotal = parseFloat(
     cart?.display_promo_total?.replace(/[^0-9.]/g, "") || String((cart?.promo_total ?? 0) > 1e4 ? (cart?.promo_total ?? 0) / 100 : cart?.promo_total ?? 0)
   ) || 0;
+  const rawAdjustmentTotal = parseFloat(
+    String(cart?.display_adjustment_total ?? "").replace(/[^0-9.]/g, "") || String(cart?.adjustment_total != null ? Number(cart.adjustment_total) / 100 : 0)
+  ) || 0;
+  const totalSavings = rawAdjustmentTotal > 0 ? rawAdjustmentTotal : rawPromoTotal;
   const applyCouponByCode = async (codeToApply) => {
     if (!codeToApply.trim() || !cart?.id || !actions?.applyDiscount) {
       toast?.error?.("Unable to apply discount");
@@ -1535,7 +1558,7 @@ var FastCheckoutDrawer = ({
       setIsPlacingOrder(false);
     }
   };
-  if (!isOpen || !mounted) return null;
+  if (!shouldRender || !mounted) return null;
   const totalAmount = cart?.display_total ? formatCurrency(cart.display_total) : cart?.total ? formatCurrency(cart.total) : "\u2014";
   const totalItems = cart?.line_items?.reduce(
     (sum, it) => sum + (it.quantity || 1),
@@ -1544,735 +1567,752 @@ var FastCheckoutDrawer = ({
   const modalContent = /* @__PURE__ */ jsx(
     "div",
     {
-      className: "fixed inset-0 z-[1000000] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-[3px] transition-opacity duration-300 overflow-y-auto animate-in fade-in",
+      className: "fixed inset-0 z-[1000000] flex items-stretch sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-[3px] overflow-hidden sm:overflow-y-auto",
+      style: {
+        opacity: isVisible ? 1 : 0,
+        transition: "opacity 300ms ease-in-out",
+        pointerEvents: isVisible ? "auto" : "none"
+      },
       onClick: (e) => {
         if (e.target === e.currentTarget && !isPlacingOrder) onClose();
       },
-      children: /* @__PURE__ */ jsxs("div", { className: "relative w-full max-w-[500px] bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-100 flex flex-col max-h-[92dvh] animate-in zoom-in-95 duration-200", children: [
-        /* @__PURE__ */ jsxs("div", { className: "px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-gray-50 to-white sticky top-0 z-20", children: [
-          /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2.5", children: [
-            /* @__PURE__ */ jsx(
-              "div",
-              {
-                className: "w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-sm",
-                style: { backgroundColor: primaryColor },
-                children: "\u26A1"
-              }
-            ),
-            /* @__PURE__ */ jsxs("div", { children: [
-              /* @__PURE__ */ jsx("h3", { className: "font-[var(--font-bold,sans-serif)] text-[16px] text-gray-900 leading-tight", children: "Quick Checkout" }),
-              /* @__PURE__ */ jsxs("p", { className: "text-[11px] text-gray-500 flex items-center gap-1", children: [
-                /* @__PURE__ */ jsx("span", { children: "\u{1F512} 100% Safe & Secure" }),
-                /* @__PURE__ */ jsx("span", { children: "\u2022" }),
-                /* @__PURE__ */ jsx("span", { children: "Direct Gateway Pay" })
-              ] })
-            ] })
-          ] }),
-          /* @__PURE__ */ jsx(
-            "button",
-            {
-              onClick: () => {
-                setIsPlacingOrder(false);
-                onClose();
-              },
-              className: "w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-700 transition-colors cursor-pointer",
-              "aria-label": "Close checkout",
-              children: "\u2715"
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxs("div", { className: "flex-1 overflow-y-auto p-5 space-y-4 text-gray-800", children: [
-          /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-200/60 text-xs", children: [
-            /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-medium)] text-gray-600", children: [
-              "Order Total (",
-              totalItems,
-              " ",
-              totalItems === 1 ? "item" : "items",
-              "):"
-            ] }),
-            /* @__PURE__ */ jsxs("div", { className: "text-right", children: [
-              /* @__PURE__ */ jsx(
-                "span",
-                {
-                  className: "font-[var(--font-bold)] text-sm block",
-                  style: { color: primaryColor },
-                  children: totalAmount
-                }
-              ),
-              rawPromoTotal > 0 && /* @__PURE__ */ jsxs("span", { className: "text-[10px] text-emerald-600 font-bold block", children: [
-                "Savings of ",
-                formatCurrency(rawPromoTotal),
-                " applied"
-              ] })
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxs("div", { className: "p-3 bg-gray-50/90 border border-gray-200/90 rounded-xl shadow-xs", children: [
-            /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between mb-2", children: [
-              /* @__PURE__ */ jsxs("span", { className: "flex items-center gap-1.5 font-[var(--font-bold)] text-xs text-gray-800", children: [
-                /* @__PURE__ */ jsx("span", { children: "\u{1F3F7}\uFE0F" }),
-                /* @__PURE__ */ jsx("span", { children: "Offers & Coupons" })
-              ] }),
-              activeDiscount && /* @__PURE__ */ jsx("span", { className: "text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full", children: "Applied" })
-            ] }),
-            activeDiscount ? /* @__PURE__ */ jsxs("div", { className: "p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center justify-between text-xs text-emerald-800", children: [
-              /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
-                /* @__PURE__ */ jsx("span", { children: "\u2705" }),
+      children: /* @__PURE__ */ jsxs(
+        "div",
+        {
+          className: "relative w-full sm:max-w-[500px] h-[100dvh] sm:h-auto max-h-[100dvh] sm:max-h-[92dvh] bg-white rounded-none sm:rounded-2xl shadow-2xl overflow-hidden border-0 sm:border border-gray-100 flex flex-col",
+          style: {
+            transform: isVisible ? "translateY(0)" : "translateY(24px)",
+            opacity: isVisible ? 1 : 0,
+            transition: "transform 350ms cubic-bezier(0.16, 1, 0.3, 1), opacity 300ms ease-out",
+            willChange: "transform, opacity"
+          },
+          children: [
+            /* @__PURE__ */ jsxs("div", { className: "px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-gray-50 to-white sticky top-0 z-20", children: [
+              /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2.5", children: [
+                /* @__PURE__ */ jsx(
+                  "div",
+                  {
+                    className: "w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-sm",
+                    style: { backgroundColor: primaryColor },
+                    children: "\u26A1"
+                  }
+                ),
                 /* @__PURE__ */ jsxs("div", { children: [
-                  /* @__PURE__ */ jsx("p", { className: "font-bold tracking-wide text-xs", children: activeDiscount.code || activeDiscount.display_action_value || "Coupon Applied" }),
-                  /* @__PURE__ */ jsx("p", { className: "text-[11px] text-emerald-600 font-medium", children: rawPromoTotal > 0 ? `You save ${formatCurrency(rawPromoTotal)}` : "Discount applied to order" })
+                  /* @__PURE__ */ jsx("h3", { className: "font-[var(--font-bold,sans-serif)] text-[16px] text-gray-900 leading-tight", children: "Quick Checkout" }),
+                  /* @__PURE__ */ jsxs("p", { className: "text-[11px] text-gray-500 flex items-center gap-1", children: [
+                    /* @__PURE__ */ jsx("span", { children: "\u{1F512} 100% Safe & Secure" }),
+                    /* @__PURE__ */ jsx("span", { children: "\u2022" }),
+                    /* @__PURE__ */ jsx("span", { children: "Direct Gateway Pay" })
+                  ] })
                 ] })
               ] }),
               /* @__PURE__ */ jsx(
                 "button",
                 {
-                  type: "button",
-                  onClick: () => handleRemoveCoupon(activeDiscount.id || activeDiscount.discount_id),
-                  disabled: couponApplying,
-                  className: "text-red-500 font-bold hover:text-red-700 text-xs px-2 py-1 rounded hover:bg-red-50 cursor-pointer transition-colors",
-                  children: couponApplying ? "..." : "Remove"
+                  onClick: () => {
+                    setIsPlacingOrder(false);
+                    onClose();
+                  },
+                  className: "w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-700 transition-colors cursor-pointer",
+                  "aria-label": "Close checkout",
+                  children: "\u2715"
                 }
               )
-            ] }) : (
-              /* Coupon Input Form */
-              /* @__PURE__ */ jsxs(
-                "form",
-                {
-                  onSubmit: (e) => {
-                    e.preventDefault();
-                    applyCouponByCode(couponCode);
-                  },
-                  className: "flex gap-2",
-                  children: [
+            ] }),
+            /* @__PURE__ */ jsxs("div", { className: "flex-1 overflow-y-auto p-5 space-y-4 text-gray-800", children: [
+              /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-200/60 text-xs", children: [
+                /* @__PURE__ */ jsxs("span", { className: "font-[var(--font-medium)] text-gray-600", children: [
+                  "Order Total (",
+                  totalItems,
+                  " ",
+                  totalItems === 1 ? "item" : "items",
+                  "):"
+                ] }),
+                /* @__PURE__ */ jsxs("div", { className: "text-right", children: [
+                  /* @__PURE__ */ jsx(
+                    "span",
+                    {
+                      className: "font-[var(--font-bold)] text-sm block",
+                      style: { color: primaryColor },
+                      children: totalAmount
+                    }
+                  ),
+                  totalSavings > 0 && /* @__PURE__ */ jsxs("span", { className: "text-[10px] text-emerald-600 font-bold block", children: [
+                    "Savings of ",
+                    formatCurrency(totalSavings),
+                    " applied"
+                  ] })
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxs("div", { className: "p-3 bg-gray-50/90 border border-gray-200/90 rounded-xl shadow-xs", children: [
+                /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between mb-2", children: [
+                  /* @__PURE__ */ jsxs("span", { className: "flex items-center gap-1.5 font-[var(--font-bold)] text-xs text-gray-800", children: [
+                    /* @__PURE__ */ jsx("span", { children: "\u{1F3F7}\uFE0F" }),
+                    /* @__PURE__ */ jsx("span", { children: "Offers & Coupons" })
+                  ] }),
+                  activeDiscount && /* @__PURE__ */ jsx("span", { className: "text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full", children: "Applied" })
+                ] }),
+                activeDiscount ? /* @__PURE__ */ jsxs("div", { className: "p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center justify-between text-xs text-emerald-800", children: [
+                  /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
+                    /* @__PURE__ */ jsx("span", { children: "\u2705" }),
+                    /* @__PURE__ */ jsxs("div", { children: [
+                      /* @__PURE__ */ jsx("p", { className: "font-bold tracking-wide text-xs", children: activeDiscount.code || activeDiscount.display_action_value || "Coupon Applied" }),
+                      /* @__PURE__ */ jsx("p", { className: "text-[11px] text-emerald-600 font-medium", children: totalSavings > 0 ? `You save ${formatCurrency(totalSavings)}` : "Discount applied to order" })
+                    ] })
+                  ] }),
+                  /* @__PURE__ */ jsx(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: () => handleRemoveCoupon(activeDiscount.id || activeDiscount.discount_id),
+                      disabled: couponApplying,
+                      className: "text-red-500 font-bold hover:text-red-700 text-xs px-2 py-1 rounded hover:bg-red-50 cursor-pointer transition-colors",
+                      children: couponApplying ? "..." : "Remove"
+                    }
+                  )
+                ] }) : (
+                  /* Coupon Input Form */
+                  /* @__PURE__ */ jsxs(
+                    "form",
+                    {
+                      onSubmit: (e) => {
+                        e.preventDefault();
+                        applyCouponByCode(couponCode);
+                      },
+                      className: "flex gap-2",
+                      children: [
+                        /* @__PURE__ */ jsx(
+                          "input",
+                          {
+                            type: "text",
+                            placeholder: "ENTER COUPON CODE",
+                            value: couponCode,
+                            onChange: (e) => setCouponCode(e.target.value.toUpperCase()),
+                            className: "flex-1 px-3 py-2 border border-gray-300 rounded-lg text-xs uppercase font-semibold tracking-wider text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white"
+                          }
+                        ),
+                        /* @__PURE__ */ jsx(
+                          "button",
+                          {
+                            type: "submit",
+                            disabled: couponApplying || !couponCode.trim(),
+                            className: "px-4 py-2 text-white text-xs font-bold rounded-lg transition-opacity disabled:opacity-50 cursor-pointer shrink-0 tracking-wider shadow-xs",
+                            style: { backgroundColor: primaryColor },
+                            children: couponApplying ? "..." : "APPLY"
+                          }
+                        )
+                      ]
+                    }
+                  )
+                ),
+                !activeDiscount && availableDiscounts.length > 0 && /* @__PURE__ */ jsxs("div", { className: "mt-2.5 pt-2 border-t border-gray-200/60 space-y-1.5", children: [
+                  /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-medium)] text-gray-500", children: "Available offers:" }),
+                  /* @__PURE__ */ jsx("div", { className: "flex flex-wrap gap-1.5", children: availableDiscounts.map((coupon) => {
+                    const code = coupon.code;
+                    const label = coupon.display_action_value || coupon.name || "Special Offer";
+                    return /* @__PURE__ */ jsxs(
+                      "button",
+                      {
+                        type: "button",
+                        onClick: () => {
+                          if (code) {
+                            setCouponCode(code);
+                            applyCouponByCode(code);
+                          } else if (coupon.id) {
+                            applyCouponById(coupon.id);
+                          }
+                        },
+                        disabled: couponApplying,
+                        className: "px-2.5 py-1 rounded-md text-[11px] font-bold border border-dashed transition-all hover:scale-102 active:scale-98 cursor-pointer flex items-center gap-1.5 bg-white shadow-2xs",
+                        style: {
+                          color: primaryColor,
+                          borderColor: primaryColor
+                        },
+                        children: [
+                          /* @__PURE__ */ jsxs("span", { children: [
+                            "\u{1F3F7}\uFE0F ",
+                            code ? `${code}` : label
+                          ] }),
+                          /* @__PURE__ */ jsx("span", { className: "text-[10px] text-emerald-600 font-bold uppercase", children: "\u2022 Apply" })
+                        ]
+                      },
+                      coupon.code || coupon.id
+                    );
+                  }) })
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxs("div", { className: "bg-white rounded-xl border border-gray-200/80 p-4 shadow-xs", children: [
+                /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between mb-3", children: [
+                  /* @__PURE__ */ jsxs("span", { className: "text-xs font-[var(--font-bold)] uppercase tracking-wider text-gray-500 flex items-center gap-1.5", children: [
+                    /* @__PURE__ */ jsx(
+                      "span",
+                      {
+                        className: "w-4 h-4 rounded-full flex items-center justify-center text-[10px] text-white",
+                        style: { backgroundColor: primaryColor },
+                        children: "1"
+                      }
+                    ),
+                    "Contact & Account"
+                  ] }),
+                  isSignedIn && /* @__PURE__ */ jsx("span", { className: "text-emerald-600 text-[11px] font-[var(--font-bold)] flex items-center gap-1", children: "\u2713 Verified" })
+                ] }),
+                isSignedIn ? /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between bg-emerald-50/60 border border-emerald-100 rounded-lg p-2.5 text-xs", children: [
+                  /* @__PURE__ */ jsxs("div", { children: [
+                    /* @__PURE__ */ jsx("p", { className: "font-[var(--font-bold)] text-emerald-950", children: auth?.user?.name || auth?.user?.firstName || "Customer" }),
+                    /* @__PURE__ */ jsx("p", { className: "text-emerald-700", children: auth?.user?.phone || auth?.user?.email || "Phone verified" })
+                  ] }),
+                  /* @__PURE__ */ jsx(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: () => {
+                        auth?.clearAuth?.();
+                        setIsOtpSent(false);
+                      },
+                      className: "text-xs text-gray-500 underline hover:text-gray-800 cursor-pointer",
+                      children: "Change"
+                    }
+                  )
+                ] }) : !isOtpSent ? /* @__PURE__ */ jsxs("form", { onSubmit: handleSendOtp, className: "space-y-3", children: [
+                  /* @__PURE__ */ jsx("p", { className: "text-xs text-gray-600", children: "Enter your mobile number to sign in and proceed with checkout." }),
+                  /* @__PURE__ */ jsxs("div", { className: "flex gap-2", children: [
+                    /* @__PURE__ */ jsx("span", { className: "px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-xs font-bold text-gray-700 flex items-center", children: "+91" }),
                     /* @__PURE__ */ jsx(
                       "input",
                       {
-                        type: "text",
-                        placeholder: "ENTER COUPON CODE",
-                        value: couponCode,
-                        onChange: (e) => setCouponCode(e.target.value.toUpperCase()),
-                        className: "flex-1 px-3 py-2 border border-gray-300 rounded-lg text-xs uppercase font-semibold tracking-wider text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white"
+                        type: "tel",
+                        maxLength: 10,
+                        placeholder: "Enter 10-digit mobile",
+                        value: phone,
+                        onChange: (e) => setPhone(e.target.value.replace(/\D/g, "")),
+                        className: "flex-1 px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-gray-400",
+                        autoFocus: true
                       }
                     ),
                     /* @__PURE__ */ jsx(
                       "button",
                       {
                         type: "submit",
-                        disabled: couponApplying || !couponCode.trim(),
-                        className: "px-4 py-2 text-white text-xs font-bold rounded-lg transition-opacity disabled:opacity-50 cursor-pointer shrink-0 tracking-wider shadow-xs",
+                        disabled: authLoading || phone.length < 10,
+                        className: "px-4 py-2 text-white text-xs font-bold rounded-lg transition-opacity disabled:opacity-50 cursor-pointer",
                         style: { backgroundColor: primaryColor },
-                        children: couponApplying ? "..." : "APPLY"
+                        children: authLoading ? "Sending..." : "Send OTP"
                       }
                     )
-                  ]
-                }
-              )
-            ),
-            !activeDiscount && availableDiscounts.length > 0 && /* @__PURE__ */ jsxs("div", { className: "mt-2.5 pt-2 border-t border-gray-200/60 space-y-1.5", children: [
-              /* @__PURE__ */ jsx("p", { className: "text-[11px] font-[var(--font-medium)] text-gray-500", children: "Available offers:" }),
-              /* @__PURE__ */ jsx("div", { className: "flex flex-wrap gap-1.5", children: availableDiscounts.map((coupon) => {
-                const code = coupon.code;
-                const label = coupon.display_action_value || coupon.name || "Special Offer";
-                return /* @__PURE__ */ jsxs(
-                  "button",
-                  {
-                    type: "button",
-                    onClick: () => {
-                      if (code) {
-                        setCouponCode(code);
-                        applyCouponByCode(code);
-                      } else if (coupon.id) {
-                        applyCouponById(coupon.id);
+                  ] })
+                ] }) : /* @__PURE__ */ jsxs("form", { onSubmit: handleVerifyOtp, className: "space-y-3", children: [
+                  /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between text-xs", children: [
+                    /* @__PURE__ */ jsxs("span", { className: "text-gray-600", children: [
+                      "Enter code sent to +91 ",
+                      phone
+                    ] }),
+                    /* @__PURE__ */ jsx(
+                      "button",
+                      {
+                        type: "button",
+                        onClick: () => setIsOtpSent(false),
+                        className: "text-xs text-gray-500 underline hover:text-gray-800",
+                        children: "Edit"
                       }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsx("div", { className: "flex justify-between gap-1.5", children: otp.map((digit, idx) => /* @__PURE__ */ jsx(
+                    "input",
+                    {
+                      id: `fast-otp-${idx}`,
+                      type: "text",
+                      maxLength: 1,
+                      value: digit,
+                      onChange: (e) => {
+                        const val = e.target.value.replace(/\D/g, "");
+                        const next = [...otp];
+                        next[idx] = val;
+                        setOtp(next);
+                        if (val && idx < 5) {
+                          const nextInput = document.getElementById(`fast-otp-${idx + 1}`);
+                          nextInput?.focus();
+                        }
+                      },
+                      onKeyDown: (e) => {
+                        if (e.key === "Backspace" && !otp[idx] && idx > 0) {
+                          const prevInput = document.getElementById(`fast-otp-${idx - 1}`);
+                          prevInput?.focus();
+                        }
+                      },
+                      className: "w-10 h-11 text-center font-bold text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     },
-                    disabled: couponApplying,
-                    className: "px-2.5 py-1 rounded-md text-[11px] font-bold border border-dashed transition-all hover:scale-102 active:scale-98 cursor-pointer flex items-center gap-1.5 bg-white shadow-2xs",
-                    style: {
-                      color: primaryColor,
-                      borderColor: primaryColor
-                    },
-                    children: [
-                      /* @__PURE__ */ jsxs("span", { children: [
-                        "\u{1F3F7}\uFE0F ",
-                        code ? `${code}` : label
-                      ] }),
-                      /* @__PURE__ */ jsx("span", { className: "text-[10px] text-emerald-600 font-bold uppercase", children: "\u2022 Apply" })
-                    ]
-                  },
-                  coupon.code || coupon.id
-                );
-              }) })
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxs("div", { className: "bg-white rounded-xl border border-gray-200/80 p-4 shadow-xs", children: [
-            /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between mb-3", children: [
-              /* @__PURE__ */ jsxs("span", { className: "text-xs font-[var(--font-bold)] uppercase tracking-wider text-gray-500 flex items-center gap-1.5", children: [
-                /* @__PURE__ */ jsx(
-                  "span",
-                  {
-                    className: "w-4 h-4 rounded-full flex items-center justify-center text-[10px] text-white",
-                    style: { backgroundColor: primaryColor },
-                    children: "1"
-                  }
-                ),
-                "Contact & Account"
-              ] }),
-              isSignedIn && /* @__PURE__ */ jsx("span", { className: "text-emerald-600 text-[11px] font-[var(--font-bold)] flex items-center gap-1", children: "\u2713 Verified" })
-            ] }),
-            isSignedIn ? /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between bg-emerald-50/60 border border-emerald-100 rounded-lg p-2.5 text-xs", children: [
-              /* @__PURE__ */ jsxs("div", { children: [
-                /* @__PURE__ */ jsx("p", { className: "font-[var(--font-bold)] text-emerald-950", children: auth?.user?.name || auth?.user?.firstName || "Customer" }),
-                /* @__PURE__ */ jsx("p", { className: "text-emerald-700", children: auth?.user?.phone || auth?.user?.email || "Phone verified" })
-              ] }),
-              /* @__PURE__ */ jsx(
-                "button",
-                {
-                  type: "button",
-                  onClick: () => {
-                    auth?.clearAuth?.();
-                    setIsOtpSent(false);
-                  },
-                  className: "text-xs text-gray-500 underline hover:text-gray-800 cursor-pointer",
-                  children: "Change"
-                }
-              )
-            ] }) : !isOtpSent ? /* @__PURE__ */ jsxs("form", { onSubmit: handleSendOtp, className: "space-y-3", children: [
-              /* @__PURE__ */ jsx("p", { className: "text-xs text-gray-600", children: "Enter your mobile number to sign in and proceed with checkout." }),
-              /* @__PURE__ */ jsxs("div", { className: "flex gap-2", children: [
-                /* @__PURE__ */ jsx("span", { className: "px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-xs font-bold text-gray-700 flex items-center", children: "+91" }),
-                /* @__PURE__ */ jsx(
-                  "input",
-                  {
-                    type: "tel",
-                    maxLength: 10,
-                    placeholder: "Enter 10-digit mobile",
-                    value: phone,
-                    onChange: (e) => setPhone(e.target.value.replace(/\D/g, "")),
-                    className: "flex-1 px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-gray-400",
-                    autoFocus: true
-                  }
-                ),
-                /* @__PURE__ */ jsx(
-                  "button",
-                  {
-                    type: "submit",
-                    disabled: authLoading || phone.length < 10,
-                    className: "px-4 py-2 text-white text-xs font-bold rounded-lg transition-opacity disabled:opacity-50 cursor-pointer",
-                    style: { backgroundColor: primaryColor },
-                    children: authLoading ? "Sending..." : "Send OTP"
-                  }
-                )
-              ] })
-            ] }) : /* @__PURE__ */ jsxs("form", { onSubmit: handleVerifyOtp, className: "space-y-3", children: [
-              /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between text-xs", children: [
-                /* @__PURE__ */ jsxs("span", { className: "text-gray-600", children: [
-                  "Enter code sent to +91 ",
-                  phone
-                ] }),
-                /* @__PURE__ */ jsx(
-                  "button",
-                  {
-                    type: "button",
-                    onClick: () => setIsOtpSent(false),
-                    className: "text-xs text-gray-500 underline hover:text-gray-800",
-                    children: "Edit"
-                  }
-                )
-              ] }),
-              /* @__PURE__ */ jsx("div", { className: "flex justify-between gap-1.5", children: otp.map((digit, idx) => /* @__PURE__ */ jsx(
-                "input",
-                {
-                  id: `fast-otp-${idx}`,
-                  type: "text",
-                  maxLength: 1,
-                  value: digit,
-                  onChange: (e) => {
-                    const val = e.target.value.replace(/\D/g, "");
-                    const next = [...otp];
-                    next[idx] = val;
-                    setOtp(next);
-                    if (val && idx < 5) {
-                      const nextInput = document.getElementById(`fast-otp-${idx + 1}`);
-                      nextInput?.focus();
-                    }
-                  },
-                  onKeyDown: (e) => {
-                    if (e.key === "Backspace" && !otp[idx] && idx > 0) {
-                      const prevInput = document.getElementById(`fast-otp-${idx - 1}`);
-                      prevInput?.focus();
-                    }
-                  },
-                  className: "w-10 h-11 text-center font-bold text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                },
-                idx
-              )) }),
-              /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between pt-1", children: [
-                /* @__PURE__ */ jsx(
-                  "button",
-                  {
-                    type: "button",
-                    disabled: resendTimer > 0 || authLoading,
-                    onClick: () => handleSendOtp(),
-                    className: "text-xs text-gray-500 underline hover:text-gray-800 disabled:opacity-50 cursor-pointer",
-                    children: resendTimer > 0 ? `Resend OTP in ${resendTimer}s` : "Resend OTP"
-                  }
-                ),
-                /* @__PURE__ */ jsx(
-                  "button",
-                  {
-                    type: "submit",
-                    disabled: authLoading || otp.join("").length < 4,
-                    className: "px-5 py-2 text-white text-xs font-bold rounded-lg transition-opacity disabled:opacity-50 cursor-pointer",
-                    style: { backgroundColor: primaryColor },
-                    children: authLoading ? "Verifying..." : "Verify & Continue"
-                  }
-                )
-              ] })
-            ] })
-          ] }),
-          isSignedIn && /* @__PURE__ */ jsxs("div", { className: "bg-white rounded-xl border border-gray-200/80 p-4 shadow-xs space-y-4", children: [
-            /* @__PURE__ */ jsx("div", { className: "flex items-center justify-between", children: /* @__PURE__ */ jsxs("span", { className: "text-xs font-[var(--font-bold)] uppercase tracking-wider text-gray-500 flex items-center gap-1.5", children: [
-              /* @__PURE__ */ jsx(
-                "span",
-                {
-                  className: "w-4 h-4 rounded-full flex items-center justify-center text-[10px] text-white",
-                  style: { backgroundColor: primaryColor },
-                  children: "2"
-                }
-              ),
-              "Delivery & Billing Address"
-            ] }) }),
-            /* @__PURE__ */ jsxs("div", { className: "space-y-2", children: [
-              /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between", children: [
-                /* @__PURE__ */ jsx("span", { className: "text-xs font-[var(--font-bold)] text-gray-800 flex items-center gap-1.5", children: /* @__PURE__ */ jsx("span", { children: "\u{1F4E6} Delivery Address" }) }),
-                showNewAddressForm !== "shipping" && /* @__PURE__ */ jsx(
-                  "button",
-                  {
-                    type: "button",
-                    onClick: () => setShowNewAddressForm("shipping"),
-                    className: "text-xs font-[var(--font-bold)] underline cursor-pointer hover:opacity-80",
-                    style: { color: primaryColor },
-                    children: "+ Add New Delivery"
-                  }
-                )
-              ] }),
-              isAddressLoading ? /* @__PURE__ */ jsx("div", { className: "py-4 flex justify-center", children: /* @__PURE__ */ jsx(
-                "div",
-                {
-                  className: "w-5 h-5 border-2 border-t-transparent rounded-full animate-spin",
-                  style: { borderColor: primaryColor }
-                }
-              ) }) : showNewAddressForm === "shipping" ? /* @__PURE__ */ jsxs("form", { onSubmit: (e) => handleSaveNewAddress(e, "shipping"), className: "space-y-3 pt-1 bg-gray-50/70 p-3 rounded-lg border border-gray-200", children: [
-                /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between pb-1 border-b border-gray-200", children: [
-                  /* @__PURE__ */ jsx("span", { className: "text-xs font-[var(--font-bold)] text-gray-800", children: "New Delivery Address" }),
-                  addresses.length > 0 && /* @__PURE__ */ jsx(
-                    "button",
-                    {
-                      type: "button",
-                      onClick: () => setShowNewAddressForm(null),
-                      className: "text-xs text-gray-400 hover:text-gray-600 cursor-pointer",
-                      children: "\u2715"
-                    }
-                  )
-                ] }),
-                /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
-                  /* @__PURE__ */ jsx(
-                    "input",
-                    {
-                      type: "text",
-                      placeholder: "Full Name *",
-                      value: newAddrName,
-                      onChange: (e) => setNewAddrName(e.target.value),
-                      className: "px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white",
-                      required: true
-                    }
-                  ),
-                  /* @__PURE__ */ jsx(
-                    "input",
-                    {
-                      type: "tel",
-                      maxLength: 10,
-                      placeholder: "10-digit Phone *",
-                      value: newAddrPhone,
-                      onChange: (e) => setNewAddrPhone(e.target.value.replace(/\D/g, "")),
-                      className: "px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white",
-                      required: true
-                    }
-                  )
-                ] }),
-                /* @__PURE__ */ jsx(
-                  "input",
-                  {
-                    type: "text",
-                    placeholder: "House / Flat / Street / Area *",
-                    value: newAddrLine1,
-                    onChange: (e) => setNewAddrLine1(e.target.value),
-                    className: "w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white",
-                    required: true
-                  }
-                ),
-                /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-3 gap-2", children: [
-                  /* @__PURE__ */ jsx(
-                    "input",
-                    {
-                      type: "text",
-                      placeholder: "Pincode *",
-                      maxLength: 6,
-                      value: newAddrZipcode,
-                      onChange: (e) => setNewAddrZipcode(e.target.value.replace(/\D/g, "")),
-                      className: "px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white",
-                      required: true
-                    }
-                  ),
-                  /* @__PURE__ */ jsx(
-                    "input",
-                    {
-                      type: "text",
-                      placeholder: "City *",
-                      value: newAddrCity,
-                      onChange: (e) => setNewAddrCity(e.target.value),
-                      className: "px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white",
-                      required: true
-                    }
-                  ),
-                  /* @__PURE__ */ jsx(
-                    "input",
-                    {
-                      type: "text",
-                      placeholder: "State *",
-                      value: newAddrState,
-                      onChange: (e) => setNewAddrState(e.target.value),
-                      className: "px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white",
-                      required: true
-                    }
-                  )
-                ] }),
-                /* @__PURE__ */ jsxs("div", { className: "flex gap-2 justify-end pt-1", children: [
-                  addresses.length > 0 && /* @__PURE__ */ jsx(
-                    "button",
-                    {
-                      type: "button",
-                      onClick: () => setShowNewAddressForm(null),
-                      className: "px-3 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-600 cursor-pointer",
-                      children: "Cancel"
-                    }
-                  ),
-                  /* @__PURE__ */ jsx(
-                    "button",
-                    {
-                      type: "submit",
-                      disabled: addressSaving,
-                      className: "px-4 py-1.5 text-white text-xs font-bold rounded-lg transition-opacity disabled:opacity-50 cursor-pointer",
-                      style: { backgroundColor: primaryColor },
-                      children: addressSaving ? "Saving..." : "Save Delivery Address"
-                    }
-                  )
+                    idx
+                  )) }),
+                  /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between pt-1", children: [
+                    /* @__PURE__ */ jsx(
+                      "button",
+                      {
+                        type: "button",
+                        disabled: resendTimer > 0 || authLoading,
+                        onClick: () => handleSendOtp(),
+                        className: "text-xs text-gray-500 underline hover:text-gray-800 disabled:opacity-50 cursor-pointer",
+                        children: resendTimer > 0 ? `Resend OTP in ${resendTimer}s` : "Resend OTP"
+                      }
+                    ),
+                    /* @__PURE__ */ jsx(
+                      "button",
+                      {
+                        type: "submit",
+                        disabled: authLoading || otp.join("").length < 4,
+                        className: "px-5 py-2 text-white text-xs font-bold rounded-lg transition-opacity disabled:opacity-50 cursor-pointer",
+                        style: { backgroundColor: primaryColor },
+                        children: authLoading ? "Verifying..." : "Verify & Continue"
+                      }
+                    )
+                  ] })
                 ] })
-              ] }) : addresses.length === 0 ? /* @__PURE__ */ jsxs("div", { className: "text-center py-2.5", children: [
-                /* @__PURE__ */ jsx("p", { className: "text-xs text-gray-500 mb-2", children: "No saved addresses found." }),
-                /* @__PURE__ */ jsx(
-                  "button",
-                  {
-                    type: "button",
-                    onClick: () => setShowNewAddressForm("shipping"),
-                    className: "px-3.5 py-1.5 text-white text-xs font-bold rounded-lg cursor-pointer",
-                    style: { backgroundColor: primaryColor },
-                    children: "+ Add Delivery Address"
-                  }
-                )
-              ] }) : /* @__PURE__ */ jsx("div", { className: "space-y-1.5 max-h-[140px] overflow-y-auto pr-1", children: addresses.map((addr) => {
-                const isSelected = String(shippingAddressId) === String(addr.id);
-                return /* @__PURE__ */ jsxs(
-                  "div",
-                  {
-                    onClick: () => handleSelectShippingAddress(addr.id),
-                    className: `p-2.5 rounded-lg border text-xs cursor-pointer transition-all flex items-start gap-2 ${isSelected ? "border-blue-500 bg-blue-50/40 ring-1 ring-blue-500" : "border-gray-200 hover:border-gray-300"}`,
-                    children: [
+              ] }),
+              isSignedIn && /* @__PURE__ */ jsxs("div", { className: "bg-white rounded-xl border border-gray-200/80 p-4 shadow-xs space-y-4", children: [
+                /* @__PURE__ */ jsx("div", { className: "flex items-center justify-between", children: /* @__PURE__ */ jsxs("span", { className: "text-xs font-[var(--font-bold)] uppercase tracking-wider text-gray-500 flex items-center gap-1.5", children: [
+                  /* @__PURE__ */ jsx(
+                    "span",
+                    {
+                      className: "w-4 h-4 rounded-full flex items-center justify-center text-[10px] text-white",
+                      style: { backgroundColor: primaryColor },
+                      children: "2"
+                    }
+                  ),
+                  "Delivery & Billing Address"
+                ] }) }),
+                /* @__PURE__ */ jsxs("div", { className: "space-y-2", children: [
+                  /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between", children: [
+                    /* @__PURE__ */ jsx("span", { className: "text-xs font-[var(--font-bold)] text-gray-800 flex items-center gap-1.5", children: /* @__PURE__ */ jsx("span", { children: "\u{1F4E6} Delivery Address" }) }),
+                    showNewAddressForm !== "shipping" && /* @__PURE__ */ jsx(
+                      "button",
+                      {
+                        type: "button",
+                        onClick: () => setShowNewAddressForm("shipping"),
+                        className: "text-xs font-[var(--font-bold)] underline cursor-pointer hover:opacity-80",
+                        style: { color: primaryColor },
+                        children: "+ Add New Delivery"
+                      }
+                    )
+                  ] }),
+                  isAddressLoading ? /* @__PURE__ */ jsx("div", { className: "py-4 flex justify-center", children: /* @__PURE__ */ jsx(
+                    "div",
+                    {
+                      className: "w-5 h-5 border-2 border-t-transparent rounded-full animate-spin",
+                      style: { borderColor: primaryColor }
+                    }
+                  ) }) : showNewAddressForm === "shipping" ? /* @__PURE__ */ jsxs("form", { onSubmit: (e) => handleSaveNewAddress(e, "shipping"), className: "space-y-3 pt-1 bg-gray-50/70 p-3 rounded-lg border border-gray-200", children: [
+                    /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between pb-1 border-b border-gray-200", children: [
+                      /* @__PURE__ */ jsx("span", { className: "text-xs font-[var(--font-bold)] text-gray-800", children: "New Delivery Address" }),
+                      addresses.length > 0 && /* @__PURE__ */ jsx(
+                        "button",
+                        {
+                          type: "button",
+                          onClick: () => setShowNewAddressForm(null),
+                          className: "text-xs text-gray-400 hover:text-gray-600 cursor-pointer",
+                          children: "\u2715"
+                        }
+                      )
+                    ] }),
+                    /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
                       /* @__PURE__ */ jsx(
                         "input",
                         {
-                          type: "radio",
-                          name: "delivery_address_selection",
-                          checked: isSelected,
-                          onChange: () => handleSelectShippingAddress(addr.id),
-                          className: "mt-0.5"
+                          type: "text",
+                          placeholder: "Full Name *",
+                          value: newAddrName,
+                          onChange: (e) => setNewAddrName(e.target.value),
+                          className: "px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white",
+                          required: true
                         }
                       ),
-                      /* @__PURE__ */ jsxs("div", { className: "flex-1 min-w-0", children: [
-                        /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-bold)] text-gray-900 truncate", children: [
-                          addr.name || addr.first_name || "Recipient",
-                          /* @__PURE__ */ jsx("span", { className: "font-normal text-gray-500 ml-2", children: addr.phone || addr.mobile })
-                        ] }),
-                        /* @__PURE__ */ jsxs("p", { className: "text-gray-600 line-clamp-1 mt-0.5 text-[11px]", children: [
-                          addr.address_line_1 || addr.address1,
-                          ",",
-                          " ",
-                          addr.city,
-                          ", ",
-                          addr.state,
-                          " - ",
-                          addr.zipcode || addr.zip
-                        ] })
-                      ] })
-                    ]
-                  },
-                  `shipping-${addr.id}`
-                );
-              }) })
-            ] }),
-            /* @__PURE__ */ jsxs(
-              "div",
-              {
-                onClick: handleToggleSameAsShipping,
-                className: "flex items-center justify-between p-2.5 rounded-lg border border-gray-200 bg-gray-50/80 hover:bg-gray-100/70 cursor-pointer transition-colors",
-                children: [
-                  /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
+                      /* @__PURE__ */ jsx(
+                        "input",
+                        {
+                          type: "tel",
+                          maxLength: 10,
+                          placeholder: "10-digit Phone *",
+                          value: newAddrPhone,
+                          onChange: (e) => setNewAddrPhone(e.target.value.replace(/\D/g, "")),
+                          className: "px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white",
+                          required: true
+                        }
+                      )
+                    ] }),
                     /* @__PURE__ */ jsx(
                       "input",
                       {
-                        type: "checkbox",
-                        checked: sameAsShipping,
-                        onChange: handleToggleSameAsShipping,
-                        className: "w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
+                        type: "text",
+                        placeholder: "House / Flat / Street / Area *",
+                        value: newAddrLine1,
+                        onChange: (e) => setNewAddrLine1(e.target.value),
+                        className: "w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white",
+                        required: true
                       }
                     ),
-                    /* @__PURE__ */ jsx("span", { className: "text-xs font-[var(--font-medium)] text-gray-800", children: "Billing address is same as delivery address" })
-                  ] }),
-                  /* @__PURE__ */ jsx("span", { className: "text-[10px] uppercase font-bold text-gray-500", children: sameAsShipping ? "\u2713 Same" : "Different" })
-                ]
-              }
-            ),
-            !sameAsShipping && /* @__PURE__ */ jsxs("div", { className: "pt-2 border-t border-gray-100 space-y-2", children: [
-              /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between", children: [
-                /* @__PURE__ */ jsx("span", { className: "text-xs font-[var(--font-bold)] text-gray-800 flex items-center gap-1.5", children: /* @__PURE__ */ jsx("span", { children: "\u{1F9FE} Billing Address" }) }),
-                showNewAddressForm !== "billing" && /* @__PURE__ */ jsx(
-                  "button",
-                  {
-                    type: "button",
-                    onClick: () => setShowNewAddressForm("billing"),
-                    className: "text-xs font-[var(--font-bold)] underline cursor-pointer hover:opacity-80",
-                    style: { color: primaryColor },
-                    children: "+ Add New Billing"
-                  }
-                )
-              ] }),
-              showNewAddressForm === "billing" ? /* @__PURE__ */ jsxs("form", { onSubmit: (e) => handleSaveNewAddress(e, "billing"), className: "space-y-3 pt-1 bg-gray-50/70 p-3 rounded-lg border border-gray-200", children: [
-                /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between pb-1 border-b border-gray-200", children: [
-                  /* @__PURE__ */ jsx("span", { className: "text-xs font-[var(--font-bold)] text-gray-800", children: "New Billing Address" }),
-                  addresses.length > 0 && /* @__PURE__ */ jsx(
-                    "button",
-                    {
-                      type: "button",
-                      onClick: () => setShowNewAddressForm(null),
-                      className: "text-xs text-gray-400 hover:text-gray-600 cursor-pointer",
-                      children: "\u2715"
-                    }
-                  )
-                ] }),
-                /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
-                  /* @__PURE__ */ jsx(
-                    "input",
-                    {
-                      type: "text",
-                      placeholder: "Full Name *",
-                      value: newAddrName,
-                      onChange: (e) => setNewAddrName(e.target.value),
-                      className: "px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white",
-                      required: true
-                    }
-                  ),
-                  /* @__PURE__ */ jsx(
-                    "input",
-                    {
-                      type: "tel",
-                      maxLength: 10,
-                      placeholder: "10-digit Phone *",
-                      value: newAddrPhone,
-                      onChange: (e) => setNewAddrPhone(e.target.value.replace(/\D/g, "")),
-                      className: "px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white",
-                      required: true
-                    }
-                  )
-                ] }),
-                /* @__PURE__ */ jsx(
-                  "input",
-                  {
-                    type: "text",
-                    placeholder: "House / Flat / Street / Area *",
-                    value: newAddrLine1,
-                    onChange: (e) => setNewAddrLine1(e.target.value),
-                    className: "w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white",
-                    required: true
-                  }
-                ),
-                /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-3 gap-2", children: [
-                  /* @__PURE__ */ jsx(
-                    "input",
-                    {
-                      type: "text",
-                      placeholder: "Pincode *",
-                      maxLength: 6,
-                      value: newAddrZipcode,
-                      onChange: (e) => setNewAddrZipcode(e.target.value.replace(/\D/g, "")),
-                      className: "px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white",
-                      required: true
-                    }
-                  ),
-                  /* @__PURE__ */ jsx(
-                    "input",
-                    {
-                      type: "text",
-                      placeholder: "City *",
-                      value: newAddrCity,
-                      onChange: (e) => setNewAddrCity(e.target.value),
-                      className: "px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white",
-                      required: true
-                    }
-                  ),
-                  /* @__PURE__ */ jsx(
-                    "input",
-                    {
-                      type: "text",
-                      placeholder: "State *",
-                      value: newAddrState,
-                      onChange: (e) => setNewAddrState(e.target.value),
-                      className: "px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white",
-                      required: true
-                    }
-                  )
-                ] }),
-                /* @__PURE__ */ jsxs("div", { className: "flex gap-2 justify-end pt-1", children: [
-                  addresses.length > 0 && /* @__PURE__ */ jsx(
-                    "button",
-                    {
-                      type: "button",
-                      onClick: () => setShowNewAddressForm(null),
-                      className: "px-3 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-600 cursor-pointer",
-                      children: "Cancel"
-                    }
-                  ),
-                  /* @__PURE__ */ jsx(
-                    "button",
-                    {
-                      type: "submit",
-                      disabled: addressSaving,
-                      className: "px-4 py-1.5 text-white text-xs font-bold rounded-lg transition-opacity disabled:opacity-50 cursor-pointer",
-                      style: { backgroundColor: primaryColor },
-                      children: addressSaving ? "Saving..." : "Save Billing Address"
-                    }
-                  )
-                ] })
-              ] }) : addresses.length === 0 ? /* @__PURE__ */ jsxs("div", { className: "text-center py-2.5", children: [
-                /* @__PURE__ */ jsx("p", { className: "text-xs text-gray-500 mb-2", children: "No saved billing addresses." }),
-                /* @__PURE__ */ jsx(
-                  "button",
-                  {
-                    type: "button",
-                    onClick: () => setShowNewAddressForm("billing"),
-                    className: "px-3.5 py-1.5 text-white text-xs font-bold rounded-lg cursor-pointer",
-                    style: { backgroundColor: primaryColor },
-                    children: "+ Add Billing Address"
-                  }
-                )
-              ] }) : /* @__PURE__ */ jsx("div", { className: "space-y-1.5 max-h-[140px] overflow-y-auto pr-1", children: addresses.map((addr) => {
-                const isSelected = String(billingAddressId) === String(addr.id);
-                return /* @__PURE__ */ jsxs(
-                  "div",
-                  {
-                    onClick: () => handleSelectBillingAddress(addr.id),
-                    className: `p-2.5 rounded-lg border text-xs cursor-pointer transition-all flex items-start gap-2 ${isSelected ? "border-blue-500 bg-blue-50/40 ring-1 ring-blue-500" : "border-gray-200 hover:border-gray-300"}`,
-                    children: [
+                    /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-3 gap-2", children: [
                       /* @__PURE__ */ jsx(
                         "input",
                         {
-                          type: "radio",
-                          name: "billing_address_selection",
-                          checked: isSelected,
-                          onChange: () => handleSelectBillingAddress(addr.id),
-                          className: "mt-0.5"
+                          type: "text",
+                          placeholder: "Pincode *",
+                          maxLength: 6,
+                          value: newAddrZipcode,
+                          onChange: (e) => setNewAddrZipcode(e.target.value.replace(/\D/g, "")),
+                          className: "px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white",
+                          required: true
                         }
                       ),
-                      /* @__PURE__ */ jsxs("div", { className: "flex-1 min-w-0", children: [
-                        /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-bold)] text-gray-900 truncate", children: [
-                          addr.name || addr.first_name || "Recipient",
-                          /* @__PURE__ */ jsx("span", { className: "font-normal text-gray-500 ml-2", children: addr.phone || addr.mobile })
-                        ] }),
-                        /* @__PURE__ */ jsxs("p", { className: "text-gray-600 line-clamp-1 mt-0.5 text-[11px]", children: [
-                          addr.address_line_1 || addr.address1,
-                          ",",
-                          " ",
-                          addr.city,
-                          ", ",
-                          addr.state,
-                          " - ",
-                          addr.zipcode || addr.zip
-                        ] })
-                      ] })
+                      /* @__PURE__ */ jsx(
+                        "input",
+                        {
+                          type: "text",
+                          placeholder: "City *",
+                          value: newAddrCity,
+                          onChange: (e) => setNewAddrCity(e.target.value),
+                          className: "px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white",
+                          required: true
+                        }
+                      ),
+                      /* @__PURE__ */ jsx(
+                        "input",
+                        {
+                          type: "text",
+                          placeholder: "State *",
+                          value: newAddrState,
+                          onChange: (e) => setNewAddrState(e.target.value),
+                          className: "px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white",
+                          required: true
+                        }
+                      )
+                    ] }),
+                    /* @__PURE__ */ jsxs("div", { className: "flex gap-2 justify-end pt-1", children: [
+                      addresses.length > 0 && /* @__PURE__ */ jsx(
+                        "button",
+                        {
+                          type: "button",
+                          onClick: () => setShowNewAddressForm(null),
+                          className: "px-3 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-600 cursor-pointer",
+                          children: "Cancel"
+                        }
+                      ),
+                      /* @__PURE__ */ jsx(
+                        "button",
+                        {
+                          type: "submit",
+                          disabled: addressSaving,
+                          className: "px-4 py-1.5 text-white text-xs font-bold rounded-lg transition-opacity disabled:opacity-50 cursor-pointer",
+                          style: { backgroundColor: primaryColor },
+                          children: addressSaving ? "Saving..." : "Save Delivery Address"
+                        }
+                      )
+                    ] })
+                  ] }) : addresses.length === 0 ? /* @__PURE__ */ jsxs("div", { className: "text-center py-2.5", children: [
+                    /* @__PURE__ */ jsx("p", { className: "text-xs text-gray-500 mb-2", children: "No saved addresses found." }),
+                    /* @__PURE__ */ jsx(
+                      "button",
+                      {
+                        type: "button",
+                        onClick: () => setShowNewAddressForm("shipping"),
+                        className: "px-3.5 py-1.5 text-white text-xs font-bold rounded-lg cursor-pointer",
+                        style: { backgroundColor: primaryColor },
+                        children: "+ Add Delivery Address"
+                      }
+                    )
+                  ] }) : /* @__PURE__ */ jsx("div", { className: "space-y-1.5 max-h-[140px] overflow-y-auto pr-1", children: addresses.map((addr) => {
+                    const isSelected = String(shippingAddressId) === String(addr.id);
+                    return /* @__PURE__ */ jsxs(
+                      "div",
+                      {
+                        onClick: () => handleSelectShippingAddress(addr.id),
+                        className: `p-2.5 rounded-lg border text-xs cursor-pointer transition-all flex items-start gap-2 ${isSelected ? "border-blue-500 bg-blue-50/40 ring-1 ring-blue-500" : "border-gray-200 hover:border-gray-300"}`,
+                        children: [
+                          /* @__PURE__ */ jsx(
+                            "input",
+                            {
+                              type: "radio",
+                              name: "delivery_address_selection",
+                              checked: isSelected,
+                              onChange: () => handleSelectShippingAddress(addr.id),
+                              className: "mt-0.5"
+                            }
+                          ),
+                          /* @__PURE__ */ jsxs("div", { className: "flex-1 min-w-0", children: [
+                            /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-bold)] text-gray-900 truncate", children: [
+                              addr.name || addr.first_name || "Recipient",
+                              /* @__PURE__ */ jsx("span", { className: "font-normal text-gray-500 ml-2", children: addr.phone || addr.mobile })
+                            ] }),
+                            /* @__PURE__ */ jsxs("p", { className: "text-gray-600 line-clamp-1 mt-0.5 text-[11px]", children: [
+                              addr.address_line_1 || addr.address1,
+                              ",",
+                              " ",
+                              addr.city,
+                              ", ",
+                              addr.state,
+                              " - ",
+                              addr.zipcode || addr.zip
+                            ] })
+                          ] })
+                        ]
+                      },
+                      `shipping-${addr.id}`
+                    );
+                  }) })
+                ] }),
+                /* @__PURE__ */ jsxs(
+                  "div",
+                  {
+                    onClick: handleToggleSameAsShipping,
+                    className: "flex items-center justify-between p-2.5 rounded-lg border border-gray-200 bg-gray-50/80 hover:bg-gray-100/70 cursor-pointer transition-colors",
+                    children: [
+                      /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
+                        /* @__PURE__ */ jsx(
+                          "input",
+                          {
+                            type: "checkbox",
+                            checked: sameAsShipping,
+                            onChange: handleToggleSameAsShipping,
+                            className: "w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
+                          }
+                        ),
+                        /* @__PURE__ */ jsx("span", { className: "text-xs font-[var(--font-medium)] text-gray-800", children: "Billing address is same as delivery address" })
+                      ] }),
+                      /* @__PURE__ */ jsx("span", { className: "text-[10px] uppercase font-bold text-gray-500", children: sameAsShipping ? "\u2713 Same" : "Different" })
                     ]
-                  },
-                  `billing-${addr.id}`
-                );
-              }) })
-            ] })
-          ] }),
-          isSignedIn && shippingAddressId && (sameAsShipping || billingAddressId) && /* @__PURE__ */ jsxs("div", { className: "bg-white rounded-xl border border-gray-200/80 p-4 shadow-xs", children: [
-            /* @__PURE__ */ jsxs("span", { className: "text-xs font-[var(--font-bold)] uppercase tracking-wider text-gray-500 flex items-center gap-1.5 mb-3", children: [
-              /* @__PURE__ */ jsx(
-                "span",
-                {
-                  className: "w-4 h-4 rounded-full flex items-center justify-center text-[10px] text-white",
-                  style: { backgroundColor: primaryColor },
-                  children: "3"
-                }
-              ),
-              "Payment Method"
-            ] }),
-            /* @__PURE__ */ jsx("div", { className: "p-3 bg-gray-50 border border-gray-200/80 rounded-xl space-y-2", children: /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between", children: [
-              /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
-                /* @__PURE__ */ jsx("span", { className: "text-lg", children: "\u{1F4B3}" }),
-                /* @__PURE__ */ jsxs("div", { children: [
-                  /* @__PURE__ */ jsxs("p", { className: "text-xs font-[var(--font-bold)] text-gray-900", children: [
-                    paymentGatewayLabel,
-                    " Secure Payment"
+                  }
+                ),
+                !sameAsShipping && /* @__PURE__ */ jsxs("div", { className: "pt-2 border-t border-gray-100 space-y-2", children: [
+                  /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between", children: [
+                    /* @__PURE__ */ jsx("span", { className: "text-xs font-[var(--font-bold)] text-gray-800 flex items-center gap-1.5", children: /* @__PURE__ */ jsx("span", { children: "\u{1F9FE} Billing Address" }) }),
+                    showNewAddressForm !== "billing" && /* @__PURE__ */ jsx(
+                      "button",
+                      {
+                        type: "button",
+                        onClick: () => setShowNewAddressForm("billing"),
+                        className: "text-xs font-[var(--font-bold)] underline cursor-pointer hover:opacity-80",
+                        style: { color: primaryColor },
+                        children: "+ Add New Billing"
+                      }
+                    )
                   ] }),
-                  /* @__PURE__ */ jsx("p", { className: "text-[11px] text-gray-500", children: isPhonePeGateway ? "UPI (GPay, PhonePe, Paytm), Cards, NetBanking" : isRazorpayGateway ? "UPI, Cards, Wallets, NetBanking" : "Direct Gateway Checkout" })
+                  showNewAddressForm === "billing" ? /* @__PURE__ */ jsxs("form", { onSubmit: (e) => handleSaveNewAddress(e, "billing"), className: "space-y-3 pt-1 bg-gray-50/70 p-3 rounded-lg border border-gray-200", children: [
+                    /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between pb-1 border-b border-gray-200", children: [
+                      /* @__PURE__ */ jsx("span", { className: "text-xs font-[var(--font-bold)] text-gray-800", children: "New Billing Address" }),
+                      addresses.length > 0 && /* @__PURE__ */ jsx(
+                        "button",
+                        {
+                          type: "button",
+                          onClick: () => setShowNewAddressForm(null),
+                          className: "text-xs text-gray-400 hover:text-gray-600 cursor-pointer",
+                          children: "\u2715"
+                        }
+                      )
+                    ] }),
+                    /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
+                      /* @__PURE__ */ jsx(
+                        "input",
+                        {
+                          type: "text",
+                          placeholder: "Full Name *",
+                          value: newAddrName,
+                          onChange: (e) => setNewAddrName(e.target.value),
+                          className: "px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white",
+                          required: true
+                        }
+                      ),
+                      /* @__PURE__ */ jsx(
+                        "input",
+                        {
+                          type: "tel",
+                          maxLength: 10,
+                          placeholder: "10-digit Phone *",
+                          value: newAddrPhone,
+                          onChange: (e) => setNewAddrPhone(e.target.value.replace(/\D/g, "")),
+                          className: "px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white",
+                          required: true
+                        }
+                      )
+                    ] }),
+                    /* @__PURE__ */ jsx(
+                      "input",
+                      {
+                        type: "text",
+                        placeholder: "House / Flat / Street / Area *",
+                        value: newAddrLine1,
+                        onChange: (e) => setNewAddrLine1(e.target.value),
+                        className: "w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white",
+                        required: true
+                      }
+                    ),
+                    /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-3 gap-2", children: [
+                      /* @__PURE__ */ jsx(
+                        "input",
+                        {
+                          type: "text",
+                          placeholder: "Pincode *",
+                          maxLength: 6,
+                          value: newAddrZipcode,
+                          onChange: (e) => setNewAddrZipcode(e.target.value.replace(/\D/g, "")),
+                          className: "px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white",
+                          required: true
+                        }
+                      ),
+                      /* @__PURE__ */ jsx(
+                        "input",
+                        {
+                          type: "text",
+                          placeholder: "City *",
+                          value: newAddrCity,
+                          onChange: (e) => setNewAddrCity(e.target.value),
+                          className: "px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white",
+                          required: true
+                        }
+                      ),
+                      /* @__PURE__ */ jsx(
+                        "input",
+                        {
+                          type: "text",
+                          placeholder: "State *",
+                          value: newAddrState,
+                          onChange: (e) => setNewAddrState(e.target.value),
+                          className: "px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white",
+                          required: true
+                        }
+                      )
+                    ] }),
+                    /* @__PURE__ */ jsxs("div", { className: "flex gap-2 justify-end pt-1", children: [
+                      addresses.length > 0 && /* @__PURE__ */ jsx(
+                        "button",
+                        {
+                          type: "button",
+                          onClick: () => setShowNewAddressForm(null),
+                          className: "px-3 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-600 cursor-pointer",
+                          children: "Cancel"
+                        }
+                      ),
+                      /* @__PURE__ */ jsx(
+                        "button",
+                        {
+                          type: "submit",
+                          disabled: addressSaving,
+                          className: "px-4 py-1.5 text-white text-xs font-bold rounded-lg transition-opacity disabled:opacity-50 cursor-pointer",
+                          style: { backgroundColor: primaryColor },
+                          children: addressSaving ? "Saving..." : "Save Billing Address"
+                        }
+                      )
+                    ] })
+                  ] }) : addresses.length === 0 ? /* @__PURE__ */ jsxs("div", { className: "text-center py-2.5", children: [
+                    /* @__PURE__ */ jsx("p", { className: "text-xs text-gray-500 mb-2", children: "No saved billing addresses." }),
+                    /* @__PURE__ */ jsx(
+                      "button",
+                      {
+                        type: "button",
+                        onClick: () => setShowNewAddressForm("billing"),
+                        className: "px-3.5 py-1.5 text-white text-xs font-bold rounded-lg cursor-pointer",
+                        style: { backgroundColor: primaryColor },
+                        children: "+ Add Billing Address"
+                      }
+                    )
+                  ] }) : /* @__PURE__ */ jsx("div", { className: "space-y-1.5 max-h-[140px] overflow-y-auto pr-1", children: addresses.map((addr) => {
+                    const isSelected = String(billingAddressId) === String(addr.id);
+                    return /* @__PURE__ */ jsxs(
+                      "div",
+                      {
+                        onClick: () => handleSelectBillingAddress(addr.id),
+                        className: `p-2.5 rounded-lg border text-xs cursor-pointer transition-all flex items-start gap-2 ${isSelected ? "border-blue-500 bg-blue-50/40 ring-1 ring-blue-500" : "border-gray-200 hover:border-gray-300"}`,
+                        children: [
+                          /* @__PURE__ */ jsx(
+                            "input",
+                            {
+                              type: "radio",
+                              name: "billing_address_selection",
+                              checked: isSelected,
+                              onChange: () => handleSelectBillingAddress(addr.id),
+                              className: "mt-0.5"
+                            }
+                          ),
+                          /* @__PURE__ */ jsxs("div", { className: "flex-1 min-w-0", children: [
+                            /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-bold)] text-gray-900 truncate", children: [
+                              addr.name || addr.first_name || "Recipient",
+                              /* @__PURE__ */ jsx("span", { className: "font-normal text-gray-500 ml-2", children: addr.phone || addr.mobile })
+                            ] }),
+                            /* @__PURE__ */ jsxs("p", { className: "text-gray-600 line-clamp-1 mt-0.5 text-[11px]", children: [
+                              addr.address_line_1 || addr.address1,
+                              ",",
+                              " ",
+                              addr.city,
+                              ", ",
+                              addr.state,
+                              " - ",
+                              addr.zipcode || addr.zip
+                            ] })
+                          ] })
+                        ]
+                      },
+                      `billing-${addr.id}`
+                    );
+                  }) })
                 ] })
               ] }),
-              /* @__PURE__ */ jsx("span", { className: "text-[10px] font-bold uppercase bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full", children: "Instant" })
-            ] }) })
-          ] })
-        ] }),
-        /* @__PURE__ */ jsxs("div", { className: "p-4 border-t border-gray-100 bg-white sticky bottom-0 z-20 space-y-2", children: [
-          /* @__PURE__ */ jsxs(
-            "button",
-            {
-              onClick: handlePlaceOrder,
-              disabled: !isSignedIn || !shippingAddressId || !sameAsShipping && !billingAddressId || isPlacingOrder,
-              className: "w-full py-3.5 px-5 text-white rounded-xl font-[var(--font-bold)] text-sm flex items-center justify-between shadow-lg transition-all active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer",
-              style: { backgroundColor: primaryColor },
-              children: [
-                /* @__PURE__ */ jsx("span", { children: isPlacingOrder ? "Connecting to Payment..." : !isSignedIn ? "Sign In to Complete Order" : !shippingAddressId ? "Select Delivery Address" : !sameAsShipping && !billingAddressId ? "Select Billing Address" : `Pay ${totalAmount} via ${paymentGatewayLabel}` }),
-                /* @__PURE__ */ jsx("span", { children: isPlacingOrder ? /* @__PURE__ */ jsx("span", { className: "inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" }) : "\u2192" })
-              ]
-            }
-          ),
-          isPlacingOrder && /* @__PURE__ */ jsx("div", { className: "text-center pt-0.5", children: /* @__PURE__ */ jsx(
-            "button",
-            {
-              type: "button",
-              onClick: () => setIsPlacingOrder(false),
-              className: "text-xs text-red-500 hover:text-red-700 underline font-medium cursor-pointer",
-              children: "Cancel / Reopen Payment Window"
-            }
-          ) }),
-          /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-center gap-4 text-[11px] text-gray-400 pt-1", children: [
-            /* @__PURE__ */ jsx("span", { children: "\u{1F6E1}\uFE0F 256-bit Encryption" }),
-            /* @__PURE__ */ jsx("span", { children: "\u2022" }),
-            /* @__PURE__ */ jsx("span", { children: "\u26A1 Instant Confirmation" }),
-            /* @__PURE__ */ jsx("span", { children: "\u2022" }),
-            /* @__PURE__ */ jsx("span", { children: "\u{1F512} Safe Gateway" })
-          ] })
-        ] })
-      ] })
+              isSignedIn && shippingAddressId && (sameAsShipping || billingAddressId) && /* @__PURE__ */ jsxs("div", { className: "bg-white rounded-xl border border-gray-200/80 p-4 shadow-xs", children: [
+                /* @__PURE__ */ jsxs("span", { className: "text-xs font-[var(--font-bold)] uppercase tracking-wider text-gray-500 flex items-center gap-1.5 mb-3", children: [
+                  /* @__PURE__ */ jsx(
+                    "span",
+                    {
+                      className: "w-4 h-4 rounded-full flex items-center justify-center text-[10px] text-white",
+                      style: { backgroundColor: primaryColor },
+                      children: "3"
+                    }
+                  ),
+                  "Payment Method"
+                ] }),
+                /* @__PURE__ */ jsx("div", { className: "p-3 bg-gray-50 border border-gray-200/80 rounded-xl space-y-2", children: /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between", children: [
+                  /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
+                    /* @__PURE__ */ jsx("span", { className: "text-lg", children: "\u{1F4B3}" }),
+                    /* @__PURE__ */ jsxs("div", { children: [
+                      /* @__PURE__ */ jsxs("p", { className: "text-xs font-[var(--font-bold)] text-gray-900", children: [
+                        paymentGatewayLabel,
+                        " Secure Payment"
+                      ] }),
+                      /* @__PURE__ */ jsx("p", { className: "text-[11px] text-gray-500", children: isPhonePeGateway ? "UPI (GPay, PhonePe, Paytm), Cards, NetBanking" : isRazorpayGateway ? "UPI, Cards, Wallets, NetBanking" : "Direct Gateway Checkout" })
+                    ] })
+                  ] }),
+                  /* @__PURE__ */ jsx("span", { className: "text-[10px] font-bold uppercase bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full", children: "Instant" })
+                ] }) })
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxs("div", { className: "p-4 border-t border-gray-100 bg-white sticky bottom-0 z-20 space-y-2", children: [
+              /* @__PURE__ */ jsxs(
+                "button",
+                {
+                  onClick: handlePlaceOrder,
+                  disabled: !isSignedIn || !shippingAddressId || !sameAsShipping && !billingAddressId || isPlacingOrder,
+                  className: "w-full py-3.5 px-5 text-white rounded-xl font-[var(--font-bold)] text-sm flex items-center justify-between shadow-lg transition-all active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer",
+                  style: { backgroundColor: primaryColor },
+                  children: [
+                    /* @__PURE__ */ jsx("span", { children: isPlacingOrder ? "Connecting to Payment..." : !isSignedIn ? "Sign In to Complete Order" : !shippingAddressId ? "Select Delivery Address" : !sameAsShipping && !billingAddressId ? "Select Billing Address" : `Pay ${totalAmount} via ${paymentGatewayLabel}` }),
+                    /* @__PURE__ */ jsx("span", { children: isPlacingOrder ? /* @__PURE__ */ jsx("span", { className: "inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" }) : "\u2192" })
+                  ]
+                }
+              ),
+              isPlacingOrder && /* @__PURE__ */ jsx("div", { className: "text-center pt-0.5", children: /* @__PURE__ */ jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => setIsPlacingOrder(false),
+                  className: "text-xs text-red-500 hover:text-red-700 underline font-medium cursor-pointer",
+                  children: "Cancel / Reopen Payment Window"
+                }
+              ) }),
+              /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-center gap-4 text-[11px] text-gray-400 pt-1", children: [
+                /* @__PURE__ */ jsx("span", { children: "\u{1F6E1}\uFE0F 256-bit Encryption" }),
+                /* @__PURE__ */ jsx("span", { children: "\u2022" }),
+                /* @__PURE__ */ jsx("span", { children: "\u26A1 Instant Confirmation" }),
+                /* @__PURE__ */ jsx("span", { children: "\u2022" }),
+                /* @__PURE__ */ jsx("span", { children: "\u{1F512} Safe Gateway" })
+              ] })
+            ] })
+          ]
+        }
+      )
     }
   );
   return createPortal(modalContent, document.body);
@@ -2312,6 +2352,25 @@ var CartDrawer = ({
   const isOpen = propIsOpen !== void 0 ? propIsOpen : contextIsOpen ?? false;
   const onClose = propOnClose !== void 0 ? propOnClose : contextCloseDrawer ?? (() => {
   });
+  const [shouldRender, setShouldRender] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+  useEffect(() => {
+    if (isOpen) {
+      setShouldRender(true);
+      const timer = requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setIsVisible(true);
+        });
+      });
+      return () => cancelAnimationFrame(timer);
+    } else {
+      setIsVisible(false);
+      const timer = setTimeout(() => {
+        setShouldRender(false);
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
   const token = auth?.token ?? auth?.access_token ?? null;
   const {
     availablePoints,
@@ -2362,6 +2421,12 @@ var CartDrawer = ({
   ) || 0;
   const rawShipTotal = parseFloat(
     String(cart?.display_ship_total ?? "").replace(/[^0-9.]/g, "") || String((cart?.ship_total ?? 0) > 1e4 ? (cart?.ship_total ?? 0) / 100 : cart?.ship_total ?? 0)
+  ) || 0;
+  const rawTaxTotal = parseFloat(
+    String(cart?.display_tax_total ?? "").replace(/[^0-9.]/g, "") || String((cart?.tax_total ?? 0) > 1e4 ? (cart?.tax_total ?? 0) / 100 : cart?.tax_total ?? 0)
+  ) || 0;
+  const rawAdjustmentTotal = parseFloat(
+    String(cart?.display_adjustment_total ?? "").replace(/[^0-9.]/g, "") || String(cart?.adjustment_total != null ? Number(cart.adjustment_total) / 100 : 0)
   ) || 0;
   const freeShippingUnlocked = hasFreeShippingConfig && rawItemTotal >= (freeShippingThreshold || 0);
   const amountNeededForFreeShipping = hasFreeShippingConfig ? Math.max(0, (freeShippingThreshold || 0) - rawItemTotal) : 0;
@@ -2477,12 +2542,17 @@ var CartDrawer = ({
       setCouponApplying(false);
     }
   };
-  if (!isOpen || !mounted) return null;
+  if (!shouldRender || !mounted) return null;
   const drawerContent = /* @__PURE__ */ jsxs("div", { className: "fixed inset-0 z-[999998] flex justify-end", children: [
     /* @__PURE__ */ jsx(
       "div",
       {
-        className: "fixed inset-0 bg-black/50 backdrop-blur-[2px] transition-opacity duration-300 animate-in fade-in",
+        className: "fixed inset-0 bg-black/50 backdrop-blur-[2px]",
+        style: {
+          opacity: isVisible ? 1 : 0,
+          transition: "opacity 350ms cubic-bezier(0.16, 1, 0.3, 1)",
+          pointerEvents: isVisible ? "auto" : "none"
+        },
         onClick: () => {
           if (!isCheckoutOpen) onClose();
         }
@@ -2491,8 +2561,12 @@ var CartDrawer = ({
     /* @__PURE__ */ jsxs(
       "div",
       {
-        className: "relative w-full max-w-[460px] h-[100dvh] bg-white shadow-2xl flex flex-col z-10 transition-transform duration-300 ease-out animate-in slide-in-from-right",
-        style: { willChange: "transform" },
+        className: "relative w-full max-w-[460px] h-[100dvh] bg-white shadow-2xl flex flex-col z-10",
+        style: {
+          transform: isVisible ? "translateX(0)" : "translateX(100%)",
+          transition: "transform 350ms cubic-bezier(0.16, 1, 0.3, 1)",
+          willChange: "transform"
+        },
         children: [
           /* @__PURE__ */ jsxs("div", { className: "p-4 border-b border-gray-100 flex items-center justify-between bg-white shrink-0", children: [
             /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
@@ -2882,12 +2956,31 @@ var CartDrawer = ({
                 /* @__PURE__ */ jsx("span", { children: "Item Subtotal" }),
                 /* @__PURE__ */ jsx("span", { children: cart?.display_item_total ? formatCurrency(cart.display_item_total) : formatCurrency(rawItemTotal) })
               ] }),
-              rawPromoTotal > 0 && /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-emerald-600 font-medium", children: [
-                /* @__PURE__ */ jsx("span", { children: "Discount" }),
-                /* @__PURE__ */ jsxs("span", { children: [
-                  "\u2212 ",
-                  formatCurrency(rawPromoTotal)
-                ] })
+              (rawPromoTotal > 0 || appliedDiscounts.length > 0) && /* @__PURE__ */ jsxs("div", { className: "space-y-1", children: [
+                /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-emerald-600 font-medium", children: [
+                  /* @__PURE__ */ jsx("span", { children: appliedDiscounts.length === 1 ? `Discount (${appliedDiscounts[0].code || appliedDiscounts[0].display_action_value || "Coupon"})` : "Discount" }),
+                  /* @__PURE__ */ jsxs("span", { children: [
+                    "\u2212 ",
+                    formatCurrency(rawPromoTotal || (rawAdjustmentTotal > 0 ? rawAdjustmentTotal : 0))
+                  ] })
+                ] }),
+                appliedDiscounts.length > 1 && /* @__PURE__ */ jsx("div", { className: "pl-2 space-y-0.5 border-l-2 border-emerald-200", children: appliedDiscounts.map((c) => {
+                  const amt = c.display_discount_amount ?? (c.discount_amount != null ? c.discount_amount / 100 : null);
+                  return /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-[11px] text-emerald-600/80", children: [
+                    /* @__PURE__ */ jsxs("span", { children: [
+                      "\u2022 ",
+                      c.code || c.display_action_value || "Coupon"
+                    ] }),
+                    amt != null && /* @__PURE__ */ jsxs("span", { children: [
+                      "\u2212 ",
+                      formatCurrency(amt)
+                    ] })
+                  ] }, c.code || c.id);
+                }) })
+              ] }),
+              /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-gray-600", children: [
+                /* @__PURE__ */ jsx("span", { children: "Tax" }),
+                /* @__PURE__ */ jsx("span", { children: cart?.display_tax_total ? formatCurrency(cart.display_tax_total) : rawTaxTotal > 0 ? formatCurrency(rawTaxTotal) : "\u2014" })
               ] }),
               /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-gray-600", children: [
                 /* @__PURE__ */ jsx("span", { children: "Delivery Fee" }),
@@ -2896,7 +2989,18 @@ var CartDrawer = ({
               /* @__PURE__ */ jsxs("div", { className: "border-t border-gray-100 pt-2 flex justify-between font-[var(--font-bold)] text-sm text-gray-900", children: [
                 /* @__PURE__ */ jsx("span", { children: "Grand Total" }),
                 /* @__PURE__ */ jsx("span", { style: { color: primaryColor }, children: cart?.display_total ? formatCurrency(cart.display_total) : formatCurrency(rawTotal) })
-              ] })
+              ] }),
+              (() => {
+                const totalSavings = rawAdjustmentTotal > 0 ? rawAdjustmentTotal : rawPromoTotal;
+                if (totalSavings > 0) {
+                  return /* @__PURE__ */ jsxs("p", { className: "text-[12px] font-[var(--font-bold)] text-emerald-600 text-right mt-1", children: [
+                    "You save ",
+                    formatCurrency(totalSavings),
+                    " on this order \u{1F389}"
+                  ] });
+                }
+                return null;
+              })()
             ] })
           ] }),
           items.length > 0 && /* @__PURE__ */ jsxs("div", { className: "p-4 border-t border-gray-100 bg-white sticky bottom-0 z-10 shadow-[0_-4px_10px_rgba(0,0,0,0.04)] space-y-2", children: [
@@ -7066,6 +7170,10 @@ var ViewCart = ({ enableFastCheckout = false }) => {
     display_item_total,
     display_ship_total,
     display_tax_total,
+    display_adjustment_total,
+    adjustment_total,
+    display_promo_total,
+    promo_total,
     order_type
   } = cart || {};
   const items = cartItems ?? [];
@@ -7312,6 +7420,45 @@ var ViewCart = ({ enableFastCheckout = false }) => {
                   )
                 ] });
               })(),
+              (() => {
+                const rawAdjustmentTotal = parseFloat(
+                  String(display_adjustment_total || "").replace(/[^0-9.]/g, "") || String(adjustment_total != null ? Number(adjustment_total) / 100 : 0)
+                ) || 0;
+                const rawPromoTotal = parseFloat(
+                  String(display_promo_total || "").replace(/[^0-9.]/g, "") || String((promo_total ?? 0) > 1e4 ? (promo_total ?? 0) / 100 : promo_total ?? 0)
+                ) || 0;
+                const adjustmentsList = Array.isArray(cart?.adjustments) ? cart.adjustments.filter((a) => {
+                  const amt = parseFloat(
+                    String(a?.display_amount ?? "").replace(/[^0-9.]/g, "") || String(a?.amount != null ? Number(a.amount) / 100 : 0)
+                  );
+                  return amt !== 0;
+                }) : [];
+                if (adjustmentsList.length > 0) {
+                  return adjustmentsList.map((adj, idx) => {
+                    const amt = parseFloat(
+                      String(adj.display_amount || "").replace(/[^0-9.]/g, "") || String(adj.amount != null ? Number(adj.amount) / 100 : 0)
+                    ) || 0;
+                    return /* @__PURE__ */ jsxs("div", { className: "flex justify-between", children: [
+                      /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[14px] text-[#00b300]", children: adj.label || adj.name || "Adjustment" }),
+                      /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-medium)] text-[14px] text-[#00b300]", children: [
+                        "\u2212 ",
+                        formatCurrency(amt)
+                      ] })
+                    ] }, adj.id || idx);
+                  });
+                }
+                const nonPromoAdjustment = rawPromoTotal > 0 ? rawAdjustmentTotal > rawPromoTotal ? rawAdjustmentTotal - rawPromoTotal : 0 : appliedDiscounts?.length > 0 ? 0 : rawAdjustmentTotal;
+                if (nonPromoAdjustment > 0) {
+                  return /* @__PURE__ */ jsxs("div", { className: "flex justify-between", children: [
+                    /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[14px] text-[#00b300]", children: rawPromoTotal > 0 ? "Points / Adjustment" : "Adjustment" }),
+                    /* @__PURE__ */ jsxs("p", { className: "font-[var(--font-medium)] text-[14px] text-[#00b300]", children: [
+                      "\u2212 ",
+                      formatCurrency(nonPromoAdjustment)
+                    ] })
+                  ] });
+                }
+                return null;
+              })(),
               /* @__PURE__ */ jsxs("div", { className: "flex justify-between", children: [
                 /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[14px] text-[var(--main)]", children: "Tax" }),
                 /* @__PURE__ */ jsx("p", { className: "font-[var(--font-regular)] text-[14px] text-[var(--main)]", children: display_tax_total ? formatCurrency(display_tax_total) : "\u2014" })
@@ -7325,11 +7472,23 @@ var ViewCart = ({ enableFastCheckout = false }) => {
                   /* @__PURE__ */ jsx("p", { className: "font-[var(--font-medium)] text-[16px] text-[var(--main)]", children: "Total payment" }),
                   /* @__PURE__ */ jsx("p", { className: "font-[var(--font-bold)] text-[16px] text-[var(--main)]", children: display_total ? formatCurrency(display_total) : "\u2014" })
                 ] }),
-                ((cart?.promo_total ?? 0) > 0 || parseFloat(cart?.display_promo_total || "0") > 0) && /* @__PURE__ */ jsxs("p", { className: "text-[13px] font-[var(--font-bold)] text-[#00b300] mt-[6px] text-right", children: [
-                  "You save ",
-                  formatCurrency(cart?.display_promo_total),
-                  " on this order \u{1F389}"
-                ] }),
+                (() => {
+                  const rawAdjustmentTotal = parseFloat(
+                    String(display_adjustment_total || "").replace(/[^0-9.]/g, "") || String(adjustment_total != null ? Number(adjustment_total) / 100 : 0)
+                  ) || 0;
+                  const rawPromoTotal = parseFloat(
+                    String(display_promo_total || "").replace(/[^0-9.]/g, "") || String((cart?.promo_total ?? 0) > 1e4 ? (cart?.promo_total ?? 0) / 100 : cart?.promo_total ?? 0)
+                  ) || 0;
+                  const totalSavings = rawAdjustmentTotal > 0 ? rawAdjustmentTotal : rawPromoTotal;
+                  if (totalSavings > 0) {
+                    return /* @__PURE__ */ jsxs("p", { className: "text-[13px] font-[var(--font-bold)] text-[#00b300] mt-[6px] text-right", children: [
+                      "You save ",
+                      formatCurrency(totalSavings),
+                      " on this order \u{1F389}"
+                    ] });
+                  }
+                  return null;
+                })(),
                 enableFastCheckout && /* @__PURE__ */ jsxs(
                   "button",
                   {

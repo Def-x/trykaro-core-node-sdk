@@ -36,6 +36,10 @@ export const ViewCart: React.FC<ViewCartProps> = ({ enableFastCheckout = false }
     display_item_total,
     display_ship_total,
     display_tax_total,
+    display_adjustment_total,
+    adjustment_total,
+    display_promo_total,
+    promo_total,
     order_type,
   } = (cart || {}) as any;
 
@@ -214,13 +218,13 @@ export const ViewCart: React.FC<ViewCartProps> = ({ enableFastCheckout = false }
                       const totalDiscount =
                         appliedDiscounts?.length > 0
                           ? appliedDiscounts.reduce((sum: number, c: any) => {
-                              const amt =
-                                c.display_discount_amount ??
-                                (c.discount_amount != null
-                                  ? c.discount_amount / 100
-                                  : 0);
-                              return sum + parseFloat(amt || "0");
-                            }, 0)
+                            const amt =
+                              c.display_discount_amount ??
+                              (c.discount_amount != null
+                                ? c.discount_amount / 100
+                                : 0);
+                            return sum + parseFloat(amt || "0");
+                          }, 0)
                           : parseFloat((cart as any)?.display_promo_total || "0");
 
                       return (
@@ -325,7 +329,7 @@ export const ViewCart: React.FC<ViewCartProps> = ({ enableFastCheckout = false }
                                       {coupon.code
                                         ? `${coupon.code}`
                                         : coupon.display_action_value ||
-                                          "Coupon"}
+                                        "Coupon"}
                                     </span>
                                     <span
                                       style={{
@@ -346,6 +350,66 @@ export const ViewCart: React.FC<ViewCartProps> = ({ enableFastCheckout = false }
                       );
                     })()}
 
+                  {/* Adjustment row */}
+                  {(() => {
+                    const rawAdjustmentTotal = parseFloat(
+                      String(display_adjustment_total || "").replace(/[^0-9.]/g, "") ||
+                      String(adjustment_total != null ? Number(adjustment_total) / 100 : 0),
+                    ) || 0;
+                    const rawPromoTotal = parseFloat(
+                      String(display_promo_total || "").replace(/[^0-9.]/g, "") ||
+                      String((promo_total ?? 0) > 10000 ? (promo_total ?? 0) / 100 : (promo_total ?? 0)),
+                    ) || 0;
+
+                    const adjustmentsList = Array.isArray((cart as any)?.adjustments)
+                      ? (cart as any).adjustments.filter((a: any) => {
+                        const amt = parseFloat(
+                          String(a?.display_amount ?? "").replace(/[^0-9.]/g, "") ||
+                          String(a?.amount != null ? Number(a.amount) / 100 : 0),
+                        );
+                        return amt !== 0;
+                      })
+                      : [];
+
+                    if (adjustmentsList.length > 0) {
+                      return adjustmentsList.map((adj: any, idx: number) => {
+                        const amt = parseFloat(
+                          String(adj.display_amount || "").replace(/[^0-9.]/g, "") ||
+                          String(adj.amount != null ? Number(adj.amount) / 100 : 0),
+                        ) || 0;
+                        return (
+                          <div key={adj.id || idx} className="flex justify-between">
+                            <p className="font-[var(--font-regular)] text-[14px] text-[#00b300]">
+                              {adj.label || adj.name || "Adjustment"}
+                            </p>
+                            <p className="font-[var(--font-medium)] text-[14px] text-[#00b300]">
+                              − {formatCurrency(amt)}
+                            </p>
+                          </div>
+                        );
+                      });
+                    }
+
+                    const nonPromoAdjustment = rawPromoTotal > 0
+                      ? (rawAdjustmentTotal > rawPromoTotal ? rawAdjustmentTotal - rawPromoTotal : 0)
+                      : (appliedDiscounts?.length > 0 ? 0 : rawAdjustmentTotal);
+
+                    if (nonPromoAdjustment > 0) {
+                      return (
+                        <div className="flex justify-between">
+                          <p className="font-[var(--font-regular)] text-[14px] text-[#00b300]">
+                            {rawPromoTotal > 0 ? "Points / Adjustment" : "Adjustment"}
+                          </p>
+                          <p className="font-[var(--font-medium)] text-[14px] text-[#00b300]">
+                            − {formatCurrency(nonPromoAdjustment)}
+                          </p>
+                        </div>
+                      );
+                    }
+
+                    return null;
+                  })()}
+
                   <div className="flex justify-between">
                     <p className="font-[var(--font-regular)] text-[14px] text-[var(--main)]">
                       Tax
@@ -364,7 +428,7 @@ export const ViewCart: React.FC<ViewCartProps> = ({ enableFastCheckout = false }
                       </p>
                       <p className="font-[var(--font-regular)] text-[14px] text-[var(--main)]">
                         {display_ship_total === "0.00" ||
-                        display_ship_total === 0
+                          display_ship_total === 0
                           ? "Free"
                           : display_ship_total
                             ? formatCurrency(display_ship_total)
@@ -382,13 +446,29 @@ export const ViewCart: React.FC<ViewCartProps> = ({ enableFastCheckout = false }
                         {display_total ? formatCurrency(display_total) : "—"}
                       </p>
                     </div>
-                    {(((cart as any)?.promo_total ?? 0) > 0 ||
-                      parseFloat((cart as any)?.display_promo_total || "0") > 0) && (
-                      <p className="text-[13px] font-[var(--font-bold)] text-[#00b300] mt-[6px] text-right">
-                        You save {formatCurrency((cart as any)?.display_promo_total)} on
-                        this order 🎉
-                      </p>
-                    )}
+                    {/* Savings callout banner - Adjustment value is total save */}
+                    {(() => {
+                      const rawAdjustmentTotal = parseFloat(
+                        String(display_adjustment_total || "").replace(/[^0-9.]/g, "") ||
+                        String(adjustment_total != null ? Number(adjustment_total) / 100 : 0),
+                      ) || 0;
+                      const rawPromoTotal = parseFloat(
+                        String(display_promo_total || "").replace(/[^0-9.]/g, "") ||
+                        String(((cart as any)?.promo_total ?? 0) > 10000 ? ((cart as any)?.promo_total ?? 0) / 100 : ((cart as any)?.promo_total ?? 0)),
+                      ) || 0;
+                      const totalSavings = rawAdjustmentTotal > 0
+                        ? rawAdjustmentTotal
+                        : rawPromoTotal;
+
+                      if (totalSavings > 0) {
+                        return (
+                          <p className="text-[13px] font-[var(--font-bold)] text-[#00b300] mt-[6px] text-right">
+                            You save {formatCurrency(totalSavings)} on this order 🎉
+                          </p>
+                        );
+                      }
+                      return null;
+                    })()}
 
                     {enableFastCheckout && (
                       <button

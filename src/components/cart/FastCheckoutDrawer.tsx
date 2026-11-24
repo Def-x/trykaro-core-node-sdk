@@ -35,6 +35,26 @@ export const FastCheckoutDrawer: React.FC<FastCheckoutDrawerProps> = ({
   router: overrideRouter,
 }) => {
   const [mounted, setMounted] = useState(false);
+  const [shouldRender, setShouldRender] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setShouldRender(true);
+      const timer = requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setIsVisible(true);
+        });
+      });
+      return () => cancelAnimationFrame(timer);
+    } else {
+      setIsVisible(false);
+      const timer = setTimeout(() => {
+        setShouldRender(false);
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
   const router = useStorefrontRouter(overrideRouter);
   const { Razorpay } = useRazorpay();
 
@@ -256,6 +276,13 @@ export const FastCheckoutDrawer: React.FC<FastCheckoutDrawerProps> = ({
     cart?.display_promo_total?.replace(/[^0-9.]/g, "") ||
       String((cart?.promo_total ?? 0) > 10000 ? (cart?.promo_total ?? 0) / 100 : (cart?.promo_total ?? 0)),
   ) || 0;
+
+  const rawAdjustmentTotal = parseFloat(
+    String(cart?.display_adjustment_total ?? "").replace(/[^0-9.]/g, "") ||
+      String(cart?.adjustment_total != null ? Number(cart.adjustment_total) / 100 : 0),
+  ) || 0;
+
+  const totalSavings = rawAdjustmentTotal > 0 ? rawAdjustmentTotal : rawPromoTotal;
 
   // Coupon apply by code
   const applyCouponByCode = async (codeToApply: string) => {
@@ -830,7 +857,7 @@ export const FastCheckoutDrawer: React.FC<FastCheckoutDrawerProps> = ({
     }
   };
 
-  if (!isOpen || !mounted) return null;
+  if (!shouldRender || !mounted) return null;
 
   const totalAmount = cart?.display_total
     ? formatCurrency(cart.display_total)
@@ -845,12 +872,25 @@ export const FastCheckoutDrawer: React.FC<FastCheckoutDrawerProps> = ({
 
   const modalContent = (
     <div
-      className="fixed inset-0 z-[1000000] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-[3px] transition-opacity duration-300 overflow-y-auto animate-in fade-in"
+      className="fixed inset-0 z-[1000000] flex items-stretch sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-[3px] overflow-hidden sm:overflow-y-auto"
+      style={{
+        opacity: isVisible ? 1 : 0,
+        transition: "opacity 300ms ease-in-out",
+        pointerEvents: isVisible ? "auto" : "none",
+      }}
       onClick={(e) => {
         if (e.target === e.currentTarget && !isPlacingOrder) onClose();
       }}
     >
-      <div className="relative w-full max-w-[500px] bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-100 flex flex-col max-h-[92dvh] animate-in zoom-in-95 duration-200">
+      <div
+        className="relative w-full sm:max-w-[500px] h-[100dvh] sm:h-auto max-h-[100dvh] sm:max-h-[92dvh] bg-white rounded-none sm:rounded-2xl shadow-2xl overflow-hidden border-0 sm:border border-gray-100 flex flex-col"
+        style={{
+          transform: isVisible ? "translateY(0)" : "translateY(24px)",
+          opacity: isVisible ? 1 : 0,
+          transition: "transform 350ms cubic-bezier(0.16, 1, 0.3, 1), opacity 300ms ease-out",
+          willChange: "transform, opacity",
+        }}
+      >
         {/* Header */}
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-gray-50 to-white sticky top-0 z-20">
           <div className="flex items-center gap-2.5">
@@ -898,9 +938,9 @@ export const FastCheckoutDrawer: React.FC<FastCheckoutDrawerProps> = ({
               >
                 {totalAmount}
               </span>
-              {rawPromoTotal > 0 && (
+              {totalSavings > 0 && (
                 <span className="text-[10px] text-emerald-600 font-bold block">
-                  Savings of {formatCurrency(rawPromoTotal)} applied
+                  Savings of {formatCurrency(totalSavings)} applied
                 </span>
               )}
             </div>
@@ -930,8 +970,8 @@ export const FastCheckoutDrawer: React.FC<FastCheckoutDrawerProps> = ({
                       {activeDiscount.code || activeDiscount.display_action_value || "Coupon Applied"}
                     </p>
                     <p className="text-[11px] text-emerald-600 font-medium">
-                      {rawPromoTotal > 0
-                        ? `You save ${formatCurrency(rawPromoTotal)}`
+                      {totalSavings > 0
+                        ? `You save ${formatCurrency(totalSavings)}`
                         : "Discount applied to order"}
                     </p>
                   </div>

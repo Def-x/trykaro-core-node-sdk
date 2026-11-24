@@ -53,6 +53,27 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   const isOpen = propIsOpen !== undefined ? propIsOpen : (contextIsOpen ?? false);
   const onClose = propOnClose !== undefined ? propOnClose : (contextCloseDrawer ?? (() => {}));
 
+  const [shouldRender, setShouldRender] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setShouldRender(true);
+      const timer = requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setIsVisible(true);
+        });
+      });
+      return () => cancelAnimationFrame(timer);
+    } else {
+      setIsVisible(false);
+      const timer = setTimeout(() => {
+        setShouldRender(false);
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
   const token = auth?.token ?? auth?.access_token ?? null;
 
   // Loyalty points redemption
@@ -123,6 +144,16 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   const rawShipTotal = parseFloat(
     String(cart?.display_ship_total ?? "").replace(/[^0-9.]/g, "") ||
       String((cart?.ship_total ?? 0) > 10000 ? (cart?.ship_total ?? 0) / 100 : (cart?.ship_total ?? 0)),
+  ) || 0;
+
+  const rawTaxTotal = parseFloat(
+    String(cart?.display_tax_total ?? "").replace(/[^0-9.]/g, "") ||
+      String((cart?.tax_total ?? 0) > 10000 ? (cart?.tax_total ?? 0) / 100 : (cart?.tax_total ?? 0)),
+  ) || 0;
+
+  const rawAdjustmentTotal = parseFloat(
+    String(cart?.display_adjustment_total ?? "").replace(/[^0-9.]/g, "") ||
+      String(cart?.adjustment_total != null ? Number(cart.adjustment_total) / 100 : 0),
   ) || 0;
 
   // Free shipping tracker
@@ -268,22 +299,31 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
     }
   };
 
-  if (!isOpen || !mounted) return null;
+  if (!shouldRender || !mounted) return null;
 
   const drawerContent = (
     <div className="fixed inset-0 z-[999998] flex justify-end">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/50 backdrop-blur-[2px] transition-opacity duration-300 animate-in fade-in"
+        className="fixed inset-0 bg-black/50 backdrop-blur-[2px]"
+        style={{
+          opacity: isVisible ? 1 : 0,
+          transition: "opacity 350ms cubic-bezier(0.16, 1, 0.3, 1)",
+          pointerEvents: isVisible ? "auto" : "none",
+        }}
         onClick={() => {
           if (!isCheckoutOpen) onClose();
         }}
       />
 
-      {/* Drawer Container (Right Slide-over) */}
+      {/* Drawer Container (Right Slide-over on Desktop & Mobile) */}
       <div
-        className="relative w-full max-w-[460px] h-[100dvh] bg-white shadow-2xl flex flex-col z-10 transition-transform duration-300 ease-out animate-in slide-in-from-right"
-        style={{ willChange: "transform" }}
+        className="relative w-full max-w-[460px] h-[100dvh] bg-white shadow-2xl flex flex-col z-10"
+        style={{
+          transform: isVisible ? "translateX(0)" : "translateX(100%)",
+          transition: "transform 350ms cubic-bezier(0.16, 1, 0.3, 1)",
+          willChange: "transform",
+        }}
       >
         {/* ── Top Header ── */}
         <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-white shrink-0">
@@ -722,12 +762,43 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 <span>{cart?.display_item_total ? formatCurrency(cart.display_item_total) : formatCurrency(rawItemTotal)}</span>
               </div>
 
-              {rawPromoTotal > 0 && (
-                <div className="flex justify-between text-emerald-600 font-medium">
-                  <span>Discount</span>
-                  <span>− {formatCurrency(rawPromoTotal)}</span>
+              {(rawPromoTotal > 0 || appliedDiscounts.length > 0) && (
+                <div className="space-y-1">
+                  <div className="flex justify-between text-emerald-600 font-medium">
+                    <span>
+                      {appliedDiscounts.length === 1
+                        ? `Discount (${appliedDiscounts[0].code || appliedDiscounts[0].display_action_value || "Coupon"})`
+                        : "Discount"}
+                    </span>
+                    <span>− {formatCurrency(rawPromoTotal || (rawAdjustmentTotal > 0 ? rawAdjustmentTotal : 0))}</span>
+                  </div>
+                  {appliedDiscounts.length > 1 && (
+                    <div className="pl-2 space-y-0.5 border-l-2 border-emerald-200">
+                      {appliedDiscounts.map((c: any) => {
+                        const amt = c.display_discount_amount ?? (c.discount_amount != null ? c.discount_amount / 100 : null);
+                        return (
+                          <div key={c.code || c.id} className="flex justify-between text-[11px] text-emerald-600/80">
+                            <span>• {c.code || c.display_action_value || "Coupon"}</span>
+                            {amt != null && <span>− {formatCurrency(amt)}</span>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
+
+
+              <div className="flex justify-between text-gray-600">
+                <span>Tax</span>
+                <span>
+                  {cart?.display_tax_total
+                    ? formatCurrency(cart.display_tax_total)
+                    : rawTaxTotal > 0
+                      ? formatCurrency(rawTaxTotal)
+                      : "—"}
+                </span>
+              </div>
 
               <div className="flex justify-between text-gray-600">
                 <span>Delivery Fee</span>
@@ -756,6 +827,21 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   {cart?.display_total ? formatCurrency(cart.display_total) : formatCurrency(rawTotal)}
                 </span>
               </div>
+
+              {/* Savings callout banner - Adjustment value is total save */}
+              {(() => {
+                const totalSavings = rawAdjustmentTotal > 0
+                  ? rawAdjustmentTotal
+                  : rawPromoTotal;
+                if (totalSavings > 0) {
+                  return (
+                    <p className="text-[12px] font-[var(--font-bold)] text-emerald-600 text-right mt-1">
+                      You save {formatCurrency(totalSavings)} on this order 🎉
+                    </p>
+                  );
+                }
+                return null;
+              })()}
             </div>
           )}
         </div>
