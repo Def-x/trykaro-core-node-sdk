@@ -78,6 +78,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
   // Loyalty points redemption
   const {
+    isLoyaltyEnabled,
     availablePoints,
     monetaryValue,
     isApplying: isApplyingLoyalty,
@@ -640,7 +641,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
           )}
 
           {/* ── Loyalty Points Redemption (SBS Rewards) ── */}
-          {items.length > 0 && token && availablePoints > 0 && (
+          {isLoyaltyEnabled && items.length > 0 && token && availablePoints > 0 && (
             <div className="my-2.5 p-3 bg-gradient-to-br from-amber-50/70 via-orange-50/40 to-white border border-amber-200/80 rounded-xl shadow-xs">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
@@ -739,7 +740,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
           )}
 
           {/* Prompt if not signed in */}
-          {items.length > 0 && !token && (
+          {isLoyaltyEnabled && items.length > 0 && !token && (
             <div className="my-2 p-2.5 bg-orange-50/50 border border-orange-200/50 rounded-xl flex items-center justify-between text-xs text-gray-600">
               <span className="flex items-center gap-1.5">
                 <span>⭐</span>

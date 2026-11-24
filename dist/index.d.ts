@@ -512,7 +512,24 @@ declare function invalidateLikedProductsCache(token: string | null): void;
 interface UseLoyaltyOptions {
     autoFetch?: boolean;
 }
+/**
+ * Checks whether the Loyalty & Rewards marketplace application is installed
+ * and enabled for the merchant organization.
+ *
+ * Inspects:
+ * 1. Explicit config/env override:
+ *    - config?.enableLoyalty (true/false)
+ *    - process.env.NEXT_PUBLIC_ENABLE_LOYALTY ("true"/"false")
+ * 2. Organization feature exposure:
+ *    - orgData?.expose_json?.loyalty?.enabled
+ * 3. Organization marketplace installations:
+ *    - orgData?.organization_marketplaces (array or stringified JSON)
+ *      Matches records with slug/name/appName matching loyalty / reward / loyalty-rewards
+ *      where is_installed is true and market_place_json.enabled is not false.
+ */
+declare function isLoyaltyMarketplaceActive(orgData?: any, config?: any): boolean;
 interface UseLoyaltyReturn {
+    isLoyaltyEnabled: boolean;
     profile: LoyaltyProfileResponse | null;
     customer: LoyaltyCustomer | null;
     rewards: LoyaltyRewardItem[];
@@ -1156,4 +1173,4 @@ declare class StorefrontAuthError extends StorefrontError {
     constructor(message?: string);
 }
 
-export { AccountAddressesPage, AccountAwardIcon, AccountClockIcon, AccountGiftIcon, AccountLayout, AccountOrderDetailContent, AccountOrdersPage, AccountPage, AccountRewardsPage, type AccountRewardsPageProps, AccountSidebar, AccountSparklesIcon, AccountStarIcon, AccountWishlistPage, type Address, AddressCard, AddressForm, ApplyLoyaltyPointsResponse, AuthManager, type AuthState, type AuthUser, type Cart, CartDrawer, type CartDrawerProps, CartItem, CartMismatchBanner, CartPage, CartSummary, ClerkStoreProvider, type ClerkStoreProviderProps, CoreProvider, CouponSection, CustomOTPAuth, type Customization, DEFAULT_NAV_ITEMS as DEFAULT_ACCOUNT_NAV_ITEMS, DeveloperErrorBoundary, EmptyState, FastCheckoutDrawer, type FastCheckoutDrawerProps, type FrameworkAdapter, type GtmConfig, type GtmItem, type GtmMeta, type LineItem, type LineItemPayload, LoyaltyCustomer, LoyaltyProfileResponse, LoyaltyRewardItem, LoyaltyTransaction, type MetaPixelConfig, type OptionType, type OptionValue, Order, type OrderPayment, type Order$1 as OrderType, OrdersList, type PaymentGatewayInfo, Popup, type Product, type ProductImage, type ProductVariant, ProfileForm, Region, type RouterAdapter, type SellingQuantity, Spinner, StorefrontActions, StorefrontApiError, StorefrontAuthError, StorefrontConfig, StorefrontError, type Taxon, ThirdPartyScripts, type UseCartDrawerReturn, type UseClerkStoreAuthOptions, type UseLoyaltyOptions, type UseLoyaltyReturn, type UseOtpStoreAuthOptions, UserInfo, type VariantOption, ViewCart, captureDeveloperException, devLogger, injectContentSquare, injectHotjar, invalidateLikedProductsCache, isTokenExpired, nameToSlug, useAddToCart, useAddresses, useAuth, useCart, useCartDrawer, useCartInfo, useClerkStoreAuth, useCore, useCurrencyFormat, useGetCurrentUserLikedProductsQuery, useLogout, useLoyalty, useOtpStoreAuth, usePaymentGateway, useVariantSelection };
+export { AccountAddressesPage, AccountAwardIcon, AccountClockIcon, AccountGiftIcon, AccountLayout, AccountOrderDetailContent, AccountOrdersPage, AccountPage, AccountRewardsPage, type AccountRewardsPageProps, AccountSidebar, AccountSparklesIcon, AccountStarIcon, AccountWishlistPage, type Address, AddressCard, AddressForm, ApplyLoyaltyPointsResponse, AuthManager, type AuthState, type AuthUser, type Cart, CartDrawer, type CartDrawerProps, CartItem, CartMismatchBanner, CartPage, CartSummary, ClerkStoreProvider, type ClerkStoreProviderProps, CoreProvider, CouponSection, CustomOTPAuth, type Customization, DEFAULT_NAV_ITEMS as DEFAULT_ACCOUNT_NAV_ITEMS, DeveloperErrorBoundary, EmptyState, FastCheckoutDrawer, type FastCheckoutDrawerProps, type FrameworkAdapter, type GtmConfig, type GtmItem, type GtmMeta, type LineItem, type LineItemPayload, LoyaltyCustomer, LoyaltyProfileResponse, LoyaltyRewardItem, LoyaltyTransaction, type MetaPixelConfig, type OptionType, type OptionValue, Order, type OrderPayment, type Order$1 as OrderType, OrdersList, type PaymentGatewayInfo, Popup, type Product, type ProductImage, type ProductVariant, ProfileForm, Region, type RouterAdapter, type SellingQuantity, Spinner, StorefrontActions, StorefrontApiError, StorefrontAuthError, StorefrontConfig, StorefrontError, type Taxon, ThirdPartyScripts, type UseCartDrawerReturn, type UseClerkStoreAuthOptions, type UseLoyaltyOptions, type UseLoyaltyReturn, type UseOtpStoreAuthOptions, UserInfo, type VariantOption, ViewCart, captureDeveloperException, devLogger, injectContentSquare, injectHotjar, invalidateLikedProductsCache, isLoyaltyMarketplaceActive, isTokenExpired, nameToSlug, useAddToCart, useAddresses, useAuth, useCart, useCartDrawer, useCartInfo, useClerkStoreAuth, useCore, useCurrencyFormat, useGetCurrentUserLikedProductsQuery, useLogout, useLoyalty, useOtpStoreAuth, usePaymentGateway, useVariantSelection };

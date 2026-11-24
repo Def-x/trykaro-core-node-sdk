@@ -5,6 +5,7 @@ import {
   getLoyaltyTransactionsAction,
   applyLoyaltyPointsAction,
 } from "./loyaltyActions";
+import { isLoyaltyMarketplaceActive } from "../hooks/useLoyalty";
 
 describe("loyaltyActions", () => {
   beforeEach(() => {
@@ -149,5 +150,115 @@ describe("loyaltyActions", () => {
     expect(result.success).toBe(false);
     expect(result.total_count).toBe(0);
     expect(result.transactions.length).toBe(0);
+  });
+
+  describe("isLoyaltyMarketplaceActive", () => {
+    it("returns false when orgData is empty, undefined or null", () => {
+      expect(isLoyaltyMarketplaceActive(null)).toBe(false);
+      expect(isLoyaltyMarketplaceActive(undefined)).toBe(false);
+      expect(isLoyaltyMarketplaceActive({})).toBe(false);
+      expect(isLoyaltyMarketplaceActive({ organization_marketplaces: [] })).toBe(false);
+    });
+
+    it("returns false when marketplaces has other apps but no loyalty app", () => {
+      const orgData = {
+        organization_marketplaces: [
+          {
+            is_installed: true,
+            market_place: { name: "Razorpay" },
+            market_place_json: { enabled: true, appName: "Razorpay" },
+          },
+          {
+            is_installed: true,
+            market_place: { name: "Shiprocket" },
+            market_place_json: { enabled: true, appName: "Shiprocket" },
+          },
+        ],
+      };
+      expect(isLoyaltyMarketplaceActive(orgData)).toBe(false);
+    });
+
+    it("returns true when loyalty marketplace app is installed and enabled", () => {
+      const orgData = {
+        organization_marketplaces: [
+          {
+            is_installed: true,
+            market_place: { name: "Customer Loyalty & Rewards" },
+            market_place_json: { enabled: true, appName: "Customer Loyalty & Rewards" },
+          },
+        ],
+      };
+      expect(isLoyaltyMarketplaceActive(orgData)).toBe(true);
+    });
+
+    it("returns true when matched by slug or loyalty keyword", () => {
+      const orgData = {
+        organization_marketplaces: [
+          {
+            is_installed: true,
+            slug: "loyalty-rewards",
+            enabled: true,
+          },
+        ],
+      };
+      expect(isLoyaltyMarketplaceActive(orgData)).toBe(true);
+    });
+
+    it("returns false when loyalty app is installed but disabled", () => {
+      const orgData = {
+        organization_marketplaces: [
+          {
+            is_installed: true,
+            market_place: { name: "Customer Loyalty & Rewards" },
+            market_place_json: { enabled: false },
+          },
+        ],
+      };
+      expect(isLoyaltyMarketplaceActive(orgData)).toBe(false);
+    });
+
+    it("returns false when loyalty app is not installed", () => {
+      const orgData = {
+        organization_marketplaces: [
+          {
+            is_installed: false,
+            market_place: { name: "Customer Loyalty & Rewards" },
+            market_place_json: { enabled: true },
+          },
+        ],
+      };
+      expect(isLoyaltyMarketplaceActive(orgData)).toBe(false);
+    });
+
+    it("correctly parses stringified organization_marketplaces", () => {
+      const orgData = {
+        organization_marketplaces: JSON.stringify([
+          {
+            is_installed: true,
+            market_place: { name: "Customer Loyalty & Rewards" },
+            market_place_json: { enabled: true },
+          },
+        ]),
+      };
+      expect(isLoyaltyMarketplaceActive(orgData)).toBe(true);
+    });
+
+    it("respects explicit config overrides", () => {
+      expect(isLoyaltyMarketplaceActive(null, { enableLoyalty: true })).toBe(true);
+      expect(
+        isLoyaltyMarketplaceActive(
+          {
+            organization_marketplaces: [
+              {
+                is_installed: true,
+                market_place: { name: "Customer Loyalty & Rewards" },
+                market_place_json: { enabled: true },
+              },
+            ],
+          },
+          { enableLoyalty: false },
+        ),
+      ).toBe(false);
+    });
   });
 });

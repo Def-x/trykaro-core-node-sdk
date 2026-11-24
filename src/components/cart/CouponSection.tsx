@@ -11,6 +11,7 @@ export const CouponSection: React.FC = () => {
   const { formatCurrency } = useCurrencyFormat();
 
   const {
+    isLoyaltyEnabled,
     availablePoints,
     monetaryValue,
     isApplying: isApplyingLoyalty,
@@ -416,7 +417,7 @@ export const CouponSection: React.FC = () => {
       )}
 
       {/* ── Loyalty Points Redemption ── */}
-      {availablePoints > 0 && (
+      {isLoyaltyEnabled && availablePoints > 0 && (
         <div className="mt-2">
           <button
             type="button"

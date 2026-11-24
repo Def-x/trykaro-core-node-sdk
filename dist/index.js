@@ -494,9 +494,47 @@ function useCurrencyFormat() {
   };
   return { formatCurrency };
 }
+function isLoyaltyMarketplaceActive(orgData, config) {
+  if (config?.enableLoyalty === false) return false;
+  if (config?.enableLoyalty === true) return true;
+  if (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_ENABLE_LOYALTY !== void 0) {
+    if (process.env.NEXT_PUBLIC_ENABLE_LOYALTY === "true") return true;
+    if (process.env.NEXT_PUBLIC_ENABLE_LOYALTY === "false") return false;
+  }
+  if (orgData?.expose_json?.loyalty?.enabled !== void 0) {
+    return Boolean(orgData.expose_json.loyalty.enabled);
+  }
+  const rawMarketplaces = orgData?.organization_marketplaces ?? orgData?.organization?.organization_marketplaces ?? orgData?.data?.organization_marketplaces;
+  let marketplaces = [];
+  if (Array.isArray(rawMarketplaces)) {
+    marketplaces = rawMarketplaces;
+  } else if (typeof rawMarketplaces === "string") {
+    try {
+      marketplaces = JSON.parse(rawMarketplaces);
+    } catch {
+      marketplaces = [];
+    }
+  }
+  if (Array.isArray(marketplaces) && marketplaces.length > 0) {
+    const loyaltyRecord = marketplaces.find((item) => {
+      if (!item) return false;
+      const rawName = String(
+        item.marketplace?.name || item.market_place?.name || item.marketplace?.slug || item.market_place?.slug || item.market_place_json?.appName || item.market_place_json?.name || item.market_place_json?.slug || item.name || item.slug || ""
+      ).toLowerCase().trim();
+      return rawName.includes("loyalty") || rawName.includes("reward") || rawName === "loyalty-rewards";
+    });
+    if (loyaltyRecord) {
+      const isInstalled = loyaltyRecord.is_installed === true || loyaltyRecord.is_installed === 1 || loyaltyRecord.installed === true || loyaltyRecord.installed === 1;
+      const isEnabled = loyaltyRecord.market_place_json?.enabled !== false && loyaltyRecord.enabled !== false && loyaltyRecord.market_place_json?.is_active !== false && loyaltyRecord.is_active !== false;
+      return Boolean(isInstalled && isEnabled);
+    }
+  }
+  return false;
+}
 var useLoyalty = (options = {}) => {
   const { autoFetch = true } = options;
-  const { actions, auth, config, cart, setCart, toast } = useCore();
+  const { actions, auth, config, cart, setCart, toast, orgData } = useCore();
+  const isLoyaltyEnabled = isLoyaltyMarketplaceActive(orgData, config);
   const token = auth?.token ?? auth?.access_token ?? null;
   const signedIn = !!((auth?.isSignedIn ?? false) || token);
   const [profile, setProfile] = useState(null);
@@ -512,6 +550,12 @@ var useLoyalty = (options = {}) => {
   const [isApplying, setIsApplying] = useState(false);
   const [error, setError] = useState(null);
   const fetchProfile = useCallback(async () => {
+    if (!isLoyaltyEnabled) {
+      setProfile(null);
+      setCustomer(null);
+      setIsLoading(false);
+      return;
+    }
     if (!token && !signedIn) {
       setProfile(null);
       setCustomer(null);
@@ -543,9 +587,9 @@ var useLoyalty = (options = {}) => {
     } finally {
       setIsLoading(false);
     }
-  }, [actions?.getLoyaltyProfile, token, signedIn, config]);
+  }, [actions?.getLoyaltyProfile, token, signedIn, config, isLoyaltyEnabled]);
   const fetchRewards = useCallback(async () => {
-    if (!token && !signedIn) {
+    if (!isLoyaltyEnabled || !token && !signedIn) {
       setRewards([]);
       return;
     }
@@ -568,12 +612,12 @@ var useLoyalty = (options = {}) => {
     } finally {
       setIsRewardsLoading(false);
     }
-  }, [actions?.getLoyaltyRewards, token, signedIn, config]);
+  }, [actions?.getLoyaltyRewards, token, signedIn, config, isLoyaltyEnabled]);
   const fetchTransactions = useCallback(
     async (params = {}) => {
       const page = params.page ?? transactionsPage;
       const perPage = params.per_page ?? transactionsPerPage;
-      if (!token && !signedIn) {
+      if (!isLoyaltyEnabled || !token && !signedIn) {
         setTransactions([]);
         setTransactionsTotalCount(0);
         return;
@@ -607,20 +651,25 @@ var useLoyalty = (options = {}) => {
         setIsTransactionsLoading(false);
       }
     },
-    [actions?.getLoyaltyTransactions, token, signedIn, config, transactionsPage, transactionsPerPage]
+    [actions?.getLoyaltyTransactions, token, signedIn, config, transactionsPage, transactionsPerPage, isLoyaltyEnabled]
   );
   useEffect(() => {
-    if (autoFetch && (token || signedIn)) {
+    if (isLoyaltyEnabled && autoFetch && (token || signedIn)) {
       fetchProfile();
       fetchRewards();
       fetchTransactions({ page: 1, per_page: 20 });
     }
-  }, [autoFetch, token, signedIn, fetchProfile, fetchRewards, fetchTransactions]);
+  }, [isLoyaltyEnabled, autoFetch, token, signedIn, fetchProfile, fetchRewards, fetchTransactions]);
   const applyPoints = useCallback(
     async ({
       cart_id,
       points_to_use
     }) => {
+      if (!isLoyaltyEnabled) {
+        const errMsg = "Loyalty rewards program is not active for this store";
+        toast?.error?.(errMsg);
+        return { success: false, serverError: errMsg };
+      }
       const targetCartId = cart_id || cart?.id;
       if (!targetCartId) {
         const errMsg = "Cart ID is required to apply loyalty points";
@@ -699,7 +748,7 @@ var useLoyalty = (options = {}) => {
         setIsApplying(false);
       }
     },
-    [cart?.id, actions, token, config, setCart, toast]
+    [cart?.id, actions, token, config, setCart, toast, isLoyaltyEnabled]
   );
   const copyReferralCode = useCallback(async () => {
     const code = customer?.referral_code;
@@ -756,6 +805,7 @@ var useLoyalty = (options = {}) => {
   const referralLink = customer?.referral_link ?? "";
   const tier = customer?.tier || (totalEarned >= 5e3 ? "PLATINUM MEMBER" : totalEarned >= 2e3 ? "GOLD MEMBER" : "SILVER MEMBER");
   return {
+    isLoyaltyEnabled,
     profile,
     customer,
     rewards,
@@ -2373,6 +2423,7 @@ var CartDrawer = ({
   }, [isOpen]);
   const token = auth?.token ?? auth?.access_token ?? null;
   const {
+    isLoyaltyEnabled,
     availablePoints,
     monetaryValue,
     isApplying: isApplyingLoyalty,
@@ -2837,7 +2888,7 @@ var CartDrawer = ({
                 }) })
               ] })
             ] }),
-            items.length > 0 && token && availablePoints > 0 && /* @__PURE__ */ jsxs("div", { className: "my-2.5 p-3 bg-gradient-to-br from-amber-50/70 via-orange-50/40 to-white border border-amber-200/80 rounded-xl shadow-xs", children: [
+            isLoyaltyEnabled && items.length > 0 && token && availablePoints > 0 && /* @__PURE__ */ jsxs("div", { className: "my-2.5 p-3 bg-gradient-to-br from-amber-50/70 via-orange-50/40 to-white border border-amber-200/80 rounded-xl shadow-xs", children: [
               /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between", children: [
                 /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-1.5", children: [
                   /* @__PURE__ */ jsx("span", { className: "text-amber-500 text-sm", children: "\u2B50" }),
@@ -2937,7 +2988,7 @@ var CartDrawer = ({
                 ". Click Redeem to apply points."
               ] })
             ] }),
-            items.length > 0 && !token && /* @__PURE__ */ jsxs("div", { className: "my-2 p-2.5 bg-orange-50/50 border border-orange-200/50 rounded-xl flex items-center justify-between text-xs text-gray-600", children: [
+            isLoyaltyEnabled && items.length > 0 && !token && /* @__PURE__ */ jsxs("div", { className: "my-2 p-2.5 bg-orange-50/50 border border-orange-200/50 rounded-xl flex items-center justify-between text-xs text-gray-600", children: [
               /* @__PURE__ */ jsxs("span", { className: "flex items-center gap-1.5", children: [
                 /* @__PURE__ */ jsx("span", { children: "\u2B50" }),
                 /* @__PURE__ */ jsx("span", { children: "Have SBS reward points?" })
@@ -6720,6 +6771,7 @@ var CouponSection = () => {
   const token = auth?.token ?? auth?.access_token ?? null;
   const { formatCurrency } = useCurrencyFormat();
   const {
+    isLoyaltyEnabled,
     availablePoints,
     monetaryValue,
     isApplying: isApplyingLoyalty,
@@ -7052,7 +7104,7 @@ var CouponSection = () => {
         ] })
       ] })
     ] }),
-    availablePoints > 0 && /* @__PURE__ */ jsxs("div", { className: "mt-2", children: [
+    isLoyaltyEnabled && availablePoints > 0 && /* @__PURE__ */ jsxs("div", { className: "mt-2", children: [
       /* @__PURE__ */ jsxs(
         "button",
         {
@@ -8205,8 +8257,12 @@ var AccountSidebar = ({
   const router = useStorefrontRouter(overrideRouter);
   const pathname = overridePathname ?? router.pathname;
   const coreLogout = useLogout();
-  const { auth } = useCore();
+  const { auth, orgData, config } = useCore();
   const resolvedContactInfo = contactInfo ?? getContactInfo(user ?? auth?.user);
+  const isLoyaltyEnabled = isLoyaltyMarketplaceActive(orgData, config);
+  const effectiveNavItems = (navItems ?? DEFAULT_NAV_ITEMS).filter(
+    (item) => item.href !== "/account/rewards" || isLoyaltyEnabled
+  );
   const handleNavigate = (href) => {
     if (onNavigate) {
       onNavigate(href);
@@ -8228,7 +8284,7 @@ var AccountSidebar = ({
       children: [
         /* @__PURE__ */ jsx("div", { className: "border-b border-gray-100 px-5 py-5 text-center", children: /* @__PURE__ */ jsx("p", { className: "truncate px-2 text-[13px] font-[var(--font-medium)] tracking-wide text-[#555555]", children: resolvedContactInfo }) }),
         /* @__PURE__ */ jsxs("nav", { className: "flex flex-col py-2 max-md:flex-row max-md:overflow-x-auto max-md:py-0", children: [
-          navItems.map(({ label, href, icon: Icon = AccountMapPinIcon }) => {
+          effectiveNavItems.map(({ label, href, icon: Icon = AccountMapPinIcon }) => {
             const isActive = href === "/account" ? pathname === href : pathname.startsWith(href);
             return /* @__PURE__ */ jsxs(
               "button",
@@ -9123,10 +9179,11 @@ var AccountRewardsPage = ({
   showBreadcrumb = true,
   className = ""
 }) => {
-  useStorefrontRouter(overrideRouter);
+  const router = useStorefrontRouter(overrideRouter);
   const { cart, auth, toast } = useCore();
   const { formatCurrency } = useCurrencyFormat();
   const {
+    isLoyaltyEnabled,
     customer,
     availablePoints,
     monetaryValue,
@@ -9232,6 +9289,30 @@ var AccountRewardsPage = ({
     if (historyFilter === "all") return activityRows;
     return activityRows.filter((item) => item.type === historyFilter);
   }, [activityRows, historyFilter]);
+  if (!isLoyaltyEnabled) {
+    return /* @__PURE__ */ jsxs("div", { className: `w-full font-sans text-[#222222] ${className}`, children: [
+      showBreadcrumb && /* @__PURE__ */ jsx("nav", { "aria-label": "Breadcrumb", className: "mb-6 text-xs text-gray-500 font-medium", children: /* @__PURE__ */ jsxs("ol", { className: "flex items-center gap-1.5 flex-wrap", children: [
+        /* @__PURE__ */ jsx("li", { children: /* @__PURE__ */ jsx(StorefrontLink, { href: "/", className: "hover:text-gray-900 transition-colors", children: "Home" }) }),
+        /* @__PURE__ */ jsx("li", { children: "/" }),
+        /* @__PURE__ */ jsx("li", { children: /* @__PURE__ */ jsx(StorefrontLink, { href: "/account", className: "hover:text-gray-900 transition-colors", children: "My Account" }) }),
+        /* @__PURE__ */ jsx("li", { children: "/" }),
+        /* @__PURE__ */ jsx("li", { className: "font-semibold text-gray-900", children: "Loyalty & Rewards" })
+      ] }) }),
+      /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center justify-center rounded-2xl border border-gray-200 bg-white p-12 text-center shadow-xs", children: [
+        /* @__PURE__ */ jsx("div", { className: "mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-50 text-amber-500", children: /* @__PURE__ */ jsx(AccountAwardIcon, { className: "h-8 w-8" }) }),
+        /* @__PURE__ */ jsx("h2", { className: "text-[20px] font-bold text-[#1C1C1C]", children: "Loyalty & Rewards Program" }),
+        /* @__PURE__ */ jsx("p", { className: "mt-2 max-w-md text-[14px] text-gray-500", children: "The loyalty and rewards program is not currently active for this store. Please check back later or continue shopping." }),
+        /* @__PURE__ */ jsx(
+          "button",
+          {
+            onClick: () => router.push("/account"),
+            className: "mt-6 inline-flex items-center justify-center rounded-lg bg-[#1C1C1C] px-6 py-2.5 text-[14px] font-semibold text-white transition hover:bg-black cursor-pointer",
+            children: "Back to My Account"
+          }
+        )
+      ] })
+    ] });
+  }
   return /* @__PURE__ */ jsxs("div", { className: `w-full font-sans text-[#222222] ${className}`, children: [
     /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-4 border-b border-gray-200 pb-4 mb-6 md:flex-row md:items-center md:justify-between", children: [
       showBreadcrumb && /* @__PURE__ */ jsx("nav", { "aria-label": "Breadcrumb", className: "text-xs text-gray-500 font-medium", children: /* @__PURE__ */ jsxs("ol", { className: "flex items-center gap-1.5 flex-wrap", children: [
@@ -10147,6 +10228,6 @@ var StorefrontAuthError = class extends StorefrontError {
   }
 };
 
-export { AccountAddressesPage, AccountAwardIcon, AccountClockIcon, AccountGiftIcon, AccountLayout, AccountOrderDetailContent, AccountOrdersPage, AccountPage, AccountRewardsPage, AccountSidebar, AccountSparklesIcon, AccountStarIcon, AccountWishlistPage, AddressCard2 as AddressCard, AddressForm, AuthManager, CartDrawer, CartItem, CartMismatchBanner_default as CartMismatchBanner, CartPage, CartSummary, ClerkStoreProvider, CoreProvider, CouponSection_default as CouponSection, CustomOTPAuth, DEFAULT_NAV_ITEMS as DEFAULT_ACCOUNT_NAV_ITEMS, DeveloperErrorBoundary, EmptyState, FastCheckoutDrawer, Order, OrdersList, Popup, ProfileForm, Spinner, StorefrontApiError, StorefrontAuthError, StorefrontError, ThirdPartyScripts, UserInfo, ViewCart, injectContentSquare, injectHotjar, invalidateLikedProductsCache, isTokenExpired, nameToSlug, useAddToCart, useAddresses, useAuth, useCart, useCartDrawer, userCartInfo_default as useCartInfo, useClerkStoreAuth, useCore, useCurrencyFormat, useGetCurrentUserLikedProductsQuery, useLogout, useLoyalty, useOtpStoreAuth, usePaymentGateway, useVariantSelection };
+export { AccountAddressesPage, AccountAwardIcon, AccountClockIcon, AccountGiftIcon, AccountLayout, AccountOrderDetailContent, AccountOrdersPage, AccountPage, AccountRewardsPage, AccountSidebar, AccountSparklesIcon, AccountStarIcon, AccountWishlistPage, AddressCard2 as AddressCard, AddressForm, AuthManager, CartDrawer, CartItem, CartMismatchBanner_default as CartMismatchBanner, CartPage, CartSummary, ClerkStoreProvider, CoreProvider, CouponSection_default as CouponSection, CustomOTPAuth, DEFAULT_NAV_ITEMS as DEFAULT_ACCOUNT_NAV_ITEMS, DeveloperErrorBoundary, EmptyState, FastCheckoutDrawer, Order, OrdersList, Popup, ProfileForm, Spinner, StorefrontApiError, StorefrontAuthError, StorefrontError, ThirdPartyScripts, UserInfo, ViewCart, injectContentSquare, injectHotjar, invalidateLikedProductsCache, isLoyaltyMarketplaceActive, isTokenExpired, nameToSlug, useAddToCart, useAddresses, useAuth, useCart, useCartDrawer, userCartInfo_default as useCartInfo, useClerkStoreAuth, useCore, useCurrencyFormat, useGetCurrentUserLikedProductsQuery, useLogout, useLoyalty, useOtpStoreAuth, usePaymentGateway, useVariantSelection };
 //# sourceMappingURL=index.js.map
 //# sourceMappingURL=index.js.map

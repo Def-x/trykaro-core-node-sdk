@@ -44,6 +44,7 @@ export const AccountRewardsPage: React.FC<AccountRewardsPageProps> = ({
   const { formatCurrency } = useCurrencyFormat();
 
   const {
+    isLoyaltyEnabled,
     customer,
     availablePoints,
     monetaryValue,
@@ -176,6 +177,49 @@ export const AccountRewardsPage: React.FC<AccountRewardsPageProps> = ({
     if (historyFilter === "all") return activityRows;
     return activityRows.filter((item) => item.type === historyFilter);
   }, [activityRows, historyFilter]);
+
+  if (!isLoyaltyEnabled) {
+    return (
+      <div className={`w-full font-sans text-[#222222] ${className}`}>
+        {showBreadcrumb && (
+          <nav aria-label="Breadcrumb" className="mb-6 text-xs text-gray-500 font-medium">
+            <ol className="flex items-center gap-1.5 flex-wrap">
+              <li>
+                <Link href="/" className="hover:text-gray-900 transition-colors">
+                  Home
+                </Link>
+              </li>
+              <li>/</li>
+              <li>
+                <Link href="/account" className="hover:text-gray-900 transition-colors">
+                  My Account
+                </Link>
+              </li>
+              <li>/</li>
+              <li className="font-semibold text-gray-900">Loyalty &amp; Rewards</li>
+            </ol>
+          </nav>
+        )}
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-gray-200 bg-white p-12 text-center shadow-xs">
+          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-50 text-amber-500">
+            <AccountAwardIcon className="h-8 w-8" />
+          </div>
+          <h2 className="text-[20px] font-bold text-[#1C1C1C]">
+            Loyalty &amp; Rewards Program
+          </h2>
+          <p className="mt-2 max-w-md text-[14px] text-gray-500">
+            The loyalty and rewards program is not currently active for this store. Please check back later or continue shopping.
+          </p>
+          <button
+            onClick={() => router.push("/account")}
+            className="mt-6 inline-flex items-center justify-center rounded-lg bg-[#1C1C1C] px-6 py-2.5 text-[14px] font-semibold text-white transition hover:bg-black cursor-pointer"
+          >
+            Back to My Account
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`w-full font-sans text-[#222222] ${className}`}>

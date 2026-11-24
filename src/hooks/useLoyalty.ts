@@ -22,7 +22,98 @@ export interface UseLoyaltyOptions {
   autoFetch?: boolean;
 }
 
+/**
+ * Checks whether the Loyalty & Rewards marketplace application is installed
+ * and enabled for the merchant organization.
+ *
+ * Inspects:
+ * 1. Explicit config/env override:
+ *    - config?.enableLoyalty (true/false)
+ *    - process.env.NEXT_PUBLIC_ENABLE_LOYALTY ("true"/"false")
+ * 2. Organization feature exposure:
+ *    - orgData?.expose_json?.loyalty?.enabled
+ * 3. Organization marketplace installations:
+ *    - orgData?.organization_marketplaces (array or stringified JSON)
+ *      Matches records with slug/name/appName matching loyalty / reward / loyalty-rewards
+ *      where is_installed is true and market_place_json.enabled is not false.
+ */
+export function isLoyaltyMarketplaceActive(orgData?: any, config?: any): boolean {
+  // 1. Explicit config overrides (for testing, overrides, or custom store configs)
+  if (config?.enableLoyalty === false) return false;
+  if (config?.enableLoyalty === true) return true;
+
+  if (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_ENABLE_LOYALTY !== undefined) {
+    if (process.env.NEXT_PUBLIC_ENABLE_LOYALTY === "true") return true;
+    if (process.env.NEXT_PUBLIC_ENABLE_LOYALTY === "false") return false;
+  }
+
+  // 2. Check expose_json
+  if (orgData?.expose_json?.loyalty?.enabled !== undefined) {
+    return Boolean(orgData.expose_json.loyalty.enabled);
+  }
+
+  // 3. Check organization_marketplaces
+  const rawMarketplaces =
+    orgData?.organization_marketplaces ??
+    orgData?.organization?.organization_marketplaces ??
+    orgData?.data?.organization_marketplaces;
+
+  let marketplaces: any[] = [];
+  if (Array.isArray(rawMarketplaces)) {
+    marketplaces = rawMarketplaces;
+  } else if (typeof rawMarketplaces === "string") {
+    try {
+      marketplaces = JSON.parse(rawMarketplaces);
+    } catch {
+      marketplaces = [];
+    }
+  }
+
+  if (Array.isArray(marketplaces) && marketplaces.length > 0) {
+    const loyaltyRecord = marketplaces.find((item: any) => {
+      if (!item) return false;
+      const rawName = String(
+        item.marketplace?.name ||
+        item.market_place?.name ||
+        item.marketplace?.slug ||
+        item.market_place?.slug ||
+        item.market_place_json?.appName ||
+        item.market_place_json?.name ||
+        item.market_place_json?.slug ||
+        item.name ||
+        item.slug ||
+        ""
+      ).toLowerCase().trim();
+
+      return (
+        rawName.includes("loyalty") ||
+        rawName.includes("reward") ||
+        rawName === "loyalty-rewards"
+      );
+    });
+
+    if (loyaltyRecord) {
+      const isInstalled =
+        loyaltyRecord.is_installed === true ||
+        loyaltyRecord.is_installed === 1 ||
+        loyaltyRecord.installed === true ||
+        loyaltyRecord.installed === 1;
+
+      const isEnabled =
+        loyaltyRecord.market_place_json?.enabled !== false &&
+        loyaltyRecord.enabled !== false &&
+        loyaltyRecord.market_place_json?.is_active !== false &&
+        loyaltyRecord.is_active !== false;
+
+      return Boolean(isInstalled && isEnabled);
+    }
+  }
+
+  return false;
+}
+
 export interface UseLoyaltyReturn {
+  isLoyaltyEnabled: boolean;
   profile: LoyaltyProfileResponse | null;
   customer: LoyaltyCustomer | null;
   rewards: LoyaltyRewardItem[];
@@ -57,8 +148,9 @@ export interface UseLoyaltyReturn {
 
 export const useLoyalty = (options: UseLoyaltyOptions = {}): UseLoyaltyReturn => {
   const { autoFetch = true } = options;
-  const { actions, auth, config, cart, setCart, toast } = useCore();
+  const { actions, auth, config, cart, setCart, toast, orgData } = useCore();
 
+  const isLoyaltyEnabled = isLoyaltyMarketplaceActive(orgData, config);
   const token = auth?.token ?? auth?.access_token ?? null;
   const signedIn = !!((auth?.isSignedIn ?? false) || token);
 
@@ -76,6 +168,13 @@ export const useLoyalty = (options: UseLoyaltyOptions = {}): UseLoyaltyReturn =>
   const [error, setError] = useState<string | null>(null);
 
   const fetchProfile = useCallback(async () => {
+    if (!isLoyaltyEnabled) {
+      setProfile(null);
+      setCustomer(null);
+      setIsLoading(false);
+      return;
+    }
+
     if (!token && !signedIn) {
       setProfile(null);
       setCustomer(null);
@@ -110,10 +209,10 @@ export const useLoyalty = (options: UseLoyaltyOptions = {}): UseLoyaltyReturn =>
     } finally {
       setIsLoading(false);
     }
-  }, [actions?.getLoyaltyProfile, token, signedIn, config]);
+  }, [actions?.getLoyaltyProfile, token, signedIn, config, isLoyaltyEnabled]);
 
   const fetchRewards = useCallback(async () => {
-    if (!token && !signedIn) {
+    if (!isLoyaltyEnabled || (!token && !signedIn)) {
       setRewards([]);
       return;
     }
@@ -139,14 +238,14 @@ export const useLoyalty = (options: UseLoyaltyOptions = {}): UseLoyaltyReturn =>
     } finally {
       setIsRewardsLoading(false);
     }
-  }, [actions?.getLoyaltyRewards, token, signedIn, config]);
+  }, [actions?.getLoyaltyRewards, token, signedIn, config, isLoyaltyEnabled]);
 
   const fetchTransactions = useCallback(
     async (params: { page?: number; per_page?: number } = {}) => {
       const page = params.page ?? transactionsPage;
       const perPage = params.per_page ?? transactionsPerPage;
 
-      if (!token && !signedIn) {
+      if (!isLoyaltyEnabled || (!token && !signedIn)) {
         setTransactions([]);
         setTransactionsTotalCount(0);
         return;
@@ -183,16 +282,16 @@ export const useLoyalty = (options: UseLoyaltyOptions = {}): UseLoyaltyReturn =>
         setIsTransactionsLoading(false);
       }
     },
-    [actions?.getLoyaltyTransactions, token, signedIn, config, transactionsPage, transactionsPerPage],
+    [actions?.getLoyaltyTransactions, token, signedIn, config, transactionsPage, transactionsPerPage, isLoyaltyEnabled],
   );
 
   useEffect(() => {
-    if (autoFetch && (token || signedIn)) {
+    if (isLoyaltyEnabled && autoFetch && (token || signedIn)) {
       fetchProfile();
       fetchRewards();
       fetchTransactions({ page: 1, per_page: 20 });
     }
-  }, [autoFetch, token, signedIn, fetchProfile, fetchRewards, fetchTransactions]);
+  }, [isLoyaltyEnabled, autoFetch, token, signedIn, fetchProfile, fetchRewards, fetchTransactions]);
 
   const applyPoints = useCallback(
     async ({
@@ -202,6 +301,12 @@ export const useLoyalty = (options: UseLoyaltyOptions = {}): UseLoyaltyReturn =>
       cart_id?: string | number;
       points_to_use: number;
     }): Promise<ApplyLoyaltyPointsResponse> => {
+      if (!isLoyaltyEnabled) {
+        const errMsg = "Loyalty rewards program is not active for this store";
+        toast?.error?.(errMsg);
+        return { success: false, serverError: errMsg };
+      }
+
       const targetCartId = cart_id || cart?.id;
 
       if (!targetCartId) {
@@ -297,7 +402,7 @@ export const useLoyalty = (options: UseLoyaltyOptions = {}): UseLoyaltyReturn =>
         setIsApplying(false);
       }
     },
-    [cart?.id, actions, token, config, setCart, toast],
+    [cart?.id, actions, token, config, setCart, toast, isLoyaltyEnabled],
   );
 
   const copyReferralCode = useCallback(async (): Promise<boolean> => {
@@ -369,6 +474,7 @@ export const useLoyalty = (options: UseLoyaltyOptions = {}): UseLoyaltyReturn =>
         : "SILVER MEMBER");
 
   return {
+    isLoyaltyEnabled,
     profile,
     customer,
     rewards,

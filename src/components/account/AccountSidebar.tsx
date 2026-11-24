@@ -3,6 +3,7 @@
 import React from "react";
 import { useCore } from "../../context/CoreProvider";
 import { useLogout } from "../../hooks/useLogout";
+import { isLoyaltyMarketplaceActive } from "../../hooks/useLoyalty";
 import { useStorefrontRouter } from "../../utils/navigation";
 import {
   AccountGiftIcon,
@@ -62,8 +63,13 @@ export const AccountSidebar: React.FC<AccountSidebarProps> = ({
   const router = useStorefrontRouter(overrideRouter);
   const pathname = overridePathname ?? router.pathname;
   const coreLogout = useLogout();
-  const { auth } = useCore();
+  const { auth, orgData, config } = useCore();
   const resolvedContactInfo = contactInfo ?? getContactInfo(user ?? auth?.user);
+  const isLoyaltyEnabled = isLoyaltyMarketplaceActive(orgData, config);
+
+  const effectiveNavItems = (navItems ?? DEFAULT_NAV_ITEMS).filter(
+    (item) => item.href !== "/account/rewards" || isLoyaltyEnabled,
+  );
 
   const handleNavigate = (href: string) => {
     if (onNavigate) {
@@ -92,7 +98,7 @@ export const AccountSidebar: React.FC<AccountSidebarProps> = ({
       </div>
 
       <nav className="flex flex-col py-2 max-md:flex-row max-md:overflow-x-auto max-md:py-0">
-        {navItems.map(({ label, href, icon: Icon = AccountMapPinIcon }) => {
+        {effectiveNavItems.map(({ label, href, icon: Icon = AccountMapPinIcon }) => {
           const isActive =
             href === "/account" ? pathname === href : pathname.startsWith(href);
 

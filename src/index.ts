@@ -35,6 +35,7 @@ export {
 } from "./hooks/useLikedProducts";
 export {
   useLoyalty,
+  isLoyaltyMarketplaceActive,
   type UseLoyaltyOptions,
   type UseLoyaltyReturn,
 } from "./hooks/useLoyalty";
