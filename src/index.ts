@@ -26,9 +26,18 @@ export {
   type PaymentGatewayInfo,
 } from "./hooks/usePaymentGateway";
 export {
+  useCartDrawer,
+  type UseCartDrawerReturn,
+} from "./hooks/useCartDrawer";
+export {
   useGetCurrentUserLikedProductsQuery,
   invalidateLikedProductsCache,
 } from "./hooks/useLikedProducts";
+export {
+  useLoyalty,
+  type UseLoyaltyOptions,
+  type UseLoyaltyReturn,
+} from "./hooks/useLoyalty";
 
 
 // ─── Auth Components ──────────────────────────────────────────────────────────
@@ -40,12 +49,15 @@ export { CartPage } from "./components/cart/CartPage";
 export { CartItem } from "./components/cart/CartItem";
 export { CartSummary } from "./components/cart/CartSummary";
 export { ViewCart } from "./components/cart/ViewCart";
+export { CartDrawer, type CartDrawerProps } from "./components/cart/CartDrawer";
+export { FastCheckoutDrawer, type FastCheckoutDrawerProps } from "./components/cart/FastCheckoutDrawer";
 export { default as CouponSection } from "./components/cart/CouponSection";
 export { default as CartMismatchBanner } from "./components/cart/CartMismatchBanner";
 
 // ─── Actions & Cart Utilities ──────────────────────────────────────────────────
 export * from "./actions/storefrontActions";
 export * from "./actions/discountActions";
+export * from "./actions/loyaltyActions";
 
 // ─── Account Components ───────────────────────────────────────────────────────
 export { AccountPage } from "./components/account/AccountPage";
@@ -55,10 +67,19 @@ export { AccountAddressesPage } from "./components/account/AccountAddressesPage"
 export { AccountOrdersPage } from "./components/account/AccountOrdersPage";
 export { AccountOrderDetailContent } from "./components/account/AccountOrderDetailContent";
 export { AccountWishlistPage } from "./components/account/AccountWishlistPage";
+export { AccountRewardsPage, type AccountRewardsPageProps } from "./components/account/AccountRewardsPage";
+export {
+  AccountGiftIcon,
+  AccountAwardIcon,
+  AccountStarIcon,
+  AccountClockIcon,
+  AccountSparklesIcon,
+} from "./components/account/AccountIcons";
 export { UserInfo } from "./components/account/UserInfo";
 export { AddressCard } from "./components/account/AddressCard";
 export { OrdersList } from "./components/account/OrdersList";
 export { ProfileForm } from "./components/account/ProfileForm";
+export type * from "./types/loyalty";
 
 // ─── Order Components ─────────────────────────────────────────────────────────
 export { Order } from "./components/orders/Order";

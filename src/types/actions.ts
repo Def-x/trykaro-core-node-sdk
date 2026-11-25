@@ -124,4 +124,14 @@ export interface StorefrontActions {
   removeDiscountById?: (params: Record<string, unknown>, options?: RequestOptions) => Promise<any>;
   /** Track a discount-related analytics event. */
   trackDiscountEvent?: (payload: Record<string, unknown>, options?: RequestOptions) => Promise<any>;
+
+  // ─── Loyalty & Rewards ────────────────────────────────────────────────────
+  /** Fetch the current customer's loyalty profile. */
+  getLoyaltyProfile?: (options?: RequestOptions) => Promise<any>;
+  /** Fetch available loyalty rewards. */
+  getLoyaltyRewards?: (options?: RequestOptions) => Promise<any>;
+  /** Fetch customer's loyalty ledger transactions with pagination. */
+  getLoyaltyTransactions?: (params?: { page?: number; per_page?: number; [key: string]: any }, options?: RequestOptions) => Promise<any>;
+  /** Apply loyalty points to checkout cart. */
+  applyLoyaltyPoints?: (payload: { cart_id: string; points_to_use: number; [key: string]: any }, options?: RequestOptions) => Promise<any>;
 }

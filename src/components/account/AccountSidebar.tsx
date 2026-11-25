@@ -5,6 +5,7 @@ import { useCore } from "../../context/CoreProvider";
 import { useLogout } from "../../hooks/useLogout";
 import { useStorefrontRouter } from "../../utils/navigation";
 import {
+  AccountGiftIcon,
   AccountHeartIcon,
   AccountLogOutIcon,
   AccountMapPinIcon,
@@ -21,6 +22,7 @@ export const DEFAULT_NAV_ITEMS: AccountNavItem[] = [
   { label: "My Addresses", href: "/account/addresses", icon: AccountMapPinIcon },
   { label: "My Orders", href: "/account/orders", icon: AccountShoppingBagIcon },
   { label: "My Wishlist", href: "/account/wishlist", icon: AccountHeartIcon },
+  { label: "Loyalty & Rewards", href: "/account/rewards", icon: AccountGiftIcon },
 ];
 
 const getContactInfo = (user: any) =>

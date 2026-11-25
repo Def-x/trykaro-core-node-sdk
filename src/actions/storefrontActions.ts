@@ -466,33 +466,94 @@ export const updateUserAction = async (userId: string | number, userData: Record
 
 // ─── Orders ───────────────────────────────────────────────────────────────────
 
-export const getOrdersAction = async (regionId: string | null, page: number = 1, options: RequestOptions = {}): Promise<any> => {
-  const url = new URL(`${getApiBaseUrl(options)}/api/get_current_user_orders`);
-  if (regionId) url.searchParams.set("region_id", regionId);
-  url.searchParams.set("page", page.toString());
-  url.searchParams.set("per_page", "10");
+export const getOrdersAction = async (regionId: string | null = null, page: number = 1, options: RequestOptions = {}): Promise<any> => {
+  const token = await getServerToken(options?.token);
+  const baseUrl = getApiBaseUrl(options);
+  const headers = await buildHeaders({ ...options, token });
 
-  return requestJson(
-    url.toString(),
+  // 1. Primary: /api/get_current_user_orders
+  const url1 = new URL(`${baseUrl}/api/get_current_user_orders`);
+  if (regionId) url1.searchParams.set("region_id", regionId);
+  url1.searchParams.set("page", page.toString());
+  url1.searchParams.set("per_page", "20");
+
+  const res1 = await requestJson(
+    url1.toString(),
     {
       method: "GET",
-      headers: await buildHeaders(options),
+      headers,
       cache: "no-store",
     },
     "Failed to get orders",
   );
+
+  const hasOrders1 =
+    (Array.isArray(res1) && res1.length > 0) ||
+    (Array.isArray(res1?.orders) && res1.orders.length > 0) ||
+    (Array.isArray(res1?.data?.orders) && res1.data.orders.length > 0) ||
+    (Array.isArray(res1?.data) && res1.data.length > 0) ||
+    (Array.isArray(res1?.current_user_orders) && res1.current_user_orders.length > 0);
+
+  if (hasOrders1) return res1;
+
+  // 2. Secondary fallback: /api/orders
+  if (!res1 || res1.serverError || !hasOrders1) {
+    const url2 = new URL(`${baseUrl}/api/orders`);
+    if (regionId) url2.searchParams.set("region_id", regionId);
+    url2.searchParams.set("page", page.toString());
+    url2.searchParams.set("per_page", "20");
+
+    const res2 = await requestJson(
+      url2.toString(),
+      {
+        method: "GET",
+        headers,
+        cache: "no-store",
+      },
+      "Failed to get orders",
+    );
+
+    const hasOrders2 =
+      (Array.isArray(res2) && res2.length > 0) ||
+      (Array.isArray(res2?.orders) && res2.orders.length > 0) ||
+      (Array.isArray(res2?.data?.orders) && res2.data.orders.length > 0) ||
+      (Array.isArray(res2?.data) && res2.data.length > 0);
+
+    if (hasOrders2 || (!res2?.serverError && res1?.serverError)) return res2;
+  }
+
+  return res1;
 };
 
-export const getOrderByIdAction = async (orderId: string | number, options: RequestOptions = {}): Promise<any> =>
-  requestJson(
-    `${getApiBaseUrl(options)}/api/orders/${orderId}`,
+export const getOrderByIdAction = async (orderId: string | number, options: RequestOptions = {}): Promise<any> => {
+  const token = await getServerToken(options?.token);
+  const baseUrl = getApiBaseUrl(options);
+  const headers = await buildHeaders({ ...options, token });
+
+  const res1 = await requestJson(
+    `${baseUrl}/api/orders/${orderId}`,
     {
       method: "GET",
-      headers: await buildHeaders(options),
+      headers,
       cache: "no-store",
     },
     "Failed to get order",
   );
+
+  if (res1 && !res1.serverError) return res1;
+
+  const res2 = await requestJson(
+    `${baseUrl}/api/get_order/${orderId}`,
+    {
+      method: "GET",
+      headers,
+      cache: "no-store",
+    },
+    "Failed to get order",
+  );
+
+  return res2 && !res2.serverError ? res2 : res1;
+};
 
 export const getOrderInvoiceAction = async (orderId: string | number, options: RequestOptions = {}): Promise<any> => {
   const res = await fetch(

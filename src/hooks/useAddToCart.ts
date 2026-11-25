@@ -27,7 +27,7 @@ import { trackMetaAddToCart } from "../lib/metaPixel";
  *  toast.error(msg)
  */
 export function useAddToCart() {
-  const { cart, setCart, actions, toast, auth, config } = useCore();
+  const { cart, setCart, actions, toast, auth, config, openCartDrawer } = useCore();
   const [quantity, setQuantity] = useState(1);
   const [isAddToCartLoading, setIsAddToCartLoading] = useState(false);
   const [deletingLineItemId, setDeletingLineItemId] = useState<any>(null);
@@ -161,6 +161,7 @@ export function useAddToCart() {
     product: any,
     customizations: any[] = [],
     overrideQty: number | null = null,
+    options?: { openDrawer?: boolean },
   ) => {
     try {
       setIsAddToCartLoading(true);
@@ -207,6 +208,9 @@ export function useAddToCart() {
       // ───────────────────────────────────────────────────────────────
 
       toast?.success?.(`${product?.name || "Item"} added to cart`);
+      if (options?.openDrawer !== false) {
+        openCartDrawer?.();
+      }
     } catch (err: any) {
       console.error("[useAddToCart] handleAddToCart error:", err);
       const errorMsg = err?.data?.error || err?.message;

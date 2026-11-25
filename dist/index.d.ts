@@ -2,9 +2,10 @@ import * as React from 'react';
 import React__default, { Component, ReactNode, ErrorInfo } from 'react';
 import { devLogger, captureDeveloperException } from './analytics/posthog.js';
 export { POSTHOG_INSTANCES, getDeveloperPostHog, getMerchantPostHog, getPostHogInstance, identifyDeveloperUser, initDeveloperPostHog, initMerchantPostHog, initPostHog, logDeveloper, resetDeveloperPostHog, sanitizePostHogToken, setDeveloperSuperProperties } from './analytics/posthog.js';
-import { S as StorefrontConfig, d as StorefrontActions, R as Region } from './storefrontActions-CJKIC8g-.js';
-export { e as RequestOptions, f as applyDiscountAction, g as createAddressAction, h as createCartAction, c as createCartPaymentAction, i as createLineItemAction, a as createPhonePeOrderAction, j as createRazorpayOrderAction, k as createStripePaymentIntentAction, l as deleteAddressAction, m as deleteLineItemAction, n as getAddressesAction, o as getAllTaxonsAction, p as getAvailableDiscountsAction, q as getCartAction, r as getCartByIdAction, s as getCurrentUserLikedProductsAction, t as getLikedProductsAction, v as getOrderByIdAction, w as getOrderInvoiceAction, x as getOrdersAction, y as getOrgVideosAction, z as getOrganizationAction, A as getProductByIdAction, B as getProductsAction, C as getProductsByIdsAction, D as getProductsFilterAction, E as getRecentlyViewedProductsAction, F as getRegionsAction, G as getRelatedProductsAction, H as getTaxonByIdAction, I as getTaxonomiesAction, J as getTaxonomyByIdAction, K as getUserAction, L as likeProductAction, M as loginUser, N as removeDiscountAction, O as signUpUser, P as trackDiscountEventAction, Q as unlikeProductAction, T as updateAddressAction, U as updateCartAction, V as updateCartIdLineItemsAction, u as updateCartPaymentAction, W as updateLineItemAction, b as updatePhonePePaymentAction, X as updateRazorpayPaymentAction, Y as updateUserAction, Z as validateCartTotal, _ as verifyOtp } from './storefrontActions-CJKIC8g-.js';
-export { applyDiscount, buildHeaders, configureStorefront, getApiBaseUrl, getEnv, getOrganizationId, getServerToken, getStorefrontGlobalConfig, removeDiscountById, revalidateCacheTag } from './actions.js';
+import { S as StorefrontConfig, d as StorefrontActions, R as Region } from './storefrontActions-OXYgf5q4.js';
+export { e as RequestOptions, f as applyDiscountAction, g as createAddressAction, h as createCartAction, c as createCartPaymentAction, i as createLineItemAction, a as createPhonePeOrderAction, j as createRazorpayOrderAction, k as createStripePaymentIntentAction, l as deleteAddressAction, m as deleteLineItemAction, n as getAddressesAction, o as getAllTaxonsAction, p as getAvailableDiscountsAction, q as getCartAction, r as getCartByIdAction, s as getCurrentUserLikedProductsAction, t as getLikedProductsAction, v as getOrderByIdAction, w as getOrderInvoiceAction, x as getOrdersAction, y as getOrgVideosAction, z as getOrganizationAction, A as getProductByIdAction, B as getProductsAction, C as getProductsByIdsAction, D as getProductsFilterAction, E as getRecentlyViewedProductsAction, F as getRegionsAction, G as getRelatedProductsAction, H as getTaxonByIdAction, I as getTaxonomiesAction, J as getTaxonomyByIdAction, K as getUserAction, L as likeProductAction, M as loginUser, N as removeDiscountAction, O as signUpUser, P as trackDiscountEventAction, Q as unlikeProductAction, T as updateAddressAction, U as updateCartAction, V as updateCartIdLineItemsAction, u as updateCartPaymentAction, W as updateLineItemAction, b as updatePhonePePaymentAction, X as updateRazorpayPaymentAction, Y as updateUserAction, Z as validateCartTotal, _ as verifyOtp } from './storefrontActions-OXYgf5q4.js';
+import { L as LoyaltyProfileResponse, a as LoyaltyCustomer, b as LoyaltyRewardItem, c as LoyaltyTransaction, A as ApplyLoyaltyPointsResponse } from './actions-CPUIzeCV.js';
+export { d as ApplyLoyaltyPointsPayload, G as GetLoyaltyTransactionsParams, e as LoyaltyActivityItem, f as LoyaltyEarnMethod, g as LoyaltyExpiringBatch, h as LoyaltyRewardsResponse, i as LoyaltyTransactionMetadata, j as LoyaltyTransactionsResponse, k as applyDiscount, l as applyLoyaltyPointsAction, m as buildHeaders, n as configureStorefront, o as getApiBaseUrl, p as getEnv, q as getLoyaltyProfileAction, r as getLoyaltyRewardsAction, s as getLoyaltyTransactionsAction, t as getOrganizationId, u as getServerToken, v as getStorefrontGlobalConfig, w as removeDiscountById, x as revalidateCacheTag } from './actions-CPUIzeCV.js';
 export { buildItem, buildMeta, clearEcommerce, initGtmConfig, pushToDataLayer, trackAddPaymentInfo, trackAddShippingInfo, trackAddToCart, trackApplyCoupon, trackBeginCheckout, trackCustomEvent, trackPageView, trackPaymentFailed, trackPurchase, trackSearch, trackViewItem } from './analytics/gtm.js';
 export { initMetaPixelConfig, trackMetaAddPaymentInfo, trackMetaAddToCart, trackMetaCompleteRegistration, trackMetaInitiateCheckout, trackMetaLead, trackMetaPageView, trackMetaPurchase, trackMetaSearch, trackMetaViewContent } from './analytics/meta.js';
 
@@ -158,6 +159,11 @@ interface CoreContextValue {
     addresses?: any[];
     isAddressLoading?: boolean;
     refreshAddresses?: () => Promise<any> | void;
+    isCartDrawerOpen?: boolean;
+    setIsCartDrawerOpen?: React__default.Dispatch<React__default.SetStateAction<boolean>>;
+    openCartDrawer?: () => void;
+    closeCartDrawer?: () => void;
+    toggleCartDrawer?: () => void;
     [key: string]: any;
 }
 interface CoreProviderProps {
@@ -263,7 +269,9 @@ declare const useCart: () => {
  *  toast.error(msg)
  */
 declare function useAddToCart(): {
-    handleAddToCart: (product: any, customizations?: any[], overrideQty?: number | null) => Promise<void>;
+    handleAddToCart: (product: any, customizations?: any[], overrideQty?: number | null, options?: {
+        openDrawer?: boolean;
+    }) => Promise<void>;
     handleDecreaseQty: (product: any, customizations?: any[]) => Promise<void>;
     handleDeleteLineItem: (productOrId: any) => Promise<void>;
     getCartItem: (product: any, customizations?: any[]) => LineItem;
@@ -290,7 +298,7 @@ declare function useAddToCart(): {
  *  formatCurrency(1999.5) // "₹1,999.50"
  */
 declare function useCurrencyFormat(): {
-    formatCurrency: (amount: number | null | undefined) => string;
+    formatCurrency: (amount: number | string | null | undefined) => string;
 };
 
 /**
@@ -457,6 +465,15 @@ interface PaymentGatewayInfo {
  */
 declare function usePaymentGateway(): PaymentGatewayInfo;
 
+interface UseCartDrawerReturn {
+    isCartDrawerOpen: boolean;
+    openCartDrawer: () => void;
+    closeCartDrawer: () => void;
+    toggleCartDrawer: () => void;
+    setIsCartDrawerOpen: (open: boolean) => void;
+}
+declare const useCartDrawer: () => UseCartDrawerReturn;
+
 /**
  * useGetCurrentUserLikedProductsQuery
  *
@@ -491,6 +508,47 @@ declare function useGetCurrentUserLikedProductsQuery(token?: string | null, { pa
  * Call this after like/unlike mutations so all active hooks re-fetch fresh data.
  */
 declare function invalidateLikedProductsCache(token: string | null): void;
+
+interface UseLoyaltyOptions {
+    autoFetch?: boolean;
+}
+interface UseLoyaltyReturn {
+    profile: LoyaltyProfileResponse | null;
+    customer: LoyaltyCustomer | null;
+    rewards: LoyaltyRewardItem[];
+    availablePoints: number;
+    monetaryValue: number;
+    pointsName: string;
+    totalEarned: number;
+    totalRedeemed: number;
+    totalExpired: number;
+    referralCode: string;
+    referralLink: string;
+    tier: string;
+    transactions: LoyaltyTransaction[];
+    transactionsTotalCount: number;
+    transactionsPage: number;
+    transactionsPerPage: number;
+    isLoading: boolean;
+    isRewardsLoading: boolean;
+    isTransactionsLoading: boolean;
+    isApplying: boolean;
+    error: string | null;
+    refetch: () => Promise<void>;
+    refetchRewards: () => Promise<void>;
+    refetchTransactions: (params?: {
+        page?: number;
+        per_page?: number;
+    }) => Promise<void>;
+    applyPoints: (payload: {
+        cart_id?: string | number;
+        points_to_use: number;
+    }) => Promise<ApplyLoyaltyPointsResponse>;
+    copyReferralCode: () => Promise<boolean>;
+    copyReferralLink: () => Promise<boolean>;
+    shareWhatsApp: (customText?: string) => void;
+}
+declare const useLoyalty: (options?: UseLoyaltyOptions) => UseLoyaltyReturn;
 
 interface AuthManagerProps {
     mode?: "sign-in" | "sign-up" | "signin" | "signup";
@@ -586,7 +644,25 @@ interface CartSummaryProps {
 }
 declare const CartSummary: React__default.FC<CartSummaryProps>;
 
-declare const ViewCart: React__default.FC;
+interface ViewCartProps {
+    enableFastCheckout?: boolean;
+}
+declare const ViewCart: React__default.FC<ViewCartProps>;
+
+interface CartDrawerProps {
+    isOpen?: boolean;
+    onClose?: () => void;
+    freeShippingThreshold?: number;
+}
+declare const CartDrawer: React__default.FC<CartDrawerProps>;
+
+interface FastCheckoutDrawerProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onPaymentSuccess?: () => void;
+    router?: any;
+}
+declare const FastCheckoutDrawer: React__default.FC<FastCheckoutDrawerProps>;
 
 declare const CouponSection: React__default.FC;
 
@@ -644,6 +720,7 @@ interface AccountLayoutProps {
     containerClassName?: string;
     panelClassName?: string;
     mainClassName?: string;
+    fullWidth?: boolean;
 }
 declare const AccountLayout: React__default.FC<AccountLayoutProps>;
 
@@ -682,6 +759,25 @@ interface AccountWishlistPageProps {
     pathname?: string;
 }
 declare const AccountWishlistPage: React__default.FC<AccountWishlistPageProps>;
+
+interface AccountRewardsPageProps {
+    router?: any;
+    showBreadcrumb?: boolean;
+    className?: string;
+}
+declare const AccountRewardsPage: React__default.FC<AccountRewardsPageProps>;
+
+interface IconProps extends React__default.SVGProps<SVGSVGElement> {
+    className?: string;
+    strokeWidth?: number;
+    fill?: string;
+    filled?: boolean;
+}
+declare const AccountGiftIcon: React__default.FC<IconProps>;
+declare const AccountAwardIcon: React__default.FC<IconProps>;
+declare const AccountStarIcon: React__default.FC<IconProps>;
+declare const AccountClockIcon: React__default.FC<IconProps>;
+declare const AccountSparklesIcon: React__default.FC<IconProps>;
 
 interface UserInfoProps {
     user?: any;
@@ -1060,4 +1156,4 @@ declare class StorefrontAuthError extends StorefrontError {
     constructor(message?: string);
 }
 
-export { AccountAddressesPage, AccountLayout, AccountOrderDetailContent, AccountOrdersPage, AccountPage, AccountSidebar, AccountWishlistPage, type Address, AddressCard, AddressForm, AuthManager, type AuthState, type AuthUser, type Cart, CartItem, CartMismatchBanner, CartPage, CartSummary, ClerkStoreProvider, type ClerkStoreProviderProps, CoreProvider, CouponSection, CustomOTPAuth, type Customization, DEFAULT_NAV_ITEMS as DEFAULT_ACCOUNT_NAV_ITEMS, DeveloperErrorBoundary, EmptyState, type FrameworkAdapter, type GtmConfig, type GtmItem, type GtmMeta, type LineItem, type LineItemPayload, type MetaPixelConfig, type OptionType, type OptionValue, Order, type OrderPayment, type Order$1 as OrderType, OrdersList, type PaymentGatewayInfo, Popup, type Product, type ProductImage, type ProductVariant, ProfileForm, Region, type RouterAdapter, type SellingQuantity, Spinner, StorefrontActions, StorefrontApiError, StorefrontAuthError, StorefrontConfig, StorefrontError, type Taxon, ThirdPartyScripts, type UseClerkStoreAuthOptions, type UseOtpStoreAuthOptions, UserInfo, type VariantOption, ViewCart, captureDeveloperException, devLogger, injectContentSquare, injectHotjar, invalidateLikedProductsCache, isTokenExpired, nameToSlug, useAddToCart, useAddresses, useAuth, useCart, useCartInfo, useClerkStoreAuth, useCore, useCurrencyFormat, useGetCurrentUserLikedProductsQuery, useLogout, useOtpStoreAuth, usePaymentGateway, useVariantSelection };
+export { AccountAddressesPage, AccountAwardIcon, AccountClockIcon, AccountGiftIcon, AccountLayout, AccountOrderDetailContent, AccountOrdersPage, AccountPage, AccountRewardsPage, type AccountRewardsPageProps, AccountSidebar, AccountSparklesIcon, AccountStarIcon, AccountWishlistPage, type Address, AddressCard, AddressForm, ApplyLoyaltyPointsResponse, AuthManager, type AuthState, type AuthUser, type Cart, CartDrawer, type CartDrawerProps, CartItem, CartMismatchBanner, CartPage, CartSummary, ClerkStoreProvider, type ClerkStoreProviderProps, CoreProvider, CouponSection, CustomOTPAuth, type Customization, DEFAULT_NAV_ITEMS as DEFAULT_ACCOUNT_NAV_ITEMS, DeveloperErrorBoundary, EmptyState, FastCheckoutDrawer, type FastCheckoutDrawerProps, type FrameworkAdapter, type GtmConfig, type GtmItem, type GtmMeta, type LineItem, type LineItemPayload, LoyaltyCustomer, LoyaltyProfileResponse, LoyaltyRewardItem, LoyaltyTransaction, type MetaPixelConfig, type OptionType, type OptionValue, Order, type OrderPayment, type Order$1 as OrderType, OrdersList, type PaymentGatewayInfo, Popup, type Product, type ProductImage, type ProductVariant, ProfileForm, Region, type RouterAdapter, type SellingQuantity, Spinner, StorefrontActions, StorefrontApiError, StorefrontAuthError, StorefrontConfig, StorefrontError, type Taxon, ThirdPartyScripts, type UseCartDrawerReturn, type UseClerkStoreAuthOptions, type UseLoyaltyOptions, type UseLoyaltyReturn, type UseOtpStoreAuthOptions, UserInfo, type VariantOption, ViewCart, captureDeveloperException, devLogger, injectContentSquare, injectHotjar, invalidateLikedProductsCache, isTokenExpired, nameToSlug, useAddToCart, useAddresses, useAuth, useCart, useCartDrawer, useCartInfo, useClerkStoreAuth, useCore, useCurrencyFormat, useGetCurrentUserLikedProductsQuery, useLogout, useLoyalty, useOtpStoreAuth, usePaymentGateway, useVariantSelection };

@@ -2,6 +2,7 @@ interface Region {
     id?: string | number;
     name?: string;
     currency?: string;
+    currencySymbol?: string;
     locale?: string;
     currency_symbol?: string;
     invoice_setting?: {
@@ -17,6 +18,7 @@ interface StorefrontConfig {
     apiBaseUrl?: string;
     regionId?: string | null;
     currency?: string;
+    currencySymbol?: string;
     locale?: string;
     authType?: 'clerk' | 'own';
     countryCode?: string;
@@ -33,6 +35,8 @@ interface StorefrontConfig {
     posthogDeveloperToken?: string;
     posthogDeveloperHost?: string;
     enablePosthogInDev?: boolean;
+    disableCartDrawer?: boolean;
+    freeShippingThreshold?: number;
     [key: string]: any;
 }
 
@@ -142,6 +146,22 @@ interface StorefrontActions {
     removeDiscountById?: (params: Record<string, unknown>, options?: RequestOptions) => Promise<any>;
     /** Track a discount-related analytics event. */
     trackDiscountEvent?: (payload: Record<string, unknown>, options?: RequestOptions) => Promise<any>;
+    /** Fetch the current customer's loyalty profile. */
+    getLoyaltyProfile?: (options?: RequestOptions) => Promise<any>;
+    /** Fetch available loyalty rewards. */
+    getLoyaltyRewards?: (options?: RequestOptions) => Promise<any>;
+    /** Fetch customer's loyalty ledger transactions with pagination. */
+    getLoyaltyTransactions?: (params?: {
+        page?: number;
+        per_page?: number;
+        [key: string]: any;
+    }, options?: RequestOptions) => Promise<any>;
+    /** Apply loyalty points to checkout cart. */
+    applyLoyaltyPoints?: (payload: {
+        cart_id: string;
+        points_to_use: number;
+        [key: string]: any;
+    }, options?: RequestOptions) => Promise<any>;
 }
 
 /**
@@ -178,7 +198,7 @@ declare const signUpUser: (data?: Record<string, unknown> | FormData, options?: 
 declare const verifyOtp: (data?: Record<string, unknown>, options?: RequestOptions) => Promise<any>;
 declare const getUserAction: (options?: RequestOptions) => Promise<any>;
 declare const updateUserAction: (userId: string | number, userData: Record<string, unknown>, options?: RequestOptions) => Promise<any>;
-declare const getOrdersAction: (regionId: string | null, page?: number, options?: RequestOptions) => Promise<any>;
+declare const getOrdersAction: (regionId?: string | null, page?: number, options?: RequestOptions) => Promise<any>;
 declare const getOrderByIdAction: (orderId: string | number, options?: RequestOptions) => Promise<any>;
 declare const getOrderInvoiceAction: (orderId: string | number, options?: RequestOptions) => Promise<any>;
 declare const getAvailableDiscountsAction: (params?: RequestOptions & {
