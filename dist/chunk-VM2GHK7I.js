@@ -171,5 +171,5 @@ var applyLoyaltyPointsAction = async (payload, options = {}) => {
 };
 
 export { applyDiscount, applyLoyaltyPointsAction, getLoyaltyProfileAction, getLoyaltyRewardsAction, getLoyaltyTransactionsAction, removeDiscountById };
-//# sourceMappingURL=chunk-FU6T37BZ.js.map
-//# sourceMappingURL=chunk-FU6T37BZ.js.map
+//# sourceMappingURL=chunk-VM2GHK7I.js.map
+//# sourceMappingURL=chunk-VM2GHK7I.js.map
