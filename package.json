@@ -1,6 +1,6 @@
 {
   "name": "@defx/storefront-core",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Framework-agnostic React SDK for Defx multi-store ecommerce storefronts",
   "type": "module",
   "packageManager": "yarn@4.12.0",
@@ -63,14 +63,16 @@
     "changeset": "changeset",
     "release": "changeset publish"
   },
+  "dependencies": {
+    "@stripe/react-stripe-js": "^7.0.1",
+    "@stripe/stripe-js": "^10.2.0",
+    "posthog-js": "^1.360.0"
+  },
   "peerDependencies": {
     "@clerk/nextjs": "^7.2.0",
-    "@stripe/react-stripe-js": ">=2",
-    "@stripe/stripe-js": ">=2",
     "js-cookie": "^3.0.5",
     "lodash": ">=4",
     "lucide-react": ">=0.300.0",
-    "posthog-js": ">=1.0.0",
     "react": "^18 || ^19",
     "react-dom": "^18 || ^19",
     "react-razorpay": ">=2 || >=3"
@@ -79,19 +81,10 @@
     "@clerk/nextjs": {
       "optional": true
     },
-    "@stripe/react-stripe-js": {
-      "optional": true
-    },
-    "@stripe/stripe-js": {
-      "optional": true
-    },
     "js-cookie": {
       "optional": true
     },
     "lucide-react": {
-      "optional": true
-    },
-    "posthog-js": {
       "optional": true
     },
     "react-razorpay": {
